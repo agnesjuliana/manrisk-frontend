@@ -1,30 +1,28 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import {
-  AudioWaveform,
-  BookOpen,
-  Bot,
-  Command,
-  Frame,
+  Building,
+  ChartSpline,
+  FlaskConical,
   GalleryVerticalEnd,
-  Map,
+  Package,
   PieChart,
-  Settings2,
-  SquareTerminal,
-} from "lucide-react"
+  ShieldAlert,
+  UserCog,
+} from "lucide-react";
 
-import { NavMain } from "@/components/nav-main"
-import { NavProjects } from "@/components/nav-projects"
-import { NavUser } from "@/components/nav-user"
-import { TeamSwitcher } from "@/components/team-switcher"
+import { NavMain } from "@/components/nav-main";
+import { NavUser } from "@/components/nav-user";
+import { TeamSwitcher } from "@/components/team-switcher";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
   SidebarRail,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
+import { title } from "process";
 
 // This is sample data.
 const data = {
@@ -35,126 +33,154 @@ const data = {
   },
   teams: [
     {
-      name: "Acme Inc",
+      name: "ManRisk Org.",
       logo: GalleryVerticalEnd,
-      plan: "Enterprise",
-    },
-    {
-      name: "Acme Corp.",
-      logo: AudioWaveform,
-      plan: "Startup",
-    },
-    {
-      name: "Evil Corp.",
-      logo: Command,
-      plan: "Free",
+      plan: "Agnes - Role",
     },
   ],
   navMain: [
     {
-      title: "Playground",
+      title: "Manajemen User",
       url: "#",
-      icon: SquareTerminal,
+      icon: UserCog,
       isActive: true,
       items: [
         {
-          title: "History",
+          title: "Divisi & Hak Akses",
           url: "#",
+          accessRole: ["ADMIN"],
         },
         {
-          title: "Starred",
+          title: "Daftar Pengguna",
           url: "#",
-        },
-        {
-          title: "Settings",
-          url: "#",
+          accessRole: ["ADMIN"],
         },
       ],
     },
     {
-      title: "Models",
+      title: "Organisasi",
       url: "#",
-      icon: Bot,
+      icon: Building,
       items: [
         {
-          title: "Genesis",
+          title: "Profil Instansi",
           url: "#",
+          accessRole: ["RISK_MANAGER", "ADMIN"],
         },
         {
-          title: "Explorer",
+          title: "Konteks Organisasi",
           url: "#",
+          accessRole: ["RISK_MANAGER"],
         },
         {
-          title: "Quantum",
+          title: "Kriteria Risiko",
           url: "#",
+          accessRole: ["RISK_MANAGER"],
         },
       ],
     },
     {
-      title: "Documentation",
+      title: "Aset",
       url: "#",
-      icon: BookOpen,
+      icon: Package,
       items: [
         {
-          title: "Introduction",
+          title: "Daftar Aset",
           url: "#",
+          accessRole: ["RISK_MANAGER", "RISK_OWNER"],
         },
         {
-          title: "Get Started",
+          title: "Persetujuan Aset",
           url: "#",
-        },
-        {
-          title: "Tutorials",
-          url: "#",
-        },
-        {
-          title: "Changelog",
-          url: "#",
+          accessRole: ["RISK_MANAGER"],
         },
       ],
     },
     {
-      title: "Settings",
+      title: "Risiko",
       url: "#",
-      icon: Settings2,
+      icon: ShieldAlert,
       items: [
         {
-          title: "General",
+          title: "Daftar Risiko",
           url: "#",
+          accessRole: ["RISK_MANAGER", "RISK_OWNER"],
         },
         {
-          title: "Team",
+          title: "Prioritas Risiko",
           url: "#",
+          accessRole: ["RISK_MANAGER", "RISK_OWNER"],
         },
         {
-          title: "Billing",
+          title: "Persetujuan Kajian",
           url: "#",
-        },
-        {
-          title: "Limits",
-          url: "#",
+          accessRole: ["RISK_MANAGER", "TOP_MANAGEMENT"],
         },
       ],
     },
-  ],
-  projects: [
     {
-      name: "Design Engineering",
+      title: "Treatment",
       url: "#",
-      icon: Frame,
+      icon: FlaskConical,
+      items: [
+        {
+          title: "Daftar Treatment",
+          url: "#",
+          accessRole: ["RISK_MANAGER", "RISK_OWNER"],
+        },
+        {
+          title: "Persetujuan Treatment",
+          url: "#",
+          accessRole: ["RISK_MANAGER", "TOP_MANAGEMENT"],
+        },
+        {
+          title: "Residu Risiko",
+          url: "#",
+          accessRole: ["RISK_MANAGER"],
+        },
+      ],
     },
     {
-      name: "Sales & Marketing",
+      title: "Kontrol & SoA",
       url: "#",
       icon: PieChart,
+      items: [
+        {
+          title: "Daftar Kontrol",
+          url: "#",
+          accessRole: ["RISK_MANAGER", "RISK_OWNER", "CONTROL_OWNER"],
+        },
+        {
+          title: "SoA",
+          url: "#",
+          accessRole: ["RISK_MANAGER", "CONTROL_OWNER"],
+        },
+      ],
     },
     {
-      name: "Travel",
+      title: "Monitoring",
       url: "#",
-      icon: Map,
+      icon: ChartSpline,
+      items: [
+        {
+          title: "Rangkuman Risiko",
+          url: "#",
+          accessRole: [
+            "RISK_MANAGER",
+            "RISK_OWNER",
+            "CONTROL_OWNER",
+            "TOP_MANAGEMENT",
+          ],
+        },
+        {
+          title: "Daftar Tugas",
+          url: "#",
+          accessRole: ["RISK_MANAGER", "RISK_OWNER", "CONTROL_OWNER"],
+        },
+      ],
     },
   ],
-}
+};
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
@@ -164,12 +190,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <NavProjects projects={data.projects} />
+        {/* <NavProjects projects={data.projects} /> */}
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={data.user} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
-  )
+  );
 }
