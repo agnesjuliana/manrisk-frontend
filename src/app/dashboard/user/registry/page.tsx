@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { loadUsers, saveUsers, type User as StoreUser, type MainRole as StoreMainRole } from "@/lib/usersStore"
 import {
   Table,
   TableHeader,
@@ -32,45 +33,17 @@ import {
 import { Trash, Edit, Plus } from "lucide-react";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 
-type MainRole =
-  | "ADMIN"
-  | "RISK_MANAGER"
-  | "RISK_OWNER"
-  | "CONTROL_OWNER"
-  | "TOP_MANAGEMENT";
-
-type User = {
-  id: string;
-  name: string;
-  email: string;
-  password: string;
-  role: MainRole;
-  division?: string;
-};
-
-const initialUsers: User[] = [
-  {
-    id: "u-1",
-    name: "Agnes Juliana",
-    email: "agnes@example.com",
-    password: "password",
-    role: "ADMIN",
-    division: "IT",
-  },
-  {
-    id: "u-2",
-    name: "Budi Santoso",
-    email: "budi@example.com",
-    password: "password",
-    role: "RISK_MANAGER",
-    division: "Finance",
-  },
-];
+// Reuse store types
+type User = StoreUser
+type MainRole = StoreMainRole
 
 const sampleDivisions = ["IT", "Finance", "Operations"];
 
 export default function UserRegistryPage() {
-  const [rows, setRows] = React.useState<User[]>(initialUsers);
+  const [rows, setRows] = React.useState<User[]>(() => {
+    if (typeof window === "undefined") return []
+    return loadUsers()
+  });
   const [query, setQuery] = React.useState("");
 
   const filtered = rows.filter((u) => {
@@ -85,7 +58,11 @@ export default function UserRegistryPage() {
   });
 
   function removeUser(id: string) {
-    setRows((prev) => prev.filter((r) => r.id !== id));
+    setRows((prev) => {
+      const next = prev.filter((r) => r.id !== id)
+      saveUsers(next)
+      return next
+    })
   }
 
   // dialog form state
@@ -107,7 +84,11 @@ export default function UserRegistryPage() {
       role: form.role as MainRole,
       division: form.division === "NONE" ? undefined : form.division,
     };
-    setRows((prev) => [newUser, ...prev]);
+    setRows((prev) => {
+      const next = [newUser, ...prev]
+      saveUsers(next)
+      return next
+    })
     setForm({ name: "", email: "", password: "", role: "ADMIN", division: "NONE" });
     setOpen(false);
   }
