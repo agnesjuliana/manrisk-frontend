@@ -6,6 +6,7 @@ export type Asset = {
   ownerId?: string;
   location?: string;
   processes?: string[];
+  status?: "PENDING" | "APPROVED_BY_RM" | "SUBMITTED_TO_TOP" | "APPROVED_BY_TOP";
 };
 
 const STORAGE_KEY = "isms:assets:v1";
@@ -19,6 +20,7 @@ const DEFAULT_ASSETS: Asset[] = [
     ownerId: "u-1",
     location: "Data Center A",
     processes: ["Pembayaran", "Rekonsiliasi"],
+    status: "PENDING",
   },
   {
     id: "asset-2",
@@ -28,6 +30,7 @@ const DEFAULT_ASSETS: Asset[] = [
     ownerId: "u-2",
     location: "Cloud Provider - us-east-1",
     processes: ["Penggajian", "Manajemen Karyawan"],
+    status: "PENDING",
   },
   {
     id: "asset-3",
@@ -37,6 +40,7 @@ const DEFAULT_ASSETS: Asset[] = [
     ownerId: undefined,
     location: "Offsite Backup",
     processes: ["Audit", "Pelaporan"],
+    status: "PENDING",
   },
 ];
 
