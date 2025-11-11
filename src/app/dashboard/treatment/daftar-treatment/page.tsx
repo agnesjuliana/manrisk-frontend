@@ -66,6 +66,7 @@ export default function DaftarTreatmentPage() {
               controlJustification: form.controlJustification || undefined,
               updatedAt: now,
               status: "SET",
+              approvalStatus: "DRAFT",
             } as Treatment)
           : t
       )
@@ -86,6 +87,7 @@ export default function DaftarTreatmentPage() {
         controlJustification: form.controlJustification || undefined,
         createdAt: now,
         status: "SET",
+        approvalStatus: "DRAFT",
       }
       const next = [...treatments, newItem]
       setTreatments(next)

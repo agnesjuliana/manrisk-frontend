@@ -1,5 +1,7 @@
 export type TreatmentOption = "Mitigate" | "Accept" | "Avoid" | "Transfer";
 
+export type TreatmentStatus = "DRAFT" | "SUBMITTED" | "APPROVED";
+
 export type Treatment = {
   id: string; // T001
   riskId: string; // linked risk id
@@ -11,6 +13,7 @@ export type Treatment = {
   createdAt: string;
   updatedAt?: string;
   status: "NOT_SET" | "SET";
+  approvalStatus?: TreatmentStatus; // approval workflow status
 };
 
 const STORAGE_KEY = "isms:treatments:v1";
