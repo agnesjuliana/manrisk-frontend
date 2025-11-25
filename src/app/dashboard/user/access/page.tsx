@@ -1,15 +1,6 @@
 "use client";
 
 import * as React from "react";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-  TableCaption,
-} from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Trash, Edit, Plus } from "lucide-react";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { PaginatedTable } from "@/components/paginated-table";
 
 type SubRole = {
   id: string;
@@ -103,123 +95,133 @@ export default function UserAccessPage() {
     setOpen(false);
   }
 
-  return (
-    <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-      <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold">Divisi & Hak Akses</h1>
-        <div className="flex items-center gap-2">
-          <Input
-            placeholder="Cari Divisi..."
-            value={query}
-            onChange={(e) => setQuery(e.currentTarget.value)}
-          />
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button variant="ghost" className="flex items-center gap-2">
-                <Plus size={16} /> Tambah Divisi
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Tambah Divisi</DialogTitle>
-                <DialogDescription>
-                  Buat divisi baru untuk penglolaan user.
-                </DialogDescription>
-              </DialogHeader>
-              <FieldGroup>
-                <Field>
-                  <FieldLabel>Nama Divisi</FieldLabel>
-                  <Input
-                    value={form.name}
-                    onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        name: e.currentTarget.value,
-                      }))
-                    }
-                  />
-                </Field>
-                <Field>
-                  <FieldLabel>Deskripsi</FieldLabel>
-                  <Input
-                    value={form.description}
-                    onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        description: e.currentTarget.value,
-                      }))
-                    }
-                  />
-                </Field>
-                <div className="flex items-center gap-3">
-                  <FieldLabel>Active</FieldLabel>
-                  <input
-                    type="checkbox"
-                    checked={form.active}
-                    onChange={(e) =>
-                      setForm((prev) => ({
-                        ...prev,
-                        active: e.currentTarget.checked,
-                      }))
-                    }
-                  />
-                </div>
-              </FieldGroup>
-              <DialogFooter>
-                <div className="flex justify-end w-full gap-2">
-                  <Button variant="outline" onClick={() => setOpen(false)}>
-                    Batalkan
-                  </Button>
-                  <Button onClick={handleAdd}>Tambah Divisi</Button>
-                </div>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
+  const tableData = filtered.map((row, index) => ({
+    ...row,
+    no: index + 1,
+  }));
 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Divisi</TableHead>
-            <TableHead>Deskripsi</TableHead>
-            <TableHead>Active</TableHead>
-            <TableHead>Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {filtered.map((row) => (
-            <TableRow key={row.id}>
-              <TableCell className="font-medium">{row.division}</TableCell>
-              <TableCell>{row.description}</TableCell>
-              <TableCell>
+  return (
+    <div className="flex flex-1 flex-col gap-4 p-4 pt-0 w-full min-w-0">
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="text-lg font-semibold">Divisi & Hak Akses</h1>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button variant="default" className="flex items-center gap-2">
+              <Plus size={16} /> Tambah Divisi
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Tambah Divisi</DialogTitle>
+              <DialogDescription>
+                Buat divisi baru untuk penglolaan user.
+              </DialogDescription>
+            </DialogHeader>
+            <FieldGroup>
+              <Field>
+                <FieldLabel>Nama Divisi</FieldLabel>
+                <Input
+                  value={form.name}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      name: e.currentTarget.value,
+                    }))
+                  }
+                />
+              </Field>
+              <Field>
+                <FieldLabel>Deskripsi</FieldLabel>
+                <Input
+                  value={form.description}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      description: e.currentTarget.value,
+                    }))
+                  }
+                />
+              </Field>
+              <div className="flex items-center gap-3">
+                <FieldLabel>Active</FieldLabel>
                 <input
                   type="checkbox"
-                  checked={row.active}
-                  onChange={() => toggleActive(row.id)}
-                  className="h-4 w-4 rounded"
-                  aria-label={`Active ${row.division}`}
+                  checked={form.active}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      active: e.currentTarget.checked,
+                    }))
+                  }
                 />
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" className="p-1">
-                    <Edit size={16} />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    className="p-1 text-destructive"
-                    onClick={() => removeRow(row.id)}
-                  >
-                    <Trash size={16} />
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-        <TableCaption>{filtered.length} divisi</TableCaption>
-      </Table>
+              </div>
+            </FieldGroup>
+            <DialogFooter>
+              <div className="flex justify-end w-full gap-2">
+                <Button variant="outline" onClick={() => setOpen(false)}>
+                  Batalkan
+                </Button>
+                <Button onClick={handleAdd}>Tambah Divisi</Button>
+              </div>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <PaginatedTable
+        data={tableData}
+        columns={[
+          {
+            header: "No",
+            key: "no",
+            render: (value) => <span className="text-gray-600">{String(value)}</span>,
+            searchable: false,
+          },
+          {
+            header: "Divisi",
+            key: "division",
+            render: (value) => <span className="font-medium">{String(value)}</span>,
+          },
+          {
+            header: "Deskripsi",
+            key: "description",
+          },
+          {
+            header: "Active",
+            key: "active",
+            render: (value, row: any) => (
+              <input
+                type="checkbox"
+                checked={value as boolean}
+                onChange={() => toggleActive(row.id)}
+                className="h-4 w-4 rounded"
+                aria-label={`Active ${row.division}`}
+              />
+            ),
+            searchable: false,
+          },
+          {
+            header: "Aksi",
+            key: "id",
+            render: (value) => (
+              <div className="flex items-center gap-2">
+                <button className="p-2 hover:bg-gray-100 rounded transition-colors">
+                  <Edit size={18} className="text-gray-600" />
+                </button>
+                <button
+                  className="p-2 hover:bg-gray-100 rounded transition-colors"
+                  onClick={() => removeRow(String(value))}
+                >
+                  <Trash size={18} className="text-gray-600" />
+                </button>
+              </div>
+            ),
+            searchable: false,
+          },
+        ]}
+        pageSize={10}
+        emptyMessage="Tidak ada divisi yang ditemukan"
+      />
     </div>
   );
 }
