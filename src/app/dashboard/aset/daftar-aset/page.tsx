@@ -3,15 +3,7 @@
 import * as React from "react";
 import { loadUsers, type User as StoreUser } from "@/lib/usersStore";
 import { loadAssets, saveAssets, type Asset } from "@/lib/assetsStore";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-  TableCaption,
-} from "@/components/ui/table";
+import { PaginatedTable, type ColumnDef } from "@/components/paginated-table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,7 +15,6 @@ import {
   DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectTrigger,
@@ -67,7 +58,6 @@ export default function DaftarAsetPage() {
     classification: CLASSIFICATIONS[0],
     ownerId: "NONE",
     location: "",
-    processes: "",
   });
 
   function handleAdd() {
@@ -77,11 +67,9 @@ export default function DaftarAsetPage() {
       name: form.name,
       type: form.type,
       classification: form.classification,
-  ownerId: form.ownerId === "NONE" ? undefined : form.ownerId,
+      ownerId: form.ownerId === "NONE" ? undefined : form.ownerId,
       location: form.location || undefined,
-      processes: form.processes
-        ? form.processes.split(",").map((s) => s.trim()).filter(Boolean)
-        : undefined,
+      status: "PENDING",
     };
     setAssets((prev) => {
       const next = [a, ...prev];
@@ -94,7 +82,6 @@ export default function DaftarAsetPage() {
       classification: CLASSIFICATIONS[0],
       ownerId: "",
       location: "",
-      processes: "",
     });
     setOpen(false);
   }
@@ -114,8 +101,8 @@ export default function DaftarAsetPage() {
         <div className="flex items-center gap-2">
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button variant="ghost" className="flex items-center gap-2">
-                <Plus size={16} /> Tambah
+              <Button className="flex items-center gap-2">
+                <Plus size={16} /> Tambah Aset
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -199,13 +186,6 @@ export default function DaftarAsetPage() {
                   />
                 </Field>
 
-                <Field>
-                  <FieldLabel>Keterkaitan Proses (pisahkan dengan koma)</FieldLabel>
-                  <Input
-                    value={form.processes}
-                    onChange={(e) => setForm((p) => ({ ...p, processes: e.currentTarget.value }))}
-                  />
-                </Field>
               </FieldGroup>
 
               <DialogFooter>
@@ -219,42 +199,100 @@ export default function DaftarAsetPage() {
         </div>
       </div>
 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Nama Aset</TableHead>
-            <TableHead>Tipe Aset</TableHead>
-            <TableHead>Klasifikasi</TableHead>
-            <TableHead>Pemilik</TableHead>
-            <TableHead>Lokasi</TableHead>
-            <TableHead>Keterkaitan Proses</TableHead>
-            <TableHead>Action</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {assets.map((a) => (
-            <TableRow key={a.id}>
-              <TableCell className="font-medium">{a.name}</TableCell>
-              <TableCell>{a.type}</TableCell>
-              <TableCell>{a.classification}</TableCell>
-              <TableCell>{users.find((u) => u.id === a.ownerId)?.name ?? "-"}</TableCell>
-              <TableCell>{a.location ?? "-"}</TableCell>
-              <TableCell>{(a.processes || []).join(", ") || "-"}</TableCell>
-              <TableCell>
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" className="p-1">
-                    <Edit size={16} />
-                  </Button>
-                  <Button variant="ghost" className="p-1 text-destructive" onClick={() => removeAsset(a.id)}>
-                    <Trash size={16} />
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-        <TableCaption>{assets.length} aset</TableCaption>
-      </Table>
+      <PaginatedTable<Asset>
+        data={assets}
+        columns={[
+          {
+            header: "No",
+            key: "id",
+            render: (_, row: Asset) => {
+              const index = assets.findIndex((a) => a.id === row.id);
+              return <span className="text-gray-600">{index + 1}</span>;
+            },
+            searchable: false,
+          },
+          {
+            header: "Nama Aset",
+            key: "name",
+            render: (value) => <span className="font-medium text-gray-900">{String(value)}</span>,
+          },
+          {
+            header: "Tipe",
+            key: "type",
+          },
+          {
+            header: "Klasifikasi",
+            key: "classification",
+          },
+          {
+            header: "Lokasi",
+            key: "location",
+          },
+          {
+            header: "Pemilik",
+            key: (row: Asset) => {
+              const owner = users.find((u) => u.id === row.ownerId);
+              return owner?.name ?? "-";
+            },
+          },
+          {
+            header: "Status",
+            key: "status",
+            render: (value) => {
+              const status = String(value || "PENDING");
+              let statusClass = "bg-gray-100 text-gray-700";
+              let statusLabel = status;
+
+              switch (status) {
+                case "PENDING":
+                  statusClass = "bg-yellow-100 text-yellow-700";
+                  statusLabel = "Pending";
+                  break;
+                case "APPROVED_BY_RM":
+                  statusClass = "bg-green-100 text-green-700";
+                  statusLabel = "Diterima RM";
+                  break;
+                case "SUBMITTED_TO_TOP":
+                  statusClass = "bg-blue-100 text-blue-700";
+                  statusLabel = "Diajukan ke Top";
+                  break;
+                case "APPROVED_BY_TOP":
+                  statusClass = "bg-green-100 text-green-700";
+                  statusLabel = "Disetujui Top";
+                  break;
+                case "REJECTED":
+                  statusClass = "bg-red-100 text-red-700";
+                  statusLabel = "Ditolak";
+                  break;
+              }
+
+              return (
+                <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${statusClass}`}>
+                  {statusLabel}
+                </span>
+              );
+            },
+            searchable: false,
+          },
+          {
+            header: "Aksi",
+            key: "id",
+            render: (_, row: Asset) => (
+              <div className="flex items-center gap-2">
+                <button className="p-2 hover:bg-gray-100 rounded transition-colors">
+                  <Trash size={18} className="text-gray-600" />
+                </button>
+                <button className="p-2 hover:bg-gray-100 rounded transition-colors">
+                  <Edit size={18} className="text-gray-600" />
+                </button>
+              </div>
+            ),
+            searchable: false,
+          },
+        ]}
+        pageSize={10}
+        emptyMessage="Belum ada aset yang terdaftar"
+      />
     </div>
   );
 }
