@@ -9,7 +9,10 @@ import {
   DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogTrigger,
 } from "@/components/ui/dialog";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardAction } from "@/components/ui/card";
+import { ProfileForm } from "@/components/profile-form";
 import ArrayItemDialog from "@/components/konteks/OrganizationArrayDialog";
 import ScopeSection from "@/components/konteks/ScopeSection";
 import StakeholdersSection from "@/components/konteks/StakeholdersSection";
@@ -98,6 +101,14 @@ const initialData: ContextData = {
 };
 
 export default function KonteksOrganisasiPage() {
+  // profile state
+  const [profile, setProfile] = useState({
+    name: "ManRisk Org.",
+    address: "Jl. Contoh No. 123",
+    email: "m@example.com",
+    phone: "+62 888-8888-8888",
+  });
+
   const [data, setData] = useState<ContextData>(initialData);
 
   // users store
@@ -380,6 +391,52 @@ export default function KonteksOrganisasiPage() {
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
       <h2 className="text-lg font-semibold">Konteks Organisasi</h2>
+
+      {/* Profile Card Section */}
+      <Card>
+        <CardHeader>
+          <div>
+            <CardTitle>{profile.name}</CardTitle>
+            <CardDescription>Informasi dasar instansi yang terdaftar</CardDescription>
+          </div>
+          <CardAction>
+            <Dialog>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Perbarui Profil Instansi</DialogTitle>
+                  <DialogDescription>Ubah informasi instansi Anda di sini.</DialogDescription>
+                </DialogHeader>
+                <ProfileForm
+                  initialValues={profile}
+                  onSubmitProfile={(values) => {
+                    setProfile(values)
+                  }}
+                  submitLabel="Simpan Perubahan"
+                />
+              </DialogContent>
+              <DialogTrigger asChild>
+                <Button variant="outline">Edit Profil</Button>
+              </DialogTrigger>
+            </Dialog>
+          </CardAction>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-2">
+            <div>
+              <div className="text-sm text-muted-foreground">Alamat</div>
+              <div className="font-medium">{profile.address}</div>
+            </div>
+            <div>
+              <div className="text-sm text-muted-foreground">Email</div>
+              <div className="font-medium">{profile.email}</div>
+            </div>
+            <div>
+              <div className="text-sm text-muted-foreground">Telepon</div>
+              <div className="font-medium">{profile.phone}</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <ScopeSection

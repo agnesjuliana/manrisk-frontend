@@ -44,6 +44,10 @@ export default function KriteriaRisikoPage() {
   const [scaleSize, setScaleSize] = useState<number>(5);
   const [likelihoodOpen, setLikelihoodOpen] = useState(false);
   const [impactOpen, setImpactOpen] = useState(false);
+  const [detectionOpen, setDetectionOpen] = useState(false);
+  const [occurrenceOpen, setOccurrenceOpen] = useState(false);
+  const [severityOpen, setSeverityOpen] = useState(false);
+  
   // editable labels for likelihood/impact, default 1..5 Indonesian labels
   const defaultLabels = [
     "Sangat Rendah",
@@ -58,10 +62,25 @@ export default function KriteriaRisikoPage() {
   const [impactLabels, setImpactLabels] = useState<string[]>(
     defaultLabels.slice(0, scaleSize)
   );
+  
+  // FMEA-specific labels
+  const [severityLabels, setSeverityLabels] = useState<string[]>(
+    defaultLabels.slice(0, scaleSize)
+  );
+  const [occurrenceLabels, setOccurrenceLabels] = useState<string[]>(
+    defaultLabels.slice(0, scaleSize)
+  );
+  const [detectionLabels, setDetectionLabels] = useState<string[]>(
+    defaultLabels.slice(0, scaleSize)
+  );
 
   // risk acceptance threshold (numeric). If risk <= threshold -> accepted
   const [threshold, setThreshold] = useState<number>(6);
   const [editingThreshold, setEditingThreshold] = useState(false);
+  
+  // RPN threshold for FMEA
+  const [rpnThreshold, setRpnThreshold] = useState<number>(100);
+  const [editingRpnThreshold, setEditingRpnThreshold] = useState(false);
 
   // regenerate arrays when scaleSize changes
   const scale = useMemo(
@@ -114,6 +133,9 @@ export default function KriteriaRisikoPage() {
   if (editingScale) {
     if (!likelihoodOpen) setLikelihoodOpen(true);
     if (!impactOpen) setImpactOpen(true);
+    if (useFmea && !detectionOpen) setDetectionOpen(true);
+    if (useFmea && !occurrenceOpen) setOccurrenceOpen(true);
+    if (useFmea && !severityOpen) setSeverityOpen(true);
   }
 
   return (
@@ -207,9 +229,13 @@ export default function KriteriaRisikoPage() {
             <CardHeader>
               <div className="flex items-center justify-between w-full">
                 <div>
-                  <CardTitle>Skala Likelihood & Impact</CardTitle>
+                  <CardTitle>
+                    {useFmea ? "Skala FMEA (S-O-D)" : "Skala Likelihood & Impact"}
+                  </CardTitle>
                   <CardDescription>
-                    Atur ukuran skala dan label untuk masing-masing (misal 1–5).
+                    {useFmea
+                      ? "Atur skala untuk Severity, Occurrence, dan Detection."
+                      : "Atur ukuran skala dan label untuk masing-masing (misal 1–5)."}
                   </CardDescription>
                 </div>
                 <div>
@@ -238,175 +264,389 @@ export default function KriteriaRisikoPage() {
                   />
                 </Field>
 
-                <Field>
-                  <FieldLabel>Likelihood (Skala 1..{scaleSize})</FieldLabel>
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      {editingScale || likelihoodOpen ? (
-                        <Collapsible
-                          open={editingScale || likelihoodOpen}
-                          onOpenChange={(v: boolean) => setLikelihoodOpen(v)}
-                        >
-                          <CollapsibleContent>
-                            <div className="grid grid-cols-1 gap-2 mt-2">
-                              {Array.from({ length: scaleSize }).map((_, i) => (
-                                <Input
-                                  readOnly={!editingScale}
-                                  className="w-full"
-                                  key={i}
-                                  value={
-                                    likelihoodLabels[i] ?? `Level ${i + 1}`
-                                  }
-                                  onChange={(e) =>
-                                    setLikelihoodLabels((s) => {
-                                      const copy = [...s];
-                                      copy[i] = e.target.value;
-                                      return copy;
-                                    })
-                                  }
-                                />
-                              ))}
+                {!useFmea ? (
+                  <>
+                    <Field>
+                      <FieldLabel>Likelihood (Skala 1..{scaleSize})</FieldLabel>
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          {editingScale || likelihoodOpen ? (
+                            <Collapsible
+                              open={editingScale || likelihoodOpen}
+                              onOpenChange={(v: boolean) => setLikelihoodOpen(v)}
+                            >
+                              <CollapsibleContent>
+                                <div className="grid grid-cols-1 gap-2 mt-2">
+                                  {Array.from({ length: scaleSize }).map((_, i) => (
+                                    <Input
+                                      readOnly={!editingScale}
+                                      className="w-full"
+                                      key={i}
+                                      value={
+                                        likelihoodLabels[i] ?? `Level ${i + 1}`
+                                      }
+                                      onChange={(e) =>
+                                        setLikelihoodLabels((s) => {
+                                          const copy = [...s];
+                                          copy[i] = e.target.value;
+                                          return copy;
+                                        })
+                                      }
+                                    />
+                                  ))}
+                                </div>
+                              </CollapsibleContent>
+                            </Collapsible>
+                          ) : (
+                            <div className="flex gap-2">
+                              <Input
+                                readOnly
+                                value={likelihoodLabels[0] ?? `Level 1`}
+                              />
+                              <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
+                                …
+                              </div>
+                              <Input
+                                readOnly
+                                value={
+                                  likelihoodLabels[scaleSize - 1] ??
+                                  `Level ${scaleSize}`
+                                }
+                              />
                             </div>
-                          </CollapsibleContent>
-                        </Collapsible>
-                      ) : (
-                        <div className="flex gap-2">
-                          <Input
-                            readOnly
-                            value={likelihoodLabels[0] ?? `Level 1`}
-                          />
-                          <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
-                            …
-                          </div>
-                          <Input
-                            readOnly
-                            value={
-                              likelihoodLabels[scaleSize - 1] ??
-                              `Level ${scaleSize}`
-                            }
-                          />
+                          )}
                         </div>
-                      )}
-                    </div>
-                    <div className="ml-2">
-                      <button
-                        aria-label="Toggle likelihood"
-                        className={`p-1 rounded hover:bg-muted/50`}
-                        onClick={() => setLikelihoodOpen((s) => !s)}
-                      >
-                        <ChevronRight
-                          className={`${
-                            editingScale || likelihoodOpen ? "rotate-90" : ""
-                          } transition-transform`}
-                        />
-                      </button>
-                    </div>
-                  </div>
-                </Field>
+                        <div className="ml-2">
+                          <button
+                            aria-label="Toggle likelihood"
+                            className={`p-1 rounded hover:bg-muted/50`}
+                            onClick={() => setLikelihoodOpen((s) => !s)}
+                          >
+                            <ChevronRight
+                              className={`${
+                                editingScale || likelihoodOpen ? "rotate-90" : ""
+                              } transition-transform`}
+                            />
+                          </button>
+                        </div>
+                      </div>
+                    </Field>
 
-                <Field>
-                  <FieldLabel>Impact (Skala 1..{scaleSize})</FieldLabel>
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      {editingScale || impactOpen ? (
-                        <Collapsible
-                          open={editingScale || impactOpen}
-                          onOpenChange={(v: boolean) => setImpactOpen(v)}
-                        >
-                          <CollapsibleContent>
-                            <div className="grid grid-cols-1 gap-2 mt-2">
-                              {Array.from({ length: scaleSize }).map((_, i) => (
-                                <Input
-                                  readOnly={!editingScale}
-                                  className="w-full"
-                                  key={i}
-                                  value={impactLabels[i] ?? `Level ${i + 1}`}
-                                  onChange={(e) =>
-                                    setImpactLabels((s) => {
-                                      const copy = [...s];
-                                      copy[i] = e.target.value;
-                                      return copy;
-                                    })
-                                  }
-                                />
-                              ))}
+                    <Field>
+                      <FieldLabel>Impact (Skala 1..{scaleSize})</FieldLabel>
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          {editingScale || impactOpen ? (
+                            <Collapsible
+                              open={editingScale || impactOpen}
+                              onOpenChange={(v: boolean) => setImpactOpen(v)}
+                            >
+                              <CollapsibleContent>
+                                <div className="grid grid-cols-1 gap-2 mt-2">
+                                  {Array.from({ length: scaleSize }).map((_, i) => (
+                                    <Input
+                                      readOnly={!editingScale}
+                                      className="w-full"
+                                      key={i}
+                                      value={impactLabels[i] ?? `Level ${i + 1}`}
+                                      onChange={(e) =>
+                                        setImpactLabels((s) => {
+                                          const copy = [...s];
+                                          copy[i] = e.target.value;
+                                          return copy;
+                                        })
+                                      }
+                                    />
+                                  ))}
+                                </div>
+                              </CollapsibleContent>
+                            </Collapsible>
+                          ) : (
+                            <div className="flex gap-2">
+                              <Input
+                                readOnly
+                                value={impactLabels[0] ?? `Level 1`}
+                              />
+                              <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
+                                …
+                              </div>
+                              <Input
+                                readOnly
+                                value={
+                                  impactLabels[scaleSize - 1] ??
+                                  `Level ${scaleSize}`
+                                }
+                              />
                             </div>
-                          </CollapsibleContent>
-                        </Collapsible>
-                      ) : (
-                        <div className="flex gap-2">
-                          <Input
-                            readOnly
-                            value={impactLabels[0] ?? `Level 1`}
-                          />
-                          <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
-                            …
-                          </div>
-                          <Input
-                            readOnly
-                            value={
-                              impactLabels[scaleSize - 1] ??
-                              `Level ${scaleSize}`
-                            }
-                          />
+                          )}
                         </div>
-                      )}
-                    </div>
-                    <div className="ml-2">
-                      <button
-                        aria-label="Toggle impact"
-                        className={`p-1 rounded hover:bg-muted/50`}
-                        onClick={() => setImpactOpen((s) => !s)}
-                      >
-                        <ChevronRight
-                          className={`${
-                            editingScale || impactOpen ? "rotate-90" : ""
-                          } transition-transform`}
-                        />
-                      </button>
-                    </div>
-                  </div>
-                </Field>
+                        <div className="ml-2">
+                          <button
+                            aria-label="Toggle impact"
+                            className={`p-1 rounded hover:bg-muted/50`}
+                            onClick={() => setImpactOpen((s) => !s)}
+                          >
+                            <ChevronRight
+                              className={`${
+                                editingScale || impactOpen ? "rotate-90" : ""
+                              } transition-transform`}
+                            />
+                          </button>
+                        </div>
+                      </div>
+                    </Field>
+                  </>
+                ) : (
+                  <>
+                    <Field>
+                      <FieldLabel>Severity (Skala 1..{scaleSize})</FieldLabel>
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          {editingScale || severityOpen ? (
+                            <Collapsible
+                              open={editingScale || severityOpen}
+                              onOpenChange={(v: boolean) => setSeverityOpen(v)}
+                            >
+                              <CollapsibleContent>
+                                <div className="grid grid-cols-1 gap-2 mt-2">
+                                  {Array.from({ length: scaleSize }).map((_, i) => (
+                                    <Input
+                                      readOnly={!editingScale}
+                                      className="w-full"
+                                      key={i}
+                                      value={
+                                        severityLabels[i] ?? `Level ${i + 1}`
+                                      }
+                                      onChange={(e) =>
+                                        setSeverityLabels((s) => {
+                                          const copy = [...s];
+                                          copy[i] = e.target.value;
+                                          return copy;
+                                        })
+                                      }
+                                    />
+                                  ))}
+                                </div>
+                              </CollapsibleContent>
+                            </Collapsible>
+                          ) : (
+                            <div className="flex gap-2">
+                              <Input
+                                readOnly
+                                value={severityLabels[0] ?? `Level 1`}
+                              />
+                              <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
+                                …
+                              </div>
+                              <Input
+                                readOnly
+                                value={
+                                  severityLabels[scaleSize - 1] ??
+                                  `Level ${scaleSize}`
+                                }
+                              />
+                            </div>
+                          )}
+                        </div>
+                        <div className="ml-2">
+                          <button
+                            aria-label="Toggle severity"
+                            className={`p-1 rounded hover:bg-muted/50`}
+                            onClick={() => setSeverityOpen((s) => !s)}
+                          >
+                            <ChevronRight
+                              className={`${
+                                editingScale || severityOpen ? "rotate-90" : ""
+                              } transition-transform`}
+                            />
+                          </button>
+                        </div>
+                      </div>
+                    </Field>
+
+                    <Field>
+                      <FieldLabel>Occurrence (Skala 1..{scaleSize})</FieldLabel>
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          {editingScale || occurrenceOpen ? (
+                            <Collapsible
+                              open={editingScale || occurrenceOpen}
+                              onOpenChange={(v: boolean) => setOccurrenceOpen(v)}
+                            >
+                              <CollapsibleContent>
+                                <div className="grid grid-cols-1 gap-2 mt-2">
+                                  {Array.from({ length: scaleSize }).map((_, i) => (
+                                    <Input
+                                      readOnly={!editingScale}
+                                      className="w-full"
+                                      key={i}
+                                      value={
+                                        occurrenceLabels[i] ?? `Level ${i + 1}`
+                                      }
+                                      onChange={(e) =>
+                                        setOccurrenceLabels((s) => {
+                                          const copy = [...s];
+                                          copy[i] = e.target.value;
+                                          return copy;
+                                        })
+                                      }
+                                    />
+                                  ))}
+                                </div>
+                              </CollapsibleContent>
+                            </Collapsible>
+                          ) : (
+                            <div className="flex gap-2">
+                              <Input
+                                readOnly
+                                value={occurrenceLabels[0] ?? `Level 1`}
+                              />
+                              <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
+                                …
+                              </div>
+                              <Input
+                                readOnly
+                                value={
+                                  occurrenceLabels[scaleSize - 1] ??
+                                  `Level ${scaleSize}`
+                                }
+                              />
+                            </div>
+                          )}
+                        </div>
+                        <div className="ml-2">
+                          <button
+                            aria-label="Toggle occurrence"
+                            className={`p-1 rounded hover:bg-muted/50`}
+                            onClick={() => setOccurrenceOpen((s) => !s)}
+                          >
+                            <ChevronRight
+                              className={`${
+                                editingScale || occurrenceOpen ? "rotate-90" : ""
+                              } transition-transform`}
+                            />
+                          </button>
+                        </div>
+                      </div>
+                    </Field>
+
+                    <Field>
+                      <FieldLabel>Detection (Skala 1..{scaleSize})</FieldLabel>
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          {editingScale || detectionOpen ? (
+                            <Collapsible
+                              open={editingScale || detectionOpen}
+                              onOpenChange={(v: boolean) => setDetectionOpen(v)}
+                            >
+                              <CollapsibleContent>
+                                <div className="grid grid-cols-1 gap-2 mt-2">
+                                  {Array.from({ length: scaleSize }).map((_, i) => (
+                                    <Input
+                                      readOnly={!editingScale}
+                                      className="w-full"
+                                      key={i}
+                                      value={
+                                        detectionLabels[i] ?? `Level ${i + 1}`
+                                      }
+                                      onChange={(e) =>
+                                        setDetectionLabels((s) => {
+                                          const copy = [...s];
+                                          copy[i] = e.target.value;
+                                          return copy;
+                                        })
+                                      }
+                                    />
+                                  ))}
+                                </div>
+                              </CollapsibleContent>
+                            </Collapsible>
+                          ) : (
+                            <div className="flex gap-2">
+                              <Input
+                                readOnly
+                                value={detectionLabels[0] ?? `Level 1`}
+                              />
+                              <div className="flex-1 flex items-center justify-center text-sm text-muted-foreground">
+                                …
+                              </div>
+                              <Input
+                                readOnly
+                                value={
+                                  detectionLabels[scaleSize - 1] ??
+                                  `Level ${scaleSize}`
+                                }
+                              />
+                            </div>
+                          )}
+                        </div>
+                        <div className="ml-2">
+                          <button
+                            aria-label="Toggle detection"
+                            className={`p-1 rounded hover:bg-muted/50`}
+                            onClick={() => setDetectionOpen((s) => !s)}
+                          >
+                            <ChevronRight
+                              className={`${
+                                editingScale || detectionOpen ? "rotate-90" : ""
+                              } transition-transform`}
+                            />
+                          </button>
+                        </div>
+                      </div>
+                    </Field>
+                  </>
+                )}
               </FieldGroup>
             </CardContent>
           </Card>
 
           <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between w-full">
-                  <div>
-                    <CardTitle>Threshold Risiko</CardTitle>
-                    <CardDescription>
-                      Atur nilai batas risiko yang dianggap diterima (≤ threshold =
-                      diterima).
-                    </CardDescription>
-                  </div>
-                  <div>
-                    <Button
-                      variant={editingThreshold ? "default" : "outline"}
-                      onClick={() => setEditingThreshold((s) => !s)}
-                    >
-                      {editingThreshold ? "Simpan" : "Edit"}
-                    </Button>
-                  </div>
+            <CardHeader>
+              <div className="flex items-center justify-between w-full">
+                <div>
+                  <CardTitle>
+                    {useFmea ? "Threshold RPN" : "Threshold Risiko"}
+                  </CardTitle>
+                  <CardDescription>
+                    {useFmea
+                      ? "Atur nilai batas RPN (Risk Priority Number) yang dianggap kritis."
+                      : "Atur nilai batas risiko yang dianggap diterima (≤ threshold = diterima)."}
+                  </CardDescription>
                 </div>
-              </CardHeader>
+                <div>
+                  <Button
+                    variant={useFmea ? (editingRpnThreshold ? "default" : "outline") : (editingThreshold ? "default" : "outline")}
+                    onClick={() => useFmea ? setEditingRpnThreshold((s) => !s) : setEditingThreshold((s) => !s)}
+                  >
+                    {useFmea ? (editingRpnThreshold ? "Simpan" : "Edit") : (editingThreshold ? "Simpan" : "Edit")}
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
             <CardContent>
               <FieldGroup>
                 <Field>
-                  <FieldLabel>Threshold</FieldLabel>
+                  <FieldLabel>
+                    {useFmea ? "Threshold RPN" : "Threshold"}
+                  </FieldLabel>
                   <Input
-                    readOnly={!editingThreshold}
+                    readOnly={useFmea ? !editingRpnThreshold : !editingThreshold}
                     type="number"
-                    value={threshold}
-                    onChange={(e) => setThreshold(Number(e.target.value))}
+                    value={useFmea ? rpnThreshold : threshold}
+                    onChange={(e) =>
+                      useFmea
+                        ? setRpnThreshold(Number(e.target.value))
+                        : setThreshold(Number(e.target.value))
+                    }
                     className="w-24"
                   />
                 </Field>
               </FieldGroup>
               <p className="text-sm text-muted-foreground mt-2">
-                Contoh: jika threshold = 6, maka semua kombinasi
-                likelihood*impact ≤ 6 dianggap diterima.
+                {useFmea
+                  ? "Contoh: jika threshold RPN = 100, maka semua perhitungan S×O×D ≥ 100 dianggap kritis."
+                  : "Contoh: jika threshold = 6, maka semua kombinasi likelihood*impact ≤ 6 dianggap diterima."}
               </p>
             </CardContent>
           </Card>
@@ -416,42 +656,87 @@ export default function KriteriaRisikoPage() {
       <Card>
         <CardHeader>
           <CardTitle>
-            Matriks Risiko ({scaleSize}x{scaleSize})
+            {useFmea 
+              ? `Tabel FMEA (S × O × D Hitung = RPN)` 
+              : `Matriks Risiko (${scaleSize}x${scaleSize})`}
           </CardTitle>
           <CardDescription>
-            Hasil perhitungan likelihood × impact berdasarkan skala yang
-            dipilih.
+            {useFmea
+              ? "Risk Priority Number (RPN) = Severity × Occurrence × Detection. Semakin tinggi RPN, semakin kritis."
+              : "Hasil perhitungan likelihood × impact berdasarkan skala yang dipilih."}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="overflow-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead />
-                  {scale.map((s) => (
-                    <TableHead key={s}>Impact {s}</TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {matrix.map((row, li) => (
-                  <TableRow key={li}>
-                    <TableCell className="font-medium">
-                      Likelihood {li + 1}
-                    </TableCell>
-                    {row.map((val, ii) => (
-                      <TableCell
-                        key={ii}
-                        className={`text-center ${riskColor(val)} rounded`}
-                      >
-                        {val}
-                      </TableCell>
+            {useFmea ? (
+              // FMEA Table View
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>No</TableHead>
+                    <TableHead>Severity</TableHead>
+                    <TableHead>Occurrence</TableHead>
+                    <TableHead>Detection</TableHead>
+                    <TableHead className="text-center">RPN</TableHead>
+                    <TableHead className="text-center">Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {Array.from({ length: Math.min(5, scaleSize) }).map((_, idx) => {
+                    const s = idx + 2;
+                    const o = idx + 2;
+                    const d = idx + 2;
+                    const rpn = s * o * d;
+                    const isCritical = rpn >= rpnThreshold;
+                    return (
+                      <TableRow key={idx}>
+                        <TableCell className="font-medium">{idx + 1}</TableCell>
+                        <TableCell>{severityLabels[s - 1] || `Level ${s}`}</TableCell>
+                        <TableCell>{occurrenceLabels[o - 1] || `Level ${o}`}</TableCell>
+                        <TableCell>{detectionLabels[d - 1] || `Level ${d}`}</TableCell>
+                        <TableCell className={`text-center font-semibold ${isCritical ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"} rounded`}>
+                          {rpn}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <span className={`text-xs px-2 py-1 rounded ${isCritical ? "bg-red-200 text-red-700" : "bg-green-200 text-green-700"}`}>
+                            {isCritical ? "🔴 Kritis" : "🟢 Normal"}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            ) : (
+              // Traditional Risk Matrix
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead />
+                    {scale.map((s) => (
+                      <TableHead key={s}>Impact {s}</TableHead>
                     ))}
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {matrix.map((row, li) => (
+                    <TableRow key={li}>
+                      <TableCell className="font-medium">
+                        Likelihood {li + 1}
+                      </TableCell>
+                      {row.map((val, ii) => (
+                        <TableCell
+                          key={ii}
+                          className={`text-center ${riskColor(val)} rounded`}
+                        >
+                          {val}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
           </div>
         </CardContent>
       </Card>

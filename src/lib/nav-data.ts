@@ -34,11 +34,6 @@ export const navMain = [
     icon: Building,
     items: [
       {
-        title: "Profil Instansi",
-        url: "/dashboard/organisasi/profil-instansi",
-        accessRole: ["RISK_MANAGER", "ADMIN"],
-      },
-      {
         title: "Konteks Organisasi",
         url: "/dashboard/organisasi/konteks-organisasi",
         accessRole: ["RISK_MANAGER"],
