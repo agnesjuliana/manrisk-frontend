@@ -47,7 +47,7 @@ export default function BuatAjuanRmPage() {
     allSubmissions.push(submission);
     saveSubmissions(allSubmissions);
 
-    router.push("/dashboard/aset/persetujuan-aset/rm-view/history");
+    router.push("/dashboard/aset/persetujuan-aset/rm-view");
   }
 
   return (
@@ -55,7 +55,7 @@ export default function BuatAjuanRmPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Buat Pengajuan ke Top Management</h1>
         <Button
-          onClick={() => router.push("/dashboard/aset/persetujuan-aset/rm-view/history")}
+          onClick={() => router.push("/dashboard/aset/persetujuan-aset/rm-view")}
           variant="outline"
           className="flex items-center gap-2"
         >
@@ -115,7 +115,7 @@ export default function BuatAjuanRmPage() {
 
       <div className="flex gap-2 justify-end">
         <Button
-          onClick={() => router.push("/dashboard/aset/persetujuan-aset/rm-view/history")}
+          onClick={() => router.push("/dashboard/aset/persetujuan-aset/rm-view")}
           variant="outline"
         >
           Batal
