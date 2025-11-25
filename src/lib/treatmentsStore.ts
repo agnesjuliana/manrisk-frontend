@@ -18,7 +18,32 @@ export type Treatment = {
 
 const STORAGE_KEY = "isms:treatments:v1";
 
-const DEFAULT_TREATMENTS: Treatment[] = [];
+const DEFAULT_TREATMENTS: Treatment[] = [
+  {
+    id: "T001",
+    riskId: "R001",
+    option: "Mitigate",
+    target: { likelihood: 2, impact: 2 },
+    reason: "Implementasi backup system redundancy",
+    controls: ["A.12.3", "A.17.1"],
+    controlJustification: "Backup redundancy dan disaster recovery planning akan mengurangi likelihood downtime",
+    createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+    status: "SET",
+    approvalStatus: "APPROVED",
+  },
+  {
+    id: "T002",
+    riskId: "R002",
+    option: "Mitigate",
+    target: { likelihood: 1, impact: 3 },
+    reason: "Implementasi enkripsi end-to-end dan key management",
+    controls: ["A.10.1", "A.10.2"],
+    controlJustification: "Enkripsi strong akan mencegah pencurian data meskipun threat level tinggi",
+    createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+    status: "SET",
+    approvalStatus: "APPROVED",
+  },
+];
 
 export function loadTreatments(): Treatment[] {
   try {

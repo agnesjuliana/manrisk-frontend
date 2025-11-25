@@ -130,7 +130,7 @@ export default function DaftarRisikoPage() {
         <h1 className="text-2xl font-semibold">Daftar Risiko & Assessment</h1>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button variant="ghost" className="flex items-center gap-2"><Plus size={16} /> Tambah Risiko</Button>
+            <Button variant="default" className="flex items-center gap-2"><Plus size={16} /> Tambah Risiko</Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
