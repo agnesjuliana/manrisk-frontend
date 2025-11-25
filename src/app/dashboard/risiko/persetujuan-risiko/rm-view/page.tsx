@@ -1,130 +1,98 @@
 "use client";
 
 import * as React from "react";
-import { loadRisks, saveRisks, type Risk } from "@/lib/risksStore";
-import { loadUsers } from "@/lib/usersStore";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-  TableCaption,
-} from "@/components/ui/table";
+import { useRouter } from "next/navigation";
+import { loadSubmissions } from "@/lib/risksSubmissionStore";
+import { PaginatedTable } from "@/components/paginated-table";
 import { Button } from "@/components/ui/button";
-import { Trash } from "lucide-react";
+import { Plus } from "lucide-react";
 
 export default function RmRiskApprovalPage() {
-  const [risks, setRisks] = React.useState<Risk[]>(() => {
+  const router = useRouter();
+  const [submissions, setSubmissions] = React.useState(() => {
     if (typeof window === "undefined") return [];
-    return loadRisks();
+    return loadSubmissions();
   });
 
-  const users = loadUsers();
-  const [selected, setSelected] = React.useState<Set<string>>(new Set());
-
-  function toggle(id: string) {
-    setSelected((prev) => {
-      const copy = new Set(prev);
-      if (copy.has(id)) copy.delete(id);
-      else copy.add(id);
-      return copy;
-    });
+  function getStatusBadgeColor(status?: string) {
+    switch (status) {
+      case "PENDING_RM_REVIEW":
+        return "bg-yellow-100 text-yellow-700";
+      case "APPROVED_BY_RM":
+        return "bg-green-100 text-green-700";
+      case "SUBMITTED_TO_TOP":
+        return "bg-blue-100 text-blue-700";
+      case "APPROVED_BY_TOP":
+        return "bg-green-100 text-green-700";
+      case "REJECTED":
+        return "bg-red-100 text-red-700";
+      default:
+        return "bg-gray-100 text-gray-700";
+    }
   }
 
-  function approveSelected() {
-    setRisks((prev) => {
-      const next = prev.map((r) =>
-        selected.has(r.id) ? { ...r, status: ("APPROVED" as Risk["status"]) } : r
-      );
-      saveRisks(next);
-      return next;
-    });
-    setSelected(new Set());
-  }
-
-  function submitToTop() {
-    setRisks((prev) => {
-      const next = prev.map((r) =>
-        r.status === "APPROVED" ? { ...r, status: ("SUBMITTED" as Risk["status"]) } : r
-      );
-      saveRisks(next);
-      return next;
-    });
-  }
-
-  function remove(id: string) {
-    setRisks((prev) => {
-      const next = prev.filter((r) => r.id !== id);
-      saveRisks(next);
-      return next;
+  function formatDate(isoString: string) {
+    return new Date(isoString).toLocaleDateString("id-ID", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+    <div className="flex flex-1 flex-col gap-4 p-4 pt-0 w-full min-w-0">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Persetujuan Risiko (Risk Manager)</h1>
-        <div className="flex gap-2">
-          <Button onClick={approveSelected} disabled={selected.size === 0}>
-            Setujui yang dipilih
-          </Button>
-          <Button variant="outline" onClick={submitToTop}>
-            Ajukan ke Top Management
-          </Button>
-        </div>
+        <h1 className="text-2xl font-semibold">Pengajuan Persetujuan Risiko</h1>
+        <Button
+          onClick={() => router.push("/dashboard/risiko/persetujuan-risiko/rm-view/buat-ajuan")}
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+        >
+          <Plus size={18} />
+          Buat Pengajuan Baru
+        </Button>
       </div>
 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>
-              <input
-                type="checkbox"
-                checked={
-                  risks.filter((r) => r.status === "DRAFT").length > 0 &&
-                  selected.size === risks.filter((r) => r.status === "DRAFT").length
-                }
-                onChange={(e) => {
-                  if (e.currentTarget.checked) {
-                    const all = new Set(risks.filter((r) => r.status === "DRAFT").map((r) => r.id));
-                    setSelected(all);
-                  } else setSelected(new Set());
-                }}
-              />
-            </TableHead>
-            <TableHead>Risk ID</TableHead>
-            <TableHead>Identified Risk</TableHead>
-            <TableHead>Owner</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Action</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {risks.map((r) => (
-            <TableRow key={r.id}>
-              <TableCell>
-                {r.status === "DRAFT" ? (
-                  <input type="checkbox" checked={selected.has(r.id)} onChange={() => toggle(r.id)} />
-                ) : null}
-              </TableCell>
-              <TableCell className="font-medium">{r.id}</TableCell>
-              <TableCell>{r.identifiedRisk}</TableCell>
-              <TableCell>{users.find((u) => u.id === r.ownerId)?.name ?? r.unit ?? "-"}</TableCell>
-              <TableCell>{r.status}</TableCell>
-              <TableCell>
-                <div className="flex gap-2">
-                  <Button variant="ghost" className="text-destructive" onClick={() => remove(r.id)}>
-                    <Trash />
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-        <TableCaption>{risks.length} risiko</TableCaption>
-      </Table>
+      <PaginatedTable
+        data={submissions}
+        columns={[
+          {
+            header: "No",
+            key: "id",
+            render: (_, row) => {
+              const index = submissions.findIndex((s) => s.id === row.id);
+              return <span className="text-gray-600">{index + 1}</span>;
+            },
+            searchable: false,
+          },
+          {
+            header: "Tanggal Pengajuan",
+            key: "submissionDate",
+            render: (value) => formatDate(String(value)),
+          },
+          {
+            header: "Jumlah Risiko",
+            key: "totalRisks",
+            render: (value) => `${value} risiko`,
+          },
+          {
+            header: "Status",
+            key: "status",
+            render: (value) => (
+              <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(String(value))}`}>
+                {String(value)}
+              </span>
+            ),
+            searchable: false,
+          },
+          {
+            header: "Catatan RM",
+            key: "rmNotes",
+            render: (value) => <span className="text-sm">{String(value || "-")}</span>,
+          },
+        ]}
+        pageSize={10}
+        emptyMessage="Belum ada pengajuan persetujuan risiko"
+      />
     </div>
   );
 }

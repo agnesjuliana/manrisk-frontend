@@ -3,15 +3,7 @@
 import * as React from "react";
 import { loadUsers, type User as StoreUser } from "@/lib/usersStore";
 import { loadRisks, saveRisks, type Risk } from "@/lib/risksStore";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-  TableCaption,
-} from "@/components/ui/table";
+import { PaginatedTable } from "@/components/paginated-table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -133,8 +125,8 @@ export default function DaftarRisikoPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-      <div className="flex items-center justify-between gap-4">
+    <div className="flex flex-1 flex-col gap-4 p-4 pt-0 w-full min-w-0">
+      <div className="flex items-center justify-between gap-4 flex-shrink-0">
         <h1 className="text-2xl font-semibold">Daftar Risiko & Assessment</h1>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
@@ -258,57 +250,135 @@ export default function DaftarRisikoPage() {
         </Dialog>
       </div>
 
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Risk ID</TableHead>
-            <TableHead>Category</TableHead>
-            <TableHead>Identified Risk</TableHead>
-            <TableHead>CIA</TableHead>
-            <TableHead>Unit/Owner</TableHead>
-            <TableHead>Identified At</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Severity</TableHead>
-            <TableHead>Likelihood</TableHead>
-            <TableHead>Risk Score</TableHead>
-            <TableHead>Risk Level</TableHead>
-            <TableHead>RPN</TableHead>
-            <TableHead>Priority</TableHead>
-            <TableHead>Action</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {risks.map((r) => {
-            const score = computeRiskScore(r.severity, r.likelihood);
-            const level = computeRiskLevel(score);
-            const rpn = computeRpn(r.severity, r.likelihood, r.detection);
-            return (
-              <TableRow key={r.id}>
-                <TableCell className="font-medium">{r.id}</TableCell>
-                <TableCell>{r.category}</TableCell>
-                <TableCell>{r.identifiedRisk}</TableCell>
-                <TableCell>{r.cia.join(", ")}</TableCell>
-                <TableCell>{users.find((u) => u.id === r.ownerId)?.name ?? r.unit ?? "-"}</TableCell>
-                <TableCell>{new Date(r.identifiedAt).toLocaleDateString()}</TableCell>
-                <TableCell>{r.status}</TableCell>
-                <TableCell>{r.severity}</TableCell>
-                <TableCell>{r.likelihood}</TableCell>
-                <TableCell>{score}</TableCell>
-                <TableCell>{level}</TableCell>
-                <TableCell>{rpn ?? "-"}</TableCell>
-                <TableCell>{r.priority ?? "-"}</TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <Button variant="ghost" className="p-1"><Edit size={16} /></Button>
-                    <Button variant="ghost" className="p-1 text-destructive" onClick={() => removeRisk(r.id)}><Trash size={16} /></Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-        <TableCaption>{risks.length} risiko</TableCaption>
-      </Table>
+      <PaginatedTable<Risk>
+        data={risks}
+        columns={[
+          {
+            header: "No",
+            key: "id",
+            render: (_, row) => {
+              const index = risks.findIndex((r) => r.id === row.id);
+              return <span className="text-gray-600">{index + 1}</span>;
+            },
+            searchable: false,
+          },
+          {
+            header: "Risk ID",
+            key: "id",
+            render: (value) => <span className="font-medium">{String(value)}</span>,
+          },
+          {
+            header: "Kategori",
+            key: "category",
+          },
+          {
+            header: "Risiko Teridentifikasi",
+            key: "identifiedRisk",
+          },
+          {
+            header: "CIA Impact",
+            key: "cia",
+            render: (value) => <span>{Array.isArray(value) ? (value as string[]).join(", ") : "-"}</span>,
+          },
+          {
+            header: "Owner",
+            key: (row) => users.find((u) => u.id === row.ownerId)?.name ?? row.unit ?? "-",
+          },
+          {
+            header: "Tanggal Identifikasi",
+            key: "identifiedAt",
+            render: (value) => new Date(String(value)).toLocaleDateString("id-ID"),
+          },
+          {
+            header: "Status",
+            key: "status",
+            render: (value) => {
+              const status = String(value || "DRAFT");
+              const statusClass = status === "DRAFT" 
+                ? "bg-gray-100 text-gray-700" 
+                : status === "APPROVED"
+                ? "bg-green-100 text-green-700"
+                : "bg-yellow-100 text-yellow-700";
+              return (
+                <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${statusClass}`}>
+                  {status}
+                </span>
+              );
+            },
+            searchable: false,
+          },
+          {
+            header: "Severity",
+            key: "severity",
+            render: (value) => <span className="text-center">{String(value)}</span>,
+            searchable: false,
+          },
+          {
+            header: "Likelihood",
+            key: "likelihood",
+            render: (value) => <span className="text-center">{String(value)}</span>,
+            searchable: false,
+          },
+          {
+            header: "Risk Score",
+            key: (row) => computeRiskScore(row.severity, row.likelihood),
+            render: (value) => <span className="text-center font-medium">{String(value)}</span>,
+            searchable: false,
+          },
+          {
+            header: "Risk Level",
+            key: (row) => computeRiskLevel(computeRiskScore(row.severity, row.likelihood)),
+            render: (value) => {
+              const level = String(value);
+              const levelClass = level === "Critical"
+                ? "bg-red-100 text-red-700"
+                : level === "High"
+                ? "bg-orange-100 text-orange-700"
+                : level === "Medium"
+                ? "bg-yellow-100 text-yellow-700"
+                : "bg-green-100 text-green-700";
+              return (
+                <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${levelClass}`}>
+                  {level}
+                </span>
+              );
+            },
+            searchable: false,
+          },
+          {
+            header: "RPN",
+            key: (row) => computeRpn(row.severity, row.likelihood, row.detection) ?? "-",
+            render: (value) => <span className="text-center">{String(value)}</span>,
+            searchable: false,
+          },
+          {
+            header: "Priority",
+            key: "priority",
+            render: (value) => <span className="text-center">{String(value ?? "-")}</span>,
+            searchable: false,
+          },
+          {
+            header: "Aksi",
+            key: "id",
+            render: (_, row) => (
+              <div className="flex items-center gap-2">
+                <button className="p-2 hover:bg-gray-100 rounded transition-colors">
+                  <Edit size={18} className="text-gray-600" />
+                </button>
+                <button
+                  className="p-2 hover:bg-gray-100 rounded transition-colors"
+                  onClick={() => removeRisk(row.id)}
+                >
+                  <Trash size={18} className="text-gray-600" />
+                </button>
+              </div>
+            ),
+            searchable: false,
+          },
+        ]}
+        pageSize={10}
+        emptyMessage="Belum ada risiko yang terdaftar"
+      />
     </div>
   );
 }
