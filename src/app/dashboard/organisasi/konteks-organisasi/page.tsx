@@ -389,19 +389,24 @@ export default function KonteksOrganisasiPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-      <h2 className="text-lg font-semibold">Konteks Organisasi</h2>
+    <div className="flex flex-1 flex-col gap-6 p-4 pt-0 w-full min-w-0">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">Konteks Organisasi</h1>
+          <p className="text-sm text-gray-600 mt-1">Kelola konteks dan strategi keamanan informasi organisasi</p>
+        </div>
+      </div>
 
       {/* Profile Card Section */}
-      <Card>
-        <CardHeader>
-          <div>
-            <CardTitle>{profile.name}</CardTitle>
-            <CardDescription>Informasi dasar instansi yang terdaftar</CardDescription>
-          </div>
-          <CardAction>
+      <Card className="border border-gray-200 shadow-sm">
+        <CardHeader className="border-b border-gray-200 bg-white pb-4">
+          <div className="flex items-start justify-between">
+            <div>
+              <CardTitle className="text-xl text-gray-900">{profile.name}</CardTitle>
+              <CardDescription className="text-gray-500 mt-1">Informasi dasar instansi yang terdaftar</CardDescription>
+            </div>
             <Dialog>
-              <DialogContent>
+              <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
                   <DialogTitle>Perbarui Profil Instansi</DialogTitle>
                   <DialogDescription>Ubah informasi instansi Anda di sini.</DialogDescription>
@@ -415,30 +420,30 @@ export default function KonteksOrganisasiPage() {
                 />
               </DialogContent>
               <DialogTrigger asChild>
-                <Button variant="outline">Edit Profil</Button>
+                <Button variant="outline" size="sm">Edit Profil</Button>
               </DialogTrigger>
             </Dialog>
-          </CardAction>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-2">
-            <div>
-              <div className="text-sm text-muted-foreground">Alamat</div>
-              <div className="font-medium">{profile.address}</div>
+          <div className="grid gap-6 md:grid-cols-3">
+            <div className="p-4 rounded-lg bg-white border border-gray-200 hover:border-gray-300 transition-colors">
+              <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Alamat</div>
+              <div className="font-medium text-gray-900 mt-2">{profile.address}</div>
             </div>
-            <div>
-              <div className="text-sm text-muted-foreground">Email</div>
-              <div className="font-medium">{profile.email}</div>
+            <div className="p-4 rounded-lg bg-white border border-gray-200 hover:border-gray-300 transition-colors">
+              <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Email</div>
+              <div className="font-medium text-gray-900 mt-2">{profile.email}</div>
             </div>
-            <div>
-              <div className="text-sm text-muted-foreground">Telepon</div>
-              <div className="font-medium">{profile.phone}</div>
+            <div className="p-4 rounded-lg bg-white border border-gray-200 hover:border-gray-300 transition-colors">
+              <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Telepon</div>
+              <div className="font-medium text-gray-900 mt-2">{profile.phone}</div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <ScopeSection
           technical_bounds={data.scope.technical_bounds}
           openAddModal={openAddModal}
@@ -477,15 +482,15 @@ export default function KonteksOrganisasiPage() {
       >
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Edit CIA Objectives</DialogTitle>
+            <DialogTitle className="text-xl">Edit Objektif CIA</DialogTitle>
             <DialogDescription>
               Ubah Confidentiality, Integrity, dan Availability sekaligus.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-3">
-            <div>
-              <Label>Confidentiality</Label>
+          <div className="grid gap-4">
+            <div className="space-y-2">
+              <Label className="font-semibold text-gray-900">Confidentiality</Label>
               <Textarea
                 value={ciaDraft.confidentiality}
                 onChange={(e) =>
@@ -494,33 +499,36 @@ export default function KonteksOrganisasiPage() {
                     confidentiality: e.target.value,
                   }))
                 }
+                className="min-h-20"
               />
             </div>
-            <div>
-              <Label>Integrity</Label>
+            <div className="space-y-2">
+              <Label className="font-semibold text-gray-900">Integrity</Label>
               <Textarea
                 value={ciaDraft.integrity}
                 onChange={(e) =>
                   setCiaDraft((d) => ({ ...d, integrity: e.target.value }))
                 }
+                className="min-h-20"
               />
             </div>
-            <div>
-              <Label>Availability</Label>
+            <div className="space-y-2">
+              <Label className="font-semibold text-gray-900">Availability</Label>
               <Textarea
                 value={ciaDraft.availability}
                 onChange={(e) =>
                   setCiaDraft((d) => ({ ...d, availability: e.target.value }))
                 }
+                className="min-h-20"
               />
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="gap-2">
             <Button variant="outline" onClick={closeCiaEdit}>
               Batal
             </Button>
-            <Button onClick={saveCiaEdit}>Simpan</Button>
+            <Button onClick={saveCiaEdit}>Simpan Perubahan</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -530,27 +538,28 @@ export default function KonteksOrganisasiPage() {
         open={!!editingSection}
         onOpenChange={(v) => (v ? null : closeEdit())}
       >
-        <DialogContent>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Edit {editingSection}</DialogTitle>
+            <DialogTitle className="text-xl">Edit {editingSection}</DialogTitle>
             <DialogDescription>
               Ubah detail untuk bagian ini lalu simpan.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-2">
-            <Label>Isi</Label>
-            <Input
+          <div className="space-y-2">
+            <Label className="font-semibold text-gray-900">Isi</Label>
+            <Textarea
               value={draftText}
               onChange={(e) => setDraftText(e.target.value)}
+              className="min-h-24"
             />
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="gap-2">
             <Button variant="outline" onClick={closeEdit}>
               Batal
             </Button>
-            <Button onClick={saveEdit}>Simpan</Button>
+            <Button onClick={saveEdit}>Simpan Perubahan</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -562,33 +571,33 @@ export default function KonteksOrganisasiPage() {
       >
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Edit Pengguna</DialogTitle>
-            <DialogDescription>Ubah data pengguna internal</DialogDescription>
+            <DialogTitle className="text-xl">Edit Pengguna</DialogTitle>
+            <DialogDescription>Ubah data pengguna internal stakeholder</DialogDescription>
           </DialogHeader>
-          <div className="grid gap-2">
-            <div>
-              <Label>Nama</Label>
+          <div className="grid gap-4">
+            <div className="space-y-2">
+              <Label className="font-semibold text-gray-900">Nama</Label>
               <Input
                 value={userForm?.name ?? ""}
                 onChange={(e) =>
                   setUserForm((p) => (p ? { ...p, name: e.target.value } : p))
                 }
+                className="border-gray-300"
               />
             </div>
-            <div>
-              <Label>Password</Label>
+            <div className="space-y-2">
+              <Label className="font-semibold text-gray-900">Email</Label>
               <Input
-                type="password"
-                value={userForm?.password ?? ""}
+                type="email"
+                value={userForm?.email ?? ""}
                 onChange={(e) =>
-                  setUserForm((p) =>
-                    p ? { ...p, password: e.target.value } : p
-                  )
+                  setUserForm((p) => (p ? { ...p, email: e.target.value } : p))
                 }
+                className="border-gray-300"
               />
             </div>
-            <div>
-              <Label>Role</Label>
+            <div className="space-y-2">
+              <Label className="font-semibold text-gray-900">Role</Label>
               <Input
                 value={userForm?.role ?? ""}
                 onChange={(e) =>
@@ -596,10 +605,11 @@ export default function KonteksOrganisasiPage() {
                     p ? { ...p, role: e.target.value as StoreMainRole } : p
                   )
                 }
+                className="border-gray-300"
               />
             </div>
-            <div>
-              <Label>Divisi</Label>
+            <div className="space-y-2">
+              <Label className="font-semibold text-gray-900">Divisi</Label>
               <Input
                 value={userForm?.division ?? ""}
                 onChange={(e) =>
@@ -607,14 +617,15 @@ export default function KonteksOrganisasiPage() {
                     p ? { ...p, division: e.target.value } : p
                   )
                 }
+                className="border-gray-300"
               />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="ghost" onClick={closeUserEdit}>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={closeUserEdit}>
               Batal
             </Button>
-            <Button onClick={saveUserEdit}>Simpan</Button>
+            <Button onClick={saveUserEdit}>Simpan Perubahan</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -16,7 +16,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { Label } from "@/components/ui/label";
-import { PencilIcon, TrashIcon } from "lucide-react";
+import { Edit, Trash } from "lucide-react";
 
 export default function RegulationsSection({
   selected,
@@ -51,7 +51,7 @@ export default function RegulationsSection({
           </div>
           <Table>
             <TableHeader>
-              <TableRow>
+              <TableRow className="bg-gray-50">
                 <TableHead>No</TableHead>
                 <TableHead>Regulasi</TableHead>
                 <TableHead>Aksi</TableHead>
@@ -63,23 +63,21 @@ export default function RegulationsSection({
                   <TableCell className="w-8">{i + 1}</TableCell>
                   <TableCell>{r}</TableCell>
                   <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="ghost"
+                    <div className="flex items-center gap-2">
+                      <button
+                        className="p-2 hover:bg-gray-100 rounded transition-colors"
                         onClick={() => openEditRow("regulations.selected", i)}
                       >
-                        <PencilIcon />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
+                        <Edit size={18} className="text-gray-600" />
+                      </button>
+                      <button
+                        className="p-2 hover:bg-gray-100 rounded transition-colors"
                         onClick={() =>
                           removeArrayItem("regulations.selected", i)
                         }
                       >
-                        <TrashIcon />
-                      </Button>
+                        <Trash size={18} className="text-gray-600" />
+                      </button>
                     </div>
                   </TableCell>
                 </TableRow>

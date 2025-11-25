@@ -15,7 +15,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { PencilIcon, TrashIcon } from "lucide-react";
+import { Edit, Trash } from "lucide-react";
 
 export default function StakeholdersSection({
   users,
@@ -46,7 +46,7 @@ export default function StakeholdersSection({
 
           <Table>
             <TableHeader>
-              <TableRow>
+              <TableRow className="bg-gray-50">
                 <TableHead>No</TableHead>
                 <TableHead>Nama</TableHead>
                 <TableHead>Role</TableHead>
@@ -80,7 +80,7 @@ export default function StakeholdersSection({
 
           <Table>
             <TableHeader>
-              <TableRow>
+              <TableRow className="bg-gray-50">
                 <TableHead>No</TableHead>
                 <TableHead>Nama</TableHead>
                 <TableHead>Interest</TableHead>
@@ -94,23 +94,21 @@ export default function StakeholdersSection({
                   <TableCell>{s.name}</TableCell>
                   <TableCell>{s.interest}</TableCell>
                   <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="ghost"
+                    <div className="flex items-center gap-2">
+                      <button
+                        className="p-2 hover:bg-gray-100 rounded transition-colors"
                         onClick={() => openEditRow("stakeholders.external", i)}
                       >
-                        <PencilIcon />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
+                        <Edit size={18} className="text-gray-600" />
+                      </button>
+                      <button
+                        className="p-2 hover:bg-gray-100 rounded transition-colors"
                         onClick={() =>
                           removeArrayItem("stakeholders.external", i)
                         }
                       >
-                        <TrashIcon />
-                      </Button>
+                        <Trash size={18} className="text-gray-600" />
+                      </button>
                     </div>
                   </TableCell>
                 </TableRow>

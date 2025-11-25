@@ -17,7 +17,7 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
-import { PencilIcon, TrashIcon } from "lucide-react";
+import { Edit, Trash } from "lucide-react";
 
 export default function CiaSection({
   cia,
@@ -73,7 +73,7 @@ export default function CiaSection({
 
           <Table>
             <TableHeader>
-              <TableRow>
+              <TableRow className="bg-gray-50">
                 <TableHead>No</TableHead>
                 <TableHead>Service</TableHead>
                 <TableHead>C</TableHead>
@@ -91,23 +91,21 @@ export default function CiaSection({
                   <TableCell>{s.I}</TableCell>
                   <TableCell>{s.A}</TableCell>
                   <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        size="sm"
-                        variant="ghost"
+                    <div className="flex items-center gap-2">
+                      <button
+                        className="p-2 hover:bg-gray-100 rounded transition-colors"
                         onClick={() => openEditRow("cia.service_priorities", i)}
                       >
-                        <PencilIcon />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
+                        <Edit size={18} className="text-gray-600" />
+                      </button>
+                      <button
+                        className="p-2 hover:bg-gray-100 rounded transition-colors"
                         onClick={() =>
                           removeArrayItem("cia.service_priorities", i)
                         }
                       >
-                        <TrashIcon />
-                      </Button>
+                        <Trash size={18} className="text-gray-600" />
+                      </button>
                     </div>
                   </TableCell>
                 </TableRow>

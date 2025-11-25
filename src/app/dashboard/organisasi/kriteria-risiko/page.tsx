@@ -672,7 +672,7 @@ export default function KriteriaRisikoPage() {
               // FMEA Table View
               <Table>
                 <TableHeader>
-                  <TableRow>
+                  <TableRow className="bg-gray-50">
                     <TableHead>No</TableHead>
                     <TableHead>Severity</TableHead>
                     <TableHead>Occurrence</TableHead>
@@ -709,33 +709,35 @@ export default function KriteriaRisikoPage() {
               </Table>
             ) : (
               // Traditional Risk Matrix
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead />
+              <table className="w-full table-fixed border-collapse">
+                <thead>
+                  <tr>
+                    <th className="w-24 border border-gray-200 p-2"></th>
                     {scale.map((s) => (
-                      <TableHead key={s}>Impact {s}</TableHead>
+                      <th key={s} className="text-center text-sm font-semibold text-gray-700 border border-gray-200 p-2">
+                        I{s}
+                      </th>
                     ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+                  </tr>
+                </thead>
+                <tbody>
                   {matrix.map((row, li) => (
-                    <TableRow key={li}>
-                      <TableCell className="font-medium">
-                        Likelihood {li + 1}
-                      </TableCell>
+                    <tr key={li}>
+                      <td className="font-medium text-sm text-gray-700 border border-gray-200 p-2 text-center">
+                        L{li + 1}
+                      </td>
                       {row.map((val, ii) => (
-                        <TableCell
+                        <td
                           key={ii}
-                          className={`text-center ${riskColor(val)} rounded`}
+                          className={`text-center p-3 border border-gray-200 ${riskColor(val)} text-sm font-semibold h-16 align-middle`}
                         >
                           {val}
-                        </TableCell>
+                        </td>
                       ))}
-                    </TableRow>
+                    </tr>
                   ))}
-                </TableBody>
-              </Table>
+                </tbody>
+              </table>
             )}
           </div>
         </CardContent>
