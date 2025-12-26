@@ -4,6 +4,7 @@ export { organizationsApi } from "./organizations"
 export { departmentsApi } from "./departments"
 export { usersApi } from "./users"
 export { contextsApi } from "./contexts"
+export { externalStakeholdersApi } from "./external-stakeholders"
 export { apiClient } from "./config"
 export type {
   User,
@@ -29,6 +30,10 @@ export type {
   UpdateUserResponse,
   DeleteUserResponse,
   GetUsersResponse,
+  ExternalStakeholder,
+  CreateExternalStakeholderRequest,
+  UpdateExternalStakeholderRequest,
+  GetExternalStakeholdersResponse,
   PaginationMetadata,
   ApiResponse,
   ApiError,

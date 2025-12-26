@@ -23,7 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
 import { Skeleton } from "@/components/ui/skeleton";
-import { contextsApi } from "@/lib/api";
+import { contextsApi, externalStakeholdersApi } from "@/lib/api";
 import {
   loadUsers,
   saveUsers,
@@ -37,8 +37,8 @@ type ContextData = {
     notes: string;
   };
   stakeholders: {
-    internal: { name: string; unit?: string; interest?: string }[];
-    external: { name: string; interest?: string }[];
+    internal: { id?: string; name: string; email?: string; role?: string; division?: string }[];
+    external: { id?: string; name: string; interest: string }[];
   };
   cia_objectives: {
     confidentiality: string;
@@ -61,13 +61,15 @@ const initialData: ContextData = {
     internal: [
       {
         name: "Kepala Sekolah",
-        unit: "Manajemen",
-        interest: "Kepatuhan & tata kelola",
+        email: "kepala@school.id",
+        role: "ADMIN",
+        division: "Manajemen",
       },
       {
         name: "Tim IT",
-        unit: "TI",
-        interest: "Operasional & ketersediaan layanan",
+        email: "it@school.id",
+        role: "RISK_MANAGER",
+        division: "TI",
       },
     ],
     external: [
@@ -120,6 +122,7 @@ export default function KonteksOrganisasiPage() {
 
   const [data, setData] = useState<ContextData>(initialData);
   const [isLoadingContexts, setIsLoadingContexts] = useState(false);
+  const [isLoadingExternalStakeholders, setIsLoadingExternalStakeholders] = useState(false);
 
   // Load contexts from API on mount
   useEffect(() => {
@@ -152,7 +155,38 @@ export default function KonteksOrganisasiPage() {
     loadContexts();
   }, []);
 
-  // users store
+  // Load external stakeholders from API on mount
+  useEffect(() => {
+    const loadExternalStakeholders = async () => {
+      setIsLoadingExternalStakeholders(true);
+      try {
+        const response = await externalStakeholdersApi.getAll(1, 1000);
+        if (response.status && response.data) {
+          const externalData = response.data.data.map((ext) => ({
+            id: ext.id,
+            name: ext.name,
+            interest: ext.interest,
+          }));
+          
+          setData((prev) => ({
+            ...prev,
+            stakeholders: {
+              ...prev.stakeholders,
+              external: externalData,
+            },
+          }));
+        }
+      } catch (error) {
+        console.error("Error loading external stakeholders:", error);
+      } finally {
+        setIsLoadingExternalStakeholders(false);
+      }
+    };
+
+    loadExternalStakeholders();
+  }, []);
+
+  // users store - kept for user editing dialog if needed
   const [users, setUsers] = useState<StoreUser[]>(() => {
     if (typeof window === "undefined") return [];
     return loadUsers();
@@ -263,6 +297,32 @@ export default function KonteksOrganisasiPage() {
             console.error("Error creating context:", error);
           }
         })();
+      } else if (path === "stakeholders.external") {
+        // Call API to create external stakeholder
+        (async () => {
+          try {
+            const response = await externalStakeholdersApi.create({
+              name: validatedDraft.name,
+              interest: validatedDraft.interest,
+            });
+            if (response.status) {
+              const newExternal = {
+                id: response.data.id,
+                name: response.data.name,
+                interest: response.data.interest,
+              };
+              setData((s) => ({
+                ...s,
+                stakeholders: {
+                  ...s.stakeholders,
+                  external: [...s.stakeholders.external, newExternal],
+                },
+              }));
+            }
+          } catch (error) {
+            console.error("Error creating external stakeholder:", error);
+          }
+        })();
       } else if (path === "regulations.selected")
         setData((s) => ({
           ...s,
@@ -277,14 +337,6 @@ export default function KonteksOrganisasiPage() {
           stakeholders: {
             ...s.stakeholders,
             internal: [...s.stakeholders.internal, validatedDraft],
-          },
-        }));
-      else if (path === "stakeholders.external")
-        setData((s) => ({
-          ...s,
-          stakeholders: {
-            ...s.stakeholders,
-            external: [...s.stakeholders.external, validatedDraft],
           },
         }));
       else if (path === "cia.service_priorities")
@@ -332,6 +384,37 @@ export default function KonteksOrganisasiPage() {
             console.error("Error updating context:", error);
           }
         })();
+      } else if (path === "stakeholders.external") {
+        // Call API to update external stakeholder
+        const externalId = data.stakeholders.external[idx]?.id;
+        if (!externalId) return;
+        (async () => {
+          try {
+            const response = await externalStakeholdersApi.update(externalId, {
+              name: validatedDraft.name,
+              interest: validatedDraft.interest,
+            });
+            if (response.status) {
+              setData((s) => ({
+                ...s,
+                stakeholders: {
+                  ...s.stakeholders,
+                  external: s.stakeholders.external.map((v, i) =>
+                    i === idx
+                      ? {
+                          id: response.data.id,
+                          name: response.data.name,
+                          interest: response.data.interest,
+                        }
+                      : v
+                  ),
+                },
+              }));
+            }
+          } catch (error) {
+            console.error("Error updating external stakeholder:", error);
+          }
+        })();
       } else if (path === "regulations.selected")
         setData((s) => ({
           ...s,
@@ -348,16 +431,6 @@ export default function KonteksOrganisasiPage() {
           stakeholders: {
             ...s.stakeholders,
             internal: s.stakeholders.internal.map((v, i) =>
-              i === idx ? validatedDraft : v
-            ),
-          },
-        }));
-      else if (path === "stakeholders.external")
-        setData((s) => ({
-          ...s,
-          stakeholders: {
-            ...s.stakeholders,
-            external: s.stakeholders.external.map((v, i) =>
               i === idx ? validatedDraft : v
             ),
           },
@@ -399,20 +472,32 @@ export default function KonteksOrganisasiPage() {
           console.error("Error deleting context:", error);
         }
       })();
+    } else if (path === "stakeholders.external") {
+      const externalId = data.stakeholders.external[idx]?.id;
+      if (!externalId) return;
+      // Call API to delete external stakeholder
+      (async () => {
+        try {
+          const response = await externalStakeholdersApi.delete(externalId);
+          if (response.status) {
+            setData((s) => ({
+              ...s,
+              stakeholders: {
+                ...s.stakeholders,
+                external: s.stakeholders.external.filter((_, i) => i !== idx),
+              },
+            }));
+          }
+        } catch (error) {
+          console.error("Error deleting external stakeholder:", error);
+        }
+      })();
     } else if (path === "stakeholders.internal")
       setData((s) => ({
         ...s,
         stakeholders: {
           ...s.stakeholders,
           internal: s.stakeholders.internal.filter((_, i) => i !== idx),
-        },
-      }));
-    else if (path === "stakeholders.external")
-      setData((s) => ({
-        ...s,
-        stakeholders: {
-          ...s.stakeholders,
-          external: s.stakeholders.external.filter((_, i) => i !== idx),
         },
       }));
     else if (path === "cia.service_priorities")
@@ -555,7 +640,7 @@ export default function KonteksOrganisasiPage() {
         />
 
         <StakeholdersSection
-          users={users}
+          users={data.stakeholders.internal}
           external={data.stakeholders.external}
           openAddModal={openAddModal}
           openEditRow={openEditRow}

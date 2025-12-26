@@ -207,3 +207,27 @@ export interface ApiError {
   status: boolean
   errors?: Record<string, string[]>
 }
+// External Stakeholders related types
+export interface ExternalStakeholder {
+  id: string
+  organizationId: string
+  name: string
+  interest: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateExternalStakeholderRequest {
+  name: string
+  interest: string
+}
+
+export interface UpdateExternalStakeholderRequest {
+  name?: string
+  interest?: string
+}
+
+export interface GetExternalStakeholdersResponse {
+  data: ExternalStakeholder[]
+  metadata: PaginationMetadata
+}
