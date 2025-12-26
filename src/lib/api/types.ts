@@ -231,3 +231,61 @@ export interface GetExternalStakeholdersResponse {
   data: ExternalStakeholder[]
   metadata: PaginationMetadata
 }
+
+// CIA Objectives related types
+export interface ServicePriority {
+  priority_id: string
+  service: string
+  C: number
+  I: number
+  A: number
+}
+
+export interface CiaObjective {
+  confidentiality: string
+  integrity: string
+  availability: string
+  service_priorities: ServicePriority[]
+}
+
+export interface CreateServicePriorityRequest {
+  context_id?: string
+  service_name: string
+  c_score: number
+  i_score: number
+  a_score: number
+}
+
+export interface UpdateServicePriorityRequest {
+  service_name?: string
+  c_score?: number
+  i_score?: number
+  a_score?: number
+}
+
+export interface GetCiaResponse {
+  cia_objectives: CiaObjective
+}
+
+// Regulations related types
+export interface Regulation {
+  id: string
+  organizationId: string
+  name: string
+  createdAt: string
+  updatedAt?: string | null
+}
+
+export interface CreateRegulationRequest {
+  name: string
+}
+
+export interface UpdateRegulationRequest {
+  name?: string
+}
+
+export interface GetRegulationsResponse {
+  data: Regulation[]
+  metadata: PaginationMetadata
+}
+

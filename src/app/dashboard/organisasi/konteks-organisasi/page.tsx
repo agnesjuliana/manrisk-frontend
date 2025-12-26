@@ -11,7 +11,14 @@ import {
   DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardAction } from "@/components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardAction,
+} from "@/components/ui/card";
 import { ProfileForm } from "@/components/profile-form";
 import ArrayItemDialog from "@/components/konteks/OrganizationArrayDialog";
 import ScopeSection from "@/components/konteks/ScopeSection";
@@ -23,7 +30,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
 import { Skeleton } from "@/components/ui/skeleton";
-import { contextsApi, externalStakeholdersApi } from "@/lib/api";
+import {
+  contextsApi,
+  externalStakeholdersApi,
+  ciaApi,
+  usersApi,
+  regulationsApi,
+} from "@/lib/api";
 import {
   loadUsers,
   saveUsers,
@@ -37,17 +50,29 @@ type ContextData = {
     notes: string;
   };
   stakeholders: {
-    internal: { id?: string; name: string; email?: string; role?: string; division?: string }[];
+    internal: {
+      id?: string;
+      name: string;
+      email?: string;
+      role?: string;
+      division?: string;
+    }[];
     external: { id?: string; name: string; interest: string }[];
   };
   cia_objectives: {
     confidentiality: string;
     integrity: string;
     availability: string;
-    service_priorities: { service: string; C: number; I: number; A: number }[];
+    service_priorities: {
+      priority_id?: string;
+      service: string;
+      C: number;
+      I: number;
+      A: number;
+    }[];
   };
   regulations: {
-    selected: string[];
+    selected: { id?: string; name: string }[];
     notes: string;
   };
 };
@@ -58,48 +83,27 @@ const initialData: ContextData = {
     notes: "",
   },
   stakeholders: {
-    internal: [
-      {
-        name: "Kepala Sekolah",
-        email: "kepala@school.id",
-        role: "ADMIN",
-        division: "Manajemen",
-      },
-      {
-        name: "Tim IT",
-        email: "it@school.id",
-        role: "RISK_MANAGER",
-        division: "TI",
-      },
-    ],
-    external: [
-      { name: "Kominfo", interest: "Kepatuhan regulasi" },
-      { name: "Orang Tua Siswa", interest: "Perlindungan data pribadi" },
-    ],
+    internal: [],
+    external: [],
   },
   cia_objectives: {
-    confidentiality: "Melindungi data pribadi siswa dari akses tidak sah.",
-    integrity: "Menjamin nilai akademik tidak berubah tanpa otorisasi.",
-    availability: "Portal e-learning tersedia ≥ 99% selama jam belajar.",
-    service_priorities: [
-      { service: "Portal E-Learning", C: 2, I: 3, A: 3 },
-      { service: "Sistem Nilai", C: 3, I: 3, A: 2 },
-    ],
+    confidentiality:
+      "[Belum diisi] Jelaskan bagaimana organisasi melindungi kerahasiaan data dan informasi dari akses tidak sah",
+    integrity:
+      "[Belum diisi] Jelaskan bagaimana organisasi memastikan integritas data dan sistem tidak berubah tanpa otorisasi",
+    availability:
+      "[Belum diisi] Jelaskan target ketersediaan layanan sistem informasi yang kritis bagi operasional organisasi",
+    service_priorities: [],
   },
   regulations: {
-    selected: [
-      "SNI ISO/IEC 27001:2022",
-      "ISO/IEC 27005:2022",
-      "UU PDP 27/2022",
-      "Permenkominfo 4/2016",
-    ],
+    selected: [],
     notes: "Fokus awal pada perlindungan data pribadi dan kontrol akses.",
   },
 };
 
 export default function KonteksOrganisasiPage() {
   const { user, isLoading: authLoading } = useAuth();
-  
+
   // profile state - initialized from user data
   const [profile, setProfile] = useState({
     name: "",
@@ -122,7 +126,13 @@ export default function KonteksOrganisasiPage() {
 
   const [data, setData] = useState<ContextData>(initialData);
   const [isLoadingContexts, setIsLoadingContexts] = useState(false);
-  const [isLoadingExternalStakeholders, setIsLoadingExternalStakeholders] = useState(false);
+  const [isLoadingInternalStakeholders, setIsLoadingInternalStakeholders] =
+    useState(false);
+  const [isLoadingExternalStakeholders, setIsLoadingExternalStakeholders] =
+    useState(false);
+  const [isLoadingCia, setIsLoadingCia] = useState(false);
+  const [ciaLoadError, setCiaLoadError] = useState(false);
+  const [isLoadingRegulations, setIsLoadingRegulations] = useState(false);
 
   // Load contexts from API on mount
   useEffect(() => {
@@ -136,7 +146,7 @@ export default function KonteksOrganisasiPage() {
             name: ctx.name,
             description: ctx.description,
           }));
-          
+
           setData((prev) => ({
             ...prev,
             scope: {
@@ -155,6 +165,39 @@ export default function KonteksOrganisasiPage() {
     loadContexts();
   }, []);
 
+  // Load internal stakeholders from API on mount
+  useEffect(() => {
+    const loadInternalStakeholders = async () => {
+      setIsLoadingInternalStakeholders(true);
+      try {
+        const response = await usersApi.getAll(1, 10);
+        if (response.status && response.data) {
+          const internalData = response.data.data.map((user) => ({
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            division: user.departmentId || "",
+          }));
+
+          setData((prev) => ({
+            ...prev,
+            stakeholders: {
+              ...prev.stakeholders,
+              internal: internalData,
+            },
+          }));
+        }
+      } catch (error) {
+        console.error("Error loading internal stakeholders:", error);
+      } finally {
+        setIsLoadingInternalStakeholders(false);
+      }
+    };
+
+    loadInternalStakeholders();
+  }, []);
+
   // Load external stakeholders from API on mount
   useEffect(() => {
     const loadExternalStakeholders = async () => {
@@ -167,7 +210,7 @@ export default function KonteksOrganisasiPage() {
             name: ext.name,
             interest: ext.interest,
           }));
-          
+
           setData((prev) => ({
             ...prev,
             stakeholders: {
@@ -186,6 +229,72 @@ export default function KonteksOrganisasiPage() {
     loadExternalStakeholders();
   }, []);
 
+  // Load CIA objectives from API on mount
+  useEffect(() => {
+    const loadCia = async () => {
+      setIsLoadingCia(true);
+      setCiaLoadError(false);
+      try {
+        const response = await ciaApi.getObjectives();
+        if (response.status && response.data) {
+          const ciaData = response.data.cia_objectives;
+          setData((prev) => ({
+            ...prev,
+            cia_objectives: {
+              confidentiality: ciaData.confidentiality,
+              integrity: ciaData.integrity,
+              availability: ciaData.availability,
+              service_priorities: ciaData.service_priorities.map((p) => ({
+                service: p.service,
+                C: p.C,
+                I: p.I,
+                A: p.A,
+                // Store priority_id for API calls
+                ...(p.priority_id ? { priority_id: p.priority_id } : {}),
+              })),
+            },
+          }));
+        }
+      } catch (error) {
+        console.error("Error loading CIA objectives:", error);
+        setCiaLoadError(true);
+      } finally {
+        setIsLoadingCia(false);
+      }
+    };
+
+    loadCia();
+  }, []);
+
+  // Load regulations from API on mount
+  useEffect(() => {
+    const loadRegulations = async () => {
+      setIsLoadingRegulations(true);
+      try {
+        const response = await regulationsApi.getAll(1, 100);
+        if (response.status && response.data) {
+          const regulationList = response.data.data.map((reg) => ({
+            id: reg.id,
+            name: reg.name,
+          }));
+
+          setData((prev) => ({
+            ...prev,
+            regulations: {
+              ...prev.regulations,
+              selected: regulationList,
+            },
+          }));
+        }
+      } catch (error) {
+        console.error("Error loading regulations:", error);
+      } finally {
+        setIsLoadingRegulations(false);
+      }
+    };
+
+    loadRegulations();
+  }, []);
   // users store - kept for user editing dialog if needed
   const [users, setUsers] = useState<StoreUser[]>(() => {
     if (typeof window === "undefined") return [];
@@ -239,21 +348,21 @@ export default function KonteksOrganisasiPage() {
     if (path === "stakeholders.internal" || path === "stakeholders.external")
       setItemDraft({ name: "", unit: "", type: "", interest: "" });
     else if (path === "cia.service_priorities")
-      setItemDraft({ service: "", C: 1, I: 1, A: 1 });
+      setItemDraft({ context_id: "", service: "", C: 50, I: 50, A: 50 });
     else setItemDraft("");
   }
 
   function openEditRow(path: string, idx: number) {
     setArrayModal({ open: true, path, mode: "edit", index: idx });
-    if (path === "scope.technical_bounds")
+    if (path === "scope.technical_bounds") {
       setItemDraft(data.scope.technical_bounds[idx]);
-    else if (path === "regulations.selected")
-      setItemDraft(data.regulations.selected[idx]);
-    else if (path === "stakeholders.external")
+    } else if (path === "regulations.selected") {
+      setItemDraft(data.regulations.selected[idx].name);
+    } else if (path === "stakeholders.external") {
       setItemDraft({ ...data.stakeholders.external[idx] });
-    else if (path === "cia.service_priorities")
+    } else if (path === "cia.service_priorities") {
       setItemDraft({ ...data.cia_objectives.service_priorities[idx] });
-    else if (path === "stakeholders.internal") {
+    } else if (path === "stakeholders.internal") {
       // internal stakeholder -> edit user
       const u = users[idx];
       if (u) openUserEdit(u);
@@ -270,9 +379,12 @@ export default function KonteksOrganisasiPage() {
   function saveArrayItemFromDialog(validatedDraft: any) {
     if (!arrayModal.path) return;
     const path = arrayModal.path;
-    if (arrayModal.mode === "add") {
+    const mode = arrayModal.mode;
+    const idx = arrayModal.index ?? -1;
+
+    // ========== ADD MODE ==========
+    if (mode === "add") {
       if (path === "scope.technical_bounds") {
-        // Call API to create context
         (async () => {
           try {
             const response = await contextsApi.create({
@@ -280,25 +392,27 @@ export default function KonteksOrganisasiPage() {
               description: validatedDraft.description,
             });
             if (response.status) {
-              const newContext = {
-                id: response.data.id,
-                name: response.data.name,
-                description: response.data.description,
-              };
               setData((s) => ({
                 ...s,
                 scope: {
                   ...s.scope,
-                  technical_bounds: [...s.scope.technical_bounds, newContext],
+                  technical_bounds: [
+                    ...s.scope.technical_bounds,
+                    {
+                      id: response.data.id,
+                      name: response.data.name,
+                      description: response.data.description,
+                    },
+                  ],
                 },
               }));
+              closeArrayModal();
             }
           } catch (error) {
             console.error("Error creating context:", error);
           }
         })();
       } else if (path === "stakeholders.external") {
-        // Call API to create external stakeholder
         (async () => {
           try {
             const response = await externalStakeholdersApi.create({
@@ -306,32 +420,50 @@ export default function KonteksOrganisasiPage() {
               interest: validatedDraft.interest,
             });
             if (response.status) {
-              const newExternal = {
-                id: response.data.id,
-                name: response.data.name,
-                interest: response.data.interest,
-              };
               setData((s) => ({
                 ...s,
                 stakeholders: {
                   ...s.stakeholders,
-                  external: [...s.stakeholders.external, newExternal],
+                  external: [
+                    ...s.stakeholders.external,
+                    {
+                      id: response.data.id,
+                      name: response.data.name,
+                      interest: response.data.interest,
+                    },
+                  ],
                 },
               }));
+              closeArrayModal();
             }
           } catch (error) {
             console.error("Error creating external stakeholder:", error);
           }
         })();
-      } else if (path === "regulations.selected")
-        setData((s) => ({
-          ...s,
-          regulations: {
-            ...s.regulations,
-            selected: [...s.regulations.selected, String(validatedDraft)],
-          },
-        }));
-      else if (path === "stakeholders.internal")
+      } else if (path === "regulations.selected") {
+        (async () => {
+          try {
+            const response = await regulationsApi.create({
+              name: String(validatedDraft),
+            });
+            if (response.status) {
+              setData((s) => ({
+                ...s,
+                regulations: {
+                  ...s.regulations,
+                  selected: [
+                    ...s.regulations.selected,
+                    { id: response.data.id, name: response.data.name },
+                  ],
+                },
+              }));
+              closeArrayModal();
+            }
+          } catch (error) {
+            console.error("Error creating regulation:", error);
+          }
+        })();
+      } else if (path === "stakeholders.internal") {
         setData((s) => ({
           ...s,
           stakeholders: {
@@ -339,22 +471,47 @@ export default function KonteksOrganisasiPage() {
             internal: [...s.stakeholders.internal, validatedDraft],
           },
         }));
-      else if (path === "cia.service_priorities")
-        setData((s) => ({
-          ...s,
-          cia_objectives: {
-            ...s.cia_objectives,
-            service_priorities: [
-              ...s.cia_objectives.service_priorities,
-              validatedDraft,
-            ],
-          },
-        }));
-    } else {
-      const idx = arrayModal.index ?? -1;
+        closeArrayModal();
+      } else if (path === "cia.service_priorities") {
+        (async () => {
+          try {
+            const response = await ciaApi.createPriority({
+              context_id: validatedDraft.context_id,
+              service_name: validatedDraft.service,
+              c_score: validatedDraft.C,
+              i_score: validatedDraft.I,
+              a_score: validatedDraft.A,
+            });
+            if (response.status) {
+              setData((s) => ({
+                ...s,
+                cia_objectives: {
+                  ...s.cia_objectives,
+                  service_priorities: [
+                    ...s.cia_objectives.service_priorities,
+                    {
+                      priority_id: response.data.priority_id,
+                      service: response.data.service,
+                      C: response.data.C,
+                      I: response.data.I,
+                      A: response.data.A,
+                    },
+                  ],
+                },
+              }));
+              closeArrayModal();
+            }
+          } catch (error) {
+            console.error("Error creating service priority:", error);
+          }
+        })();
+      }
+    }
+    // ========== EDIT MODE ==========
+    else if (mode === "edit") {
       if (idx < 0) return;
+
       if (path === "scope.technical_bounds") {
-        // Call API to update context
         const contextId = data.scope.technical_bounds[idx]?.id;
         if (!contextId) return;
         (async () => {
@@ -379,13 +536,13 @@ export default function KonteksOrganisasiPage() {
                   ),
                 },
               }));
+              closeArrayModal();
             }
           } catch (error) {
             console.error("Error updating context:", error);
           }
         })();
       } else if (path === "stakeholders.external") {
-        // Call API to update external stakeholder
         const externalId = data.stakeholders.external[idx]?.id;
         if (!externalId) return;
         (async () => {
@@ -410,22 +567,39 @@ export default function KonteksOrganisasiPage() {
                   ),
                 },
               }));
+              closeArrayModal();
             }
           } catch (error) {
             console.error("Error updating external stakeholder:", error);
           }
         })();
-      } else if (path === "regulations.selected")
-        setData((s) => ({
-          ...s,
-          regulations: {
-            ...s.regulations,
-            selected: s.regulations.selected.map((v, i) =>
-              i === idx ? String(validatedDraft) : v
-            ),
-          },
-        }));
-      else if (path === "stakeholders.internal")
+      } else if (path === "regulations.selected") {
+        const regulation = data.regulations.selected[idx];
+        if (!regulation || !regulation.id) return;
+        (async () => {
+          try {
+            const response = await regulationsApi.update(regulation.id as string, {
+              name: String(validatedDraft),
+            });
+            if (response.status) {
+              setData((s) => ({
+                ...s,
+                regulations: {
+                  ...s.regulations,
+                  selected: s.regulations.selected.map((reg, i) =>
+                    i === idx
+                      ? { id: response.data.id, name: response.data.name }
+                      : reg
+                  ),
+                },
+              }));
+              closeArrayModal();
+            }
+          } catch (error) {
+            console.error("Error updating regulation:", error);
+          }
+        })();
+      } else if (path === "stakeholders.internal") {
         setData((s) => ({
           ...s,
           stakeholders: {
@@ -435,18 +609,46 @@ export default function KonteksOrganisasiPage() {
             ),
           },
         }));
-      else if (path === "cia.service_priorities")
-        setData((s) => ({
-          ...s,
-          cia_objectives: {
-            ...s.cia_objectives,
-            service_priorities: s.cia_objectives.service_priorities.map(
-              (v, i) => (i === idx ? validatedDraft : v)
-            ),
-          },
-        }));
+        closeArrayModal();
+      } else if (path === "cia.service_priorities") {
+        const priorityId =
+          data.cia_objectives.service_priorities[idx]?.priority_id;
+        if (!priorityId) return;
+        (async () => {
+          try {
+            const response = await ciaApi.updatePriority(priorityId, {
+              service_name: validatedDraft.service,
+              c_score: validatedDraft.C,
+              i_score: validatedDraft.I,
+              a_score: validatedDraft.A,
+            });
+            if (response.status) {
+              setData((s) => ({
+                ...s,
+                cia_objectives: {
+                  ...s.cia_objectives,
+                  service_priorities: s.cia_objectives.service_priorities.map(
+                    (v, i) =>
+                      i === idx
+                        ? {
+                            priority_id: response.data.priority_id,
+                            service: response.data.service,
+                            C: response.data.C,
+                            I: response.data.I,
+                            A: response.data.A,
+                          }
+                        : v
+                  ),
+                },
+              }));
+              closeArrayModal();
+            }
+          } catch (error) {
+            console.error("Error updating service priority:", error);
+          }
+        })();
+      }
     }
-    closeArrayModal();
   }
 
   function removeArrayItem(path: string, idx: number) {
@@ -500,24 +702,50 @@ export default function KonteksOrganisasiPage() {
           internal: s.stakeholders.internal.filter((_, i) => i !== idx),
         },
       }));
-    else if (path === "cia.service_priorities")
-      setData((s) => ({
-        ...s,
-        cia_objectives: {
-          ...s.cia_objectives,
-          service_priorities: s.cia_objectives.service_priorities.filter(
-            (_, i) => i !== idx
-          ),
-        },
-      }));
-    else if (path === "regulations.selected")
-      setData((s) => ({
-        ...s,
-        regulations: {
-          ...s.regulations,
-          selected: s.regulations.selected.filter((_, i) => i !== idx),
-        },
-      }));
+    else if (path === "cia.service_priorities") {
+      const priorityId =
+        data.cia_objectives.service_priorities[idx]?.priority_id;
+      if (!priorityId) return;
+      // Call API to delete service priority
+      (async () => {
+        try {
+          const response = await ciaApi.deletePriority(priorityId);
+          if (response.status) {
+            setData((s) => ({
+              ...s,
+              cia_objectives: {
+                ...s.cia_objectives,
+                service_priorities: s.cia_objectives.service_priorities.filter(
+                  (_, i) => i !== idx
+                ),
+              },
+            }));
+          }
+        } catch (error) {
+          console.error("Error deleting service priority:", error);
+        }
+      })();
+    } else if (path === "regulations.selected") {
+      const regulationId = data.regulations.selected[idx]?.id;
+      if (!regulationId) return;
+      // Call API to delete regulation
+      (async () => {
+        try {
+          const response = await regulationsApi.delete(regulationId);
+          if (response.status) {
+            setData((s) => ({
+              ...s,
+              regulations: {
+                ...s.regulations,
+                selected: s.regulations.selected.filter((_, i) => i !== idx),
+              },
+            }));
+          }
+        } catch (error) {
+          console.error("Error deleting regulation:", error);
+        }
+      })();
+    }
   }
 
   // CIA single modal
@@ -539,10 +767,29 @@ export default function KonteksOrganisasiPage() {
     setCiaEditOpen(false);
   }
   function saveCiaEdit() {
-    setData((s) => ({
-      ...s,
-      cia_objectives: { ...s.cia_objectives, ...ciaDraft },
-    }));
+    // Call API to update CIA objectives
+    (async () => {
+      try {
+        const response = await ciaApi.updateObjectives({
+          confidentiality: ciaDraft.confidentiality,
+          integrity: ciaDraft.integrity,
+          availability: ciaDraft.availability,
+        });
+        if (response.status) {
+          setData((s) => ({
+            ...s,
+            cia_objectives: {
+              ...s.cia_objectives,
+              confidentiality: ciaDraft.confidentiality,
+              integrity: ciaDraft.integrity,
+              availability: ciaDraft.availability,
+            },
+          }));
+        }
+      } catch (error) {
+        console.error("Error updating CIA objectives:", error);
+      }
+    })();
     closeCiaEdit();
   }
 
@@ -569,8 +816,12 @@ export default function KonteksOrganisasiPage() {
     <div className="flex flex-1 flex-col gap-6 p-4 pt-0 w-full min-w-0">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Konteks Organisasi</h1>
-          <p className="text-sm text-gray-600 mt-1">Kelola konteks dan strategi keamanan informasi organisasi</p>
+          <h1 className="text-2xl font-semibold text-gray-900">
+            Konteks Organisasi
+          </h1>
+          <p className="text-sm text-gray-600 mt-1">
+            Kelola konteks dan strategi keamanan informasi organisasi
+          </p>
         </div>
       </div>
 
@@ -582,25 +833,31 @@ export default function KonteksOrganisasiPage() {
               <CardTitle className="text-xl text-gray-900">
                 {authLoading ? <Skeleton className="h-6 w-48" /> : profile.name}
               </CardTitle>
-              <CardDescription className="text-gray-500 mt-1">Informasi dasar instansi yang terdaftar</CardDescription>
+              <CardDescription className="text-gray-500 mt-1">
+                Informasi dasar instansi yang terdaftar
+              </CardDescription>
             </div>
             <Dialog>
               <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
                   <DialogTitle>Perbarui Profil Instansi</DialogTitle>
-                  <DialogDescription>Ubah informasi instansi Anda di sini.</DialogDescription>
+                  <DialogDescription>
+                    Ubah informasi instansi Anda di sini.
+                  </DialogDescription>
                 </DialogHeader>
                 <ProfileForm
                   initialValues={profile}
                   onSubmitProfile={(values) => {
-                    setProfile(values)
+                    setProfile(values);
                   }}
                   submitLabel="Simpan Perubahan"
                   isEditMode={true}
                 />
               </DialogContent>
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm">Edit Profil</Button>
+                <Button variant="outline" size="sm">
+                  Edit Profil
+                </Button>
               </DialogTrigger>
             </Dialog>
           </div>
@@ -615,16 +872,28 @@ export default function KonteksOrganisasiPage() {
           ) : (
             <div className="grid gap-6 md:grid-cols-3">
               <div className="p-4 rounded-lg bg-white border border-gray-200 hover:border-gray-300 transition-colors">
-                <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Alamat</div>
-                <div className="font-medium text-gray-900 mt-2">{profile.address}</div>
+                <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                  Alamat
+                </div>
+                <div className="font-medium text-gray-900 mt-2">
+                  {profile.address}
+                </div>
               </div>
               <div className="p-4 rounded-lg bg-white border border-gray-200 hover:border-gray-300 transition-colors">
-                <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Email</div>
-                <div className="font-medium text-gray-900 mt-2">{profile.email}</div>
+                <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                  Email
+                </div>
+                <div className="font-medium text-gray-900 mt-2">
+                  {profile.email}
+                </div>
               </div>
               <div className="p-4 rounded-lg bg-white border border-gray-200 hover:border-gray-300 transition-colors">
-                <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Telepon</div>
-                <div className="font-medium text-gray-900 mt-2">{profile.phone}</div>
+                <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                  Telepon
+                </div>
+                <div className="font-medium text-gray-900 mt-2">
+                  {profile.phone}
+                </div>
               </div>
             </div>
           )}
@@ -649,6 +918,7 @@ export default function KonteksOrganisasiPage() {
 
         <CiaSection
           cia={data.cia_objectives}
+          ciaLoadError={ciaLoadError}
           onEdit={openCiaEdit}
           openAddModal={openAddModal}
           openEditRow={openEditRow}
@@ -678,7 +948,9 @@ export default function KonteksOrganisasiPage() {
 
           <div className="grid gap-4">
             <div className="space-y-2">
-              <Label className="font-semibold text-gray-900">Confidentiality</Label>
+              <Label className="font-semibold text-gray-900">
+                Confidentiality
+              </Label>
               <Textarea
                 value={ciaDraft.confidentiality}
                 onChange={(e) =>
@@ -701,7 +973,9 @@ export default function KonteksOrganisasiPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label className="font-semibold text-gray-900">Availability</Label>
+              <Label className="font-semibold text-gray-900">
+                Availability
+              </Label>
               <Textarea
                 value={ciaDraft.availability}
                 onChange={(e) =>
@@ -760,7 +1034,9 @@ export default function KonteksOrganisasiPage() {
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="text-xl">Edit Pengguna</DialogTitle>
-            <DialogDescription>Ubah data pengguna internal stakeholder</DialogDescription>
+            <DialogDescription>
+              Ubah data pengguna internal stakeholder
+            </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4">
             <div className="space-y-2">
@@ -827,6 +1103,10 @@ export default function KonteksOrganisasiPage() {
         onChangeDraft={(v) => setItemDraft(v)}
         onClose={closeArrayModal}
         onSave={(validatedDraft) => saveArrayItemFromDialog(validatedDraft)}
+        contexts={data.scope.technical_bounds.map((ctx) => ({
+          id: ctx.id || "",
+          name: ctx.name,
+        }))}
       />
     </div>
   );

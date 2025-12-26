@@ -5,6 +5,8 @@ export { departmentsApi } from "./departments"
 export { usersApi } from "./users"
 export { contextsApi } from "./contexts"
 export { externalStakeholdersApi } from "./external-stakeholders"
+export { ciaApi } from "./cia"
+export { regulationsApi } from "./regulations"
 export { apiClient } from "./config"
 export type {
   User,
@@ -34,6 +36,15 @@ export type {
   CreateExternalStakeholderRequest,
   UpdateExternalStakeholderRequest,
   GetExternalStakeholdersResponse,
+  ServicePriority,
+  CiaObjective,
+  CreateServicePriorityRequest,
+  UpdateServicePriorityRequest,
+  GetCiaResponse,
+  Regulation,
+  CreateRegulationRequest,
+  UpdateRegulationRequest,
+  GetRegulationsResponse,
   PaginationMetadata,
   ApiResponse,
   ApiError,

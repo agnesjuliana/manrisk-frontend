@@ -24,7 +24,7 @@ export default function RegulationsSection({
   openEditRow,
   removeArrayItem,
 }: {
-  selected: string[];
+  selected: { id?: string; name: string }[];
   openAddModal: (path: string) => void;
   openEditRow: (path: string, idx: number) => void;
   removeArrayItem: (path: string, idx: number) => void;
@@ -61,7 +61,7 @@ export default function RegulationsSection({
               {selected.map((r, i) => (
                 <TableRow key={i}>
                   <TableCell className="w-8">{i + 1}</TableCell>
-                  <TableCell>{r}</TableCell>
+                  <TableCell>{r.name}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <button
@@ -84,10 +84,6 @@ export default function RegulationsSection({
               ))}
             </TableBody>
           </Table>
-        </div>
-        <div>
-          <Label>Catatan</Label>
-          <p className="text-sm mb-2">(lihat dialog edit untuk catatan)</p>
         </div>
       </CardContent>
     </Card>

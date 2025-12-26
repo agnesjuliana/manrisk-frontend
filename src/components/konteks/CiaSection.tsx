@@ -1,4 +1,5 @@
 import React from "react";
+import { toast } from "sonner";
 import {
   Card,
   CardHeader,
@@ -21,17 +22,26 @@ import { Edit, Trash } from "lucide-react";
 
 export default function CiaSection({
   cia,
+  ciaLoadError,
   onEdit,
   openAddModal,
   openEditRow,
   removeArrayItem,
 }: {
   cia: any;
+  ciaLoadError: boolean;
   onEdit: () => void;
   openAddModal: (path: string) => void;
   openEditRow: (path: string, idx: number) => void;
   removeArrayItem: (path: string, idx: number) => void;
 }) {
+  const handleAddServicePriority = () => {
+    if (ciaLoadError) {
+      toast.error("Silakan edit CIA Objectives terlebih dahulu");
+      return;
+    }
+    openAddModal("cia.service_priorities");
+  };
   return (
     <Card>
       <CardHeader>
@@ -65,7 +75,7 @@ export default function CiaSection({
             <Button
               size="sm"
               variant="outline"
-              onClick={() => openAddModal("cia.service_priorities")}
+              onClick={handleAddServicePriority}
             >
               Tambah
             </Button>
