@@ -3,6 +3,7 @@ export { authApi } from "./auth"
 export { organizationsApi } from "./organizations"
 export { departmentsApi } from "./departments"
 export { usersApi } from "./users"
+export { contextsApi } from "./contexts"
 export { apiClient } from "./config"
 export type {
   User,

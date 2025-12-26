@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/use-auth";
 import { Skeleton } from "@/components/ui/skeleton";
+import { contextsApi } from "@/lib/api";
 import {
   loadUsers,
   saveUsers,
@@ -32,7 +33,7 @@ import {
 
 type ContextData = {
   scope: {
-    technical_bounds: { name: string; description: string }[];
+    technical_bounds: { id?: string; name: string; description: string }[];
     notes: string;
   };
   stakeholders: {
@@ -53,15 +54,7 @@ type ContextData = {
 
 const initialData: ContextData = {
   scope: {
-    technical_bounds: [
-      {
-        name: "Aplikasi",
-        description:
-          "Sistem aplikasi yang digunakan dalam proses belajar mengajar.",
-      },
-      { name: "Infrastruktur", description: "Perangkat keras dan jaringan." },
-      { name: "Data", description: "Data akademik dan data pribadi." },
-    ],
+    technical_bounds: [],
     notes: "",
   },
   stakeholders: {
@@ -126,6 +119,38 @@ export default function KonteksOrganisasiPage() {
   }, [user]);
 
   const [data, setData] = useState<ContextData>(initialData);
+  const [isLoadingContexts, setIsLoadingContexts] = useState(false);
+
+  // Load contexts from API on mount
+  useEffect(() => {
+    const loadContexts = async () => {
+      setIsLoadingContexts(true);
+      try {
+        const response = await contextsApi.getAll(1, 1000);
+        if (response.status && response.data) {
+          const contexts = response.data.data.map((ctx) => ({
+            id: ctx.id,
+            name: ctx.name,
+            description: ctx.description,
+          }));
+          
+          setData((prev) => ({
+            ...prev,
+            scope: {
+              ...prev.scope,
+              technical_bounds: contexts,
+            },
+          }));
+        }
+      } catch (error) {
+        console.error("Error loading contexts:", error);
+      } finally {
+        setIsLoadingContexts(false);
+      }
+    };
+
+    loadContexts();
+  }, []);
 
   // users store
   const [users, setUsers] = useState<StoreUser[]>(() => {
@@ -212,15 +237,33 @@ export default function KonteksOrganisasiPage() {
     if (!arrayModal.path) return;
     const path = arrayModal.path;
     if (arrayModal.mode === "add") {
-      if (path === "scope.technical_bounds")
-        setData((s) => ({
-          ...s,
-          scope: {
-            ...s.scope,
-            technical_bounds: [...s.scope.technical_bounds, validatedDraft],
-          },
-        }));
-      else if (path === "regulations.selected")
+      if (path === "scope.technical_bounds") {
+        // Call API to create context
+        (async () => {
+          try {
+            const response = await contextsApi.create({
+              name: validatedDraft.name,
+              description: validatedDraft.description,
+            });
+            if (response.status) {
+              const newContext = {
+                id: response.data.id,
+                name: response.data.name,
+                description: response.data.description,
+              };
+              setData((s) => ({
+                ...s,
+                scope: {
+                  ...s.scope,
+                  technical_bounds: [...s.scope.technical_bounds, newContext],
+                },
+              }));
+            }
+          } catch (error) {
+            console.error("Error creating context:", error);
+          }
+        })();
+      } else if (path === "regulations.selected")
         setData((s) => ({
           ...s,
           regulations: {
@@ -258,17 +301,38 @@ export default function KonteksOrganisasiPage() {
     } else {
       const idx = arrayModal.index ?? -1;
       if (idx < 0) return;
-      if (path === "scope.technical_bounds")
-        setData((s) => ({
-          ...s,
-          scope: {
-            ...s.scope,
-            technical_bounds: s.scope.technical_bounds.map((v, i) =>
-              i === idx ? validatedDraft : v
-            ),
-          },
-        }));
-      else if (path === "regulations.selected")
+      if (path === "scope.technical_bounds") {
+        // Call API to update context
+        const contextId = data.scope.technical_bounds[idx]?.id;
+        if (!contextId) return;
+        (async () => {
+          try {
+            const response = await contextsApi.update(contextId, {
+              name: validatedDraft.name,
+              description: validatedDraft.description,
+            });
+            if (response.status) {
+              setData((s) => ({
+                ...s,
+                scope: {
+                  ...s.scope,
+                  technical_bounds: s.scope.technical_bounds.map((v, i) =>
+                    i === idx
+                      ? {
+                          id: response.data.id,
+                          name: response.data.name,
+                          description: response.data.description,
+                        }
+                      : v
+                  ),
+                },
+              }));
+            }
+          } catch (error) {
+            console.error("Error updating context:", error);
+          }
+        })();
+      } else if (path === "regulations.selected")
         setData((s) => ({
           ...s,
           regulations: {
@@ -313,17 +377,29 @@ export default function KonteksOrganisasiPage() {
   }
 
   function removeArrayItem(path: string, idx: number) {
-    if (path === "scope.technical_bounds")
-      setData((s) => ({
-        ...s,
-        scope: {
-          ...s.scope,
-          technical_bounds: s.scope.technical_bounds.filter(
-            (_, i) => i !== idx
-          ),
-        },
-      }));
-    else if (path === "stakeholders.internal")
+    if (path === "scope.technical_bounds") {
+      const contextId = data.scope.technical_bounds[idx]?.id;
+      if (!contextId) return;
+      // Call API to delete context
+      (async () => {
+        try {
+          const response = await contextsApi.delete(contextId);
+          if (response.status) {
+            setData((s) => ({
+              ...s,
+              scope: {
+                ...s.scope,
+                technical_bounds: s.scope.technical_bounds.filter(
+                  (_, i) => i !== idx
+                ),
+              },
+            }));
+          }
+        } catch (error) {
+          console.error("Error deleting context:", error);
+        }
+      })();
+    } else if (path === "stakeholders.internal")
       setData((s) => ({
         ...s,
         stakeholders: {
