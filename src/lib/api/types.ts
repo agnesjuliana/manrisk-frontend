@@ -77,6 +77,66 @@ export interface CreateOrganizationResponse {
   data: Organization
 }
 
+// Department related types
+export interface Department {
+  id: string
+  organizationId: string
+  name: string
+  description: string
+  isActive: boolean
+  createdAt: string | null
+  updatedAt: string | null
+}
+
+export interface CreateDepartmentRequest {
+  name: string
+  description: string
+  isActive: boolean
+}
+
+export interface UpdateDepartmentRequest {
+  name?: string
+  description?: string
+  isActive?: boolean
+}
+
+export interface CreateDepartmentResponse {
+  code: number
+  message: string
+  status: boolean
+  data: Department
+}
+
+export interface UpdateDepartmentResponse {
+  code: number
+  message: string
+  status: boolean
+  data: Department
+}
+
+export interface DeleteDepartmentResponse {
+  code: number
+  message: string
+  status: boolean
+}
+
+export interface PaginationMetadata {
+  page: number
+  per_page: number
+  total_data: number
+  total_page: number
+}
+
+export interface GetDepartmentsResponse {
+  code: number
+  message: string
+  status: boolean
+  data: {
+    data: Department[]
+    metadata: PaginationMetadata
+  }
+}
+
 export interface ApiResponse<T> {
   code: number
   message: string
