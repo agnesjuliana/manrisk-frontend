@@ -1,3 +1,6 @@
+"use client"
+
+import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,9 +13,16 @@ import {
 import { Input } from "@/components/ui/input";
 
 export function Welcome({ className, ...props }: React.ComponentProps<"div">) {
+  const router = useRouter()
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    router.push("/onboard/company-profile")
+  }
+
   return (
     <div className={cn("flex flex-col gap-6", className)} {...props}>
-      <form>
+      <form onSubmit={handleSubmit}>
         <FieldGroup>
           <div className="flex flex-col items-center gap-2 text-center">
             <h1 className="text-xl font-bold">Selamat datang di ManRisk 🎉</h1>
