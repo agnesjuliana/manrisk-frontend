@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { loadUsers, saveUsers, type User as StoreUser, type MainRole as StoreMainRole } from "@/lib/usersStore"
+import { toast } from "sonner";
+import { usersApi, departmentsApi, type UserManagement, type Department } from "@/lib/api";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,76 +26,167 @@ import { Trash, Edit, Plus } from "lucide-react";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { PaginatedTable } from "@/components/paginated-table";
 
-// Reuse store types
-type User = StoreUser
-type MainRole = StoreMainRole
-
-const sampleDivisions = ["IT", "Finance", "Operations"];
-
 export default function UserRegistryPage() {
-  const [rows, setRows] = React.useState<User[]>(() => {
-    if (typeof window === "undefined") return []
-    return loadUsers()
-  });
-  const [query, setQuery] = React.useState("");
-
-  const filtered = rows.filter((u) => {
-    if (!query) return true;
-    const q = query.toLowerCase();
-    return (
-      u.name.toLowerCase().includes(q) ||
-      u.email.toLowerCase().includes(q) ||
-      u.role.toLowerCase().includes(q) ||
-      (u.division || "").toLowerCase().includes(q)
-    );
-  });
-
-  function removeUser(id: string) {
-    setRows((prev) => {
-      const next = prev.filter((r) => r.id !== id)
-      saveUsers(next)
-      return next
-    })
-  }
+  const [rows, setRows] = React.useState<UserManagement[]>([]);
+  const [divisions, setDivisions] = React.useState<Department[]>([]);
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [totalPages, setTotalPages] = React.useState(1);
+  const pageSize = 20;
 
   // dialog form state
   const [open, setOpen] = React.useState(false);
+  const [editingId, setEditingId] = React.useState<string | null>(null);
   const [form, setForm] = React.useState({
     name: "",
     email: "",
     password: "",
-    role: "ADMIN",
-    division: "NONE",
+    role: "RISK_MANAGER",
+    division_id: "",
   });
 
-  function handleAdd() {
-    const newUser: User = {
-      id: "u-" + Date.now(),
-      name: form.name,
-      email: form.email,
-      password: form.password,
-      role: form.role as MainRole,
-      division: form.division === "NONE" ? undefined : form.division,
-    };
-    setRows((prev) => {
-      const next = [newUser, ...prev]
-      saveUsers(next)
-      return next
-    })
-    setForm({ name: "", email: "", password: "", role: "ADMIN", division: "NONE" });
-    setOpen(false);
+  // Fetch divisions for dropdown
+  const fetchDivisions = React.useCallback(async () => {
+    try {
+      const response = await departmentsApi.getAll(1, 1000);
+      if (response.status) {
+        setDivisions(response.data.data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch divisions:", error);
+    }
+  }, []);
+
+  // Fetch users
+  const fetchUsers = React.useCallback(
+    async (page: number = 1) => {
+      setIsLoading(true);
+      try {
+        const response = await usersApi.getAll(page, pageSize);
+        if (response.status) {
+          setRows(response.data.data);
+          setCurrentPage(response.data.metadata.page);
+          setTotalPages(response.data.metadata.total_page);
+        }
+      } catch (error: any) {
+        toast.error(error.message || "Gagal mengambil data pengguna");
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
+
+  // Initial fetch
+  React.useEffect(() => {
+    fetchDivisions();
+    fetchUsers(1);
+  }, [fetchDivisions, fetchUsers]);
+
+  async function handleAdd() {
+    if (!form.name || !form.email || (!editingId && !form.password)) {
+      toast.error("Nama, email, dan password harus diisi");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      if (editingId) {
+        // Update existing
+        const response = await usersApi.update(editingId, {
+          name: form.name,
+          email: form.email,
+          role: form.role as any,
+          division_id: form.division_id || undefined,
+        });
+        if (response.status) {
+          toast.success("Pengguna berhasil diperbarui");
+          fetchUsers(currentPage);
+          setEditingId(null);
+        }
+      } else {
+        // Create new
+        const response = await usersApi.create({
+          name: form.name,
+          email: form.email,
+          password: form.password,
+          role: form.role as any,
+          division_id: form.division_id || undefined,
+        });
+        if (response.status) {
+          toast.success("Pengguna berhasil ditambahkan");
+          fetchUsers(1);
+        }
+      }
+      setForm({
+        name: "",
+        email: "",
+        password: "",
+        role: "RISK_MANAGER",
+        division_id: "",
+      });
+      setOpen(false);
+    } catch (error: any) {
+      toast.error(error.message || "Gagal menyimpan pengguna");
+    } finally {
+      setIsLoading(false);
+    }
   }
 
-  const tableData = filtered.map((row, index) => ({
+  async function handleDelete(id: string) {
+    if (!confirm("Apakah Anda yakin ingin menghapus pengguna ini?")) return;
+
+    setIsLoading(true);
+    try {
+      const response = await usersApi.delete(id);
+      if (response.status) {
+        toast.success("Pengguna berhasil dihapus");
+        fetchUsers(currentPage);
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Gagal menghapus pengguna");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  function handleEdit(user: UserManagement) {
+    setEditingId(user.id);
+    setForm({
+      name: user.name,
+      email: user.email,
+      password: "",
+      role: user.role as any,
+      division_id: user.departmentId || "",
+    });
+    setOpen(true);
+  }
+
+  function handleOpenChange(newOpen: boolean) {
+    setOpen(newOpen);
+    if (!newOpen) {
+      setEditingId(null);
+      setForm({
+        name: "",
+        email: "",
+        password: "",
+        role: "RISK_MANAGER",
+        division_id: "",
+      });
+    }
+  }
+
+  const tableData = rows.map((row, index) => ({
     ...row,
-    no: index + 1,
+    no: (currentPage - 1) * pageSize + index + 1,
+    divisionName: divisions.find((d) => d.id === row.departmentId)?.name || "-",
   }));
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 pt-0 w-full min-w-0">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-lg font-semibold">Daftar Pengguna</h1>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={handleOpenChange}>
           <DialogTrigger asChild>
             <Button variant="default" className="flex items-center gap-2">
               <Plus size={16} /> Tambah Pengguna
@@ -102,9 +194,13 @@ export default function UserRegistryPage() {
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Tambah Pengguna</DialogTitle>
+              <DialogTitle>
+                {editingId ? "Edit Pengguna" : "Tambah Pengguna"}
+              </DialogTitle>
               <DialogDescription>
-                Isi data pengguna baru di formulir berikut.
+                {editingId
+                  ? "Perbarui informasi pengguna."
+                  : "Isi data pengguna baru di formulir berikut."}
               </DialogDescription>
             </DialogHeader>
             <FieldGroup>
@@ -115,36 +211,42 @@ export default function UserRegistryPage() {
                   onChange={(e) =>
                     setForm((prev) => ({
                       ...prev,
-                      name: e.currentTarget.value,
+                      name: e.target.value,
                     }))
                   }
+                  disabled={isLoading}
                 />
               </Field>
               <Field>
                 <FieldLabel>Email</FieldLabel>
                 <Input
+                  type="email"
                   value={form.email}
                   onChange={(e) =>
                     setForm((prev) => ({
                       ...prev,
-                      email: e.currentTarget.value,
+                      email: e.target.value,
                     }))
                   }
+                  disabled={isLoading}
                 />
               </Field>
-              <Field>
-                <FieldLabel>Password</FieldLabel>
-                <Input
-                  type="password"
-                  value={form.password}
-                  onChange={(e) =>
-                    setForm((prev) => ({
-                      ...prev,
-                      password: e.currentTarget.value,
-                    }))
-                  }
-                />
-              </Field>
+              {!editingId && (
+                <Field>
+                  <FieldLabel>Password</FieldLabel>
+                  <Input
+                    type="password"
+                    value={form.password}
+                    onChange={(e) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        password: e.target.value,
+                      }))
+                    }
+                    disabled={isLoading}
+                  />
+                </Field>
+              )}
               <Field>
                 <FieldLabel>Role</FieldLabel>
                 <Select
@@ -152,6 +254,7 @@ export default function UserRegistryPage() {
                   onValueChange={(v: string) =>
                     setForm((prev) => ({ ...prev, role: v }))
                   }
+                  disabled={isLoading}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Pilih role" />
@@ -160,9 +263,6 @@ export default function UserRegistryPage() {
                     <SelectItem value="ADMIN">ADMIN</SelectItem>
                     <SelectItem value="RISK_MANAGER">RISK_MANAGER</SelectItem>
                     <SelectItem value="RISK_OWNER">RISK_OWNER</SelectItem>
-                    <SelectItem value="CONTROL_OWNER">
-                      CONTROL_OWNER
-                    </SelectItem>
                     <SelectItem value="TOP_MANAGEMENT">
                       TOP_MANAGEMENT
                     </SelectItem>
@@ -170,21 +270,22 @@ export default function UserRegistryPage() {
                 </Select>
               </Field>
               <Field>
-                <FieldLabel>Divisi</FieldLabel>
+                <FieldLabel>Divisi (Opsional)</FieldLabel>
                 <Select
-                  value={form.division}
+                  value={form.division_id || "none"}
                   onValueChange={(v: string) =>
-                    setForm((prev) => ({ ...prev, division: v }))
+                    setForm((prev) => ({ ...prev, division_id: v === "none" ? "" : v }))
                   }
+                  disabled={isLoading}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Pilih divisi (opsional)" />
+                    <SelectValue placeholder="Pilih divisi" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="NONE">-- Tidak ada --</SelectItem>
-                    {sampleDivisions.map((d) => (
-                      <SelectItem key={d} value={d}>
-                        {d}
+                    <SelectItem value="none">-- Tidak ada --</SelectItem>
+                    {divisions.map((d) => (
+                      <SelectItem key={d.id} value={d.id}>
+                        {d.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -193,10 +294,20 @@ export default function UserRegistryPage() {
             </FieldGroup>
             <DialogFooter>
               <div className="flex justify-end w-full gap-2">
-                <Button variant="outline" onClick={() => setOpen(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => handleOpenChange(false)}
+                  disabled={isLoading}
+                >
                   Batal
                 </Button>
-                <Button onClick={handleAdd}>Tambah Pengguna</Button>
+                <Button onClick={handleAdd} disabled={isLoading}>
+                  {isLoading
+                    ? "Sedang Menyimpan..."
+                    : editingId
+                    ? "Perbarui Pengguna"
+                    : "Tambah Pengguna"}
+                </Button>
               </div>
             </DialogFooter>
           </DialogContent>
@@ -216,31 +327,39 @@ export default function UserRegistryPage() {
             header: "Nama",
             key: "name",
             render: (value) => <span className="font-medium">{String(value)}</span>,
+            searchable: true,
           },
           {
             header: "Email",
             key: "email",
+            searchable: true,
           },
           {
             header: "Role",
             key: "role",
+            searchable: true,
           },
           {
             header: "Divisi",
-            key: "division",
-            render: (value) => <span>{String(value || "-")}</span>,
+            key: "divisionName",
+            render: (value) => <span>{String(value)}</span>,
           },
           {
             header: "Aksi",
             key: "id",
-            render: (value) => (
+            render: (value, row: any) => (
               <div className="flex items-center gap-2">
-                <button className="p-2 hover:bg-gray-100 rounded transition-colors">
+                <button
+                  className="p-2 hover:bg-gray-100 rounded transition-colors disabled:opacity-50"
+                  onClick={() => handleEdit(row)}
+                  disabled={isLoading}
+                >
                   <Edit size={18} className="text-gray-600" />
                 </button>
                 <button
-                  className="p-2 hover:bg-gray-100 rounded transition-colors"
-                  onClick={() => removeUser(String(value))}
+                  className="p-2 hover:bg-gray-100 rounded transition-colors disabled:opacity-50"
+                  onClick={() => handleDelete(String(value))}
+                  disabled={isLoading}
                 >
                   <Trash size={18} className="text-gray-600" />
                 </button>
@@ -249,7 +368,7 @@ export default function UserRegistryPage() {
             searchable: false,
           },
         ]}
-        pageSize={10}
+        pageSize={pageSize}
         emptyMessage="Tidak ada pengguna yang ditemukan"
       />
     </div>

@@ -120,6 +120,16 @@ export interface DeleteDepartmentResponse {
   status: boolean
 }
 
+export interface GetDepartmentsResponse {
+  code: number
+  message: string
+  status: boolean
+  data: {
+    data: Department[]
+    metadata: PaginationMetadata
+  }
+}
+
 export interface PaginationMetadata {
   page: number
   per_page: number
@@ -127,12 +137,59 @@ export interface PaginationMetadata {
   total_page: number
 }
 
-export interface GetDepartmentsResponse {
+// User Management related types
+export interface UserManagement {
+  id: string
+  organizationId: string
+  name: string
+  email: string
+  role: "ADMIN" | "RISK_MANAGER" | "RISK_OWNER" | "TOP_MANAGEMENT" | string
+  departmentId?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface CreateUserRequest {
+  name: string
+  email: string
+  password: string
+  role: "ADMIN" | "RISK_MANAGER" | "RISK_OWNER" | "TOP_MANAGEMENT"
+  division_id?: string
+}
+
+export interface UpdateUserRequest {
+  name?: string
+  email?: string
+  role?: "ADMIN" | "RISK_MANAGER" | "RISK_OWNER" | "TOP_MANAGEMENT"
+  division_id?: string
+}
+
+export interface CreateUserResponse {
+  code: number
+  message: string
+  status: boolean
+  data: UserManagement
+}
+
+export interface UpdateUserResponse {
+  code: number
+  message: string
+  status: boolean
+  data: UserManagement
+}
+
+export interface DeleteUserResponse {
+  code: number
+  message: string
+  status: boolean
+}
+
+export interface GetUsersResponse {
   code: number
   message: string
   status: boolean
   data: {
-    data: Department[]
+    data: UserManagement[]
     metadata: PaginationMetadata
   }
 }
