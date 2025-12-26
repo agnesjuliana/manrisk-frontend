@@ -7,6 +7,7 @@ export { contextsApi } from "./contexts"
 export { externalStakeholdersApi } from "./external-stakeholders"
 export { ciaApi } from "./cia"
 export { regulationsApi } from "./regulations"
+export { riskCriteriaApi } from "./risk-criteria"
 export { apiClient } from "./config"
 export type {
   User,
