@@ -28,11 +28,13 @@ export function ProfileForm({
   onSubmitProfile,
   submitLabel = "Simpan",
   showHeader = false,
+  isEditMode = false,
 }: React.ComponentProps<"div"> & {
   initialValues?: Partial<ProfileValues>
   onSubmitProfile?: (values: ProfileValues) => void
   submitLabel?: string
   showHeader?: boolean
+  isEditMode?: boolean
 }) {
   const router = useRouter()
   const [values, setValues] = React.useState<ProfileValues>({
@@ -62,13 +64,13 @@ export function ProfileForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     
-    // If onSubmitProfile callback is provided, use it (for other use cases)
-    if (onSubmitProfile) {
+    // If onSubmitProfile callback is provided AND not in edit mode, use it
+    if (onSubmitProfile && !isEditMode) {
       onSubmitProfile(values)
       return
     }
 
-    // Otherwise, submit to API (for onboarding flow)
+    // Otherwise, submit to API
     setIsLoading(true)
 
     try {
@@ -80,9 +82,14 @@ export function ProfileForm({
       })
 
       if (response.status) {
-        toast.success("Organisasi berhasil disimpan! Redirecting...")
-        // Redirect to dashboard
-        router.push("/dashboard")
+        toast.success("Organisasi berhasil disimpan!")
+        if (onSubmitProfile) {
+          onSubmitProfile(values)
+        }
+        // Redirect to dashboard only if not in edit mode
+        if (!isEditMode) {
+          router.push("/dashboard")
+        }
       }
     } catch (err: any) {
       const errorMessage = err.message || "Gagal menyimpan organisasi. Silakan coba lagi."

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -21,6 +21,8 @@ import RegulationsSection from "@/components/konteks/RegulationsSection";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useAuth } from "@/hooks/use-auth";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   loadUsers,
   saveUsers,
@@ -101,13 +103,27 @@ const initialData: ContextData = {
 };
 
 export default function KonteksOrganisasiPage() {
-  // profile state
+  const { user, isLoading: authLoading } = useAuth();
+  
+  // profile state - initialized from user data
   const [profile, setProfile] = useState({
-    name: "ManRisk Org.",
-    address: "Jl. Contoh No. 123",
-    email: "m@example.com",
-    phone: "+62 888-8888-8888",
+    name: "",
+    address: "",
+    email: "",
+    phone: "",
   });
+
+  // Load profile from user data on mount
+  useEffect(() => {
+    if (user?.organization) {
+      setProfile({
+        name: user.organization.name || "",
+        address: user.organization.address || "",
+        email: user.organization.email || "",
+        phone: user.organization.noTelp || "",
+      });
+    }
+  }, [user]);
 
   const [data, setData] = useState<ContextData>(initialData);
 
@@ -402,7 +418,9 @@ export default function KonteksOrganisasiPage() {
         <CardHeader className="border-b border-gray-200 bg-white pb-4">
           <div className="flex items-start justify-between">
             <div>
-              <CardTitle className="text-xl text-gray-900">{profile.name}</CardTitle>
+              <CardTitle className="text-xl text-gray-900">
+                {authLoading ? <Skeleton className="h-6 w-48" /> : profile.name}
+              </CardTitle>
               <CardDescription className="text-gray-500 mt-1">Informasi dasar instansi yang terdaftar</CardDescription>
             </div>
             <Dialog>
@@ -417,6 +435,7 @@ export default function KonteksOrganisasiPage() {
                     setProfile(values)
                   }}
                   submitLabel="Simpan Perubahan"
+                  isEditMode={true}
                 />
               </DialogContent>
               <DialogTrigger asChild>
@@ -426,20 +445,28 @@ export default function KonteksOrganisasiPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-6 md:grid-cols-3">
-            <div className="p-4 rounded-lg bg-white border border-gray-200 hover:border-gray-300 transition-colors">
-              <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Alamat</div>
-              <div className="font-medium text-gray-900 mt-2">{profile.address}</div>
+          {authLoading ? (
+            <div className="grid gap-6 md:grid-cols-3">
+              <Skeleton className="h-20" />
+              <Skeleton className="h-20" />
+              <Skeleton className="h-20" />
             </div>
-            <div className="p-4 rounded-lg bg-white border border-gray-200 hover:border-gray-300 transition-colors">
-              <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Email</div>
-              <div className="font-medium text-gray-900 mt-2">{profile.email}</div>
+          ) : (
+            <div className="grid gap-6 md:grid-cols-3">
+              <div className="p-4 rounded-lg bg-white border border-gray-200 hover:border-gray-300 transition-colors">
+                <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Alamat</div>
+                <div className="font-medium text-gray-900 mt-2">{profile.address}</div>
+              </div>
+              <div className="p-4 rounded-lg bg-white border border-gray-200 hover:border-gray-300 transition-colors">
+                <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Email</div>
+                <div className="font-medium text-gray-900 mt-2">{profile.email}</div>
+              </div>
+              <div className="p-4 rounded-lg bg-white border border-gray-200 hover:border-gray-300 transition-colors">
+                <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Telepon</div>
+                <div className="font-medium text-gray-900 mt-2">{profile.phone}</div>
+              </div>
             </div>
-            <div className="p-4 rounded-lg bg-white border border-gray-200 hover:border-gray-300 transition-colors">
-              <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Telepon</div>
-              <div className="font-medium text-gray-900 mt-2">{profile.phone}</div>
-            </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 
