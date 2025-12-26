@@ -6,6 +6,8 @@ export function useAuth() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(true)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [user, setUser] = useState<any>(null)
+  const [role, setRole] = useState<string | null>(null)
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -22,6 +24,8 @@ export function useAuth() {
         const response = await authApi.getProfile()
         
         if (response.status) {
+          setUser(response.data)
+          setRole(response.data.role)
           setIsAuthenticated(true)
           setIsLoading(false)
         }
@@ -35,7 +39,7 @@ export function useAuth() {
     checkAuth()
   }, [router])
 
-  return { isLoading, isAuthenticated }
+  return { isLoading, isAuthenticated, user, role }
 }
 
 export default useAuth

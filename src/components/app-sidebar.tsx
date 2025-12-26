@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { GalleryVerticalEnd } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
 
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
@@ -15,34 +16,49 @@ import {
 } from "@/components/ui/sidebar";
 import { navMain } from "@/lib/nav-data";
 
-// local UI data
-const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
-  teams: [
-    {
-      name: "ManRisk Org.",
-      logo: GalleryVerticalEnd,
-      plan: "Agnes - Role",
-    },
-  ],
-};
-
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <Sidebar collapsible="icon" {...props}>
+        <SidebarHeader />
+        <SidebarContent />
+        <SidebarFooter />
+        <SidebarRail />
+      </Sidebar>
+    );
+  }
+
+  const userData = user ? {
+    name: user.name,
+    email: user.email,
+    avatar: "/avatars/default.jpg",
+  } : {
+    name: "User",
+    email: "user@example.com",
+    avatar: "/avatars/default.jpg",
+  };
+
+  const teamsData = [
+    {
+      name: user?.organization?.name || "ManRisk Org.",
+      logo: GalleryVerticalEnd,
+      plan: user?.role || "User",
+    },
+  ];
+
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
+        <TeamSwitcher teams={teamsData} />
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={navMain} />
         {/* <NavProjects projects={data.projects} /> */}
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={userData} />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

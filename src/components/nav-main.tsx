@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { ChevronRight, type LucideIcon } from "lucide-react"
+import { useAuth } from "@/hooks/use-auth"
 
 import {
   Collapsible,
@@ -27,17 +28,36 @@ export function NavMain({
     url: string
     icon?: LucideIcon
     isActive?: boolean
+    accessRole?: string[]
     items?: {
       title: string
       url: string
+      accessRole?: string[]
+      isViewOnly?: string[]
     }[]
   }[]
 }) {
+  const { role, isLoading } = useAuth()
+
+  if (isLoading) {
+    return null
+  }
+
+  // Filter menu items based on user role
+  const filteredItems = items
+    .filter((item) => !item.accessRole || item.accessRole.includes(role || ""))
+    .map((item) => ({
+      ...item,
+      items: item.items?.filter(
+        (subItem) => !subItem.accessRole || subItem.accessRole.includes(role || "")
+      ),
+    }))
+
   return (
     <SidebarGroup>
       <SidebarGroupLabel>Dashboard</SidebarGroupLabel>
       <SidebarMenu>
-        {items.map((item) => (
+        {filteredItems.map((item) => (
           <Collapsible
             key={item.title}
             asChild
@@ -58,7 +78,12 @@ export function NavMain({
                     <SidebarMenuSubItem key={subItem.title}>
                       <SidebarMenuSubButton asChild>
                         <Link href={subItem.url}>
-                          <span>{subItem.title}</span>
+                          <span>
+                            {subItem.title}
+                            {subItem.isViewOnly?.includes(role || "") && (
+                              <span className="ml-2 text-xs text-gray-500">(View Only)</span>
+                            )}
+                          </span>
                         </Link>
                       </SidebarMenuSubButton>
                     </SidebarMenuSubItem>

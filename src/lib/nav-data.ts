@@ -15,6 +15,7 @@ export const navMain = [
     url: "/dashboard/user",
     icon: UserCog,
     isActive: true,
+    accessRole: ["ADMIN"],
     items: [
       {
         title: "Divisi & Hak Akses",
@@ -32,16 +33,19 @@ export const navMain = [
     title: "Organisasi",
     url: "/dashboard/organisasi",
     icon: Building,
+    accessRole: ["ADMIN", "RISK_MANAGER", "RISK_OWNER"],
     items: [
       {
         title: "Konteks Organisasi",
         url: "/dashboard/organisasi/konteks-organisasi",
-        accessRole: ["RISK_MANAGER"],
+        accessRole: ["ADMIN", "RISK_MANAGER", "RISK_OWNER"],
+        isViewOnly: ["RISK_OWNER"],
       },
       {
         title: "Kriteria Risiko",
         url: "/dashboard/organisasi/kriteria-risiko",
-        accessRole: ["RISK_MANAGER"],
+        accessRole: ["ADMIN", "RISK_MANAGER", "RISK_OWNER"],
+        isViewOnly: ["RISK_OWNER"],
       },
     ],
   },
@@ -49,6 +53,7 @@ export const navMain = [
     title: "Aset",
     url: "/dashboard/aset",
     icon: Package,
+    accessRole: ["RISK_MANAGER", "RISK_OWNER"],
     items: [
       {
         title: "Daftar Aset",
@@ -66,6 +71,7 @@ export const navMain = [
     title: "Risiko",
     url: "/dashboard/risiko",
     icon: ShieldAlert,
+    accessRole: ["RISK_MANAGER", "RISK_OWNER"],
     items: [
       {
         title: "Daftar Risiko",
@@ -80,7 +86,7 @@ export const navMain = [
       {
         title: "Persetujuan Kajian",
         url: "/dashboard/risiko/persetujuan-risiko/rm-view",
-        accessRole: ["RISK_MANAGER", "TOP_MANAGEMENT"],
+        accessRole: ["RISK_MANAGER"],
       },
     ],
   },
@@ -88,6 +94,7 @@ export const navMain = [
     title: "Treatment",
     url: "/dashboard/treatment",
     icon: FlaskConical,
+    accessRole: ["RISK_MANAGER", "RISK_OWNER"],
     items: [
       {
         title: "Daftar Treatment",
@@ -97,7 +104,7 @@ export const navMain = [
       {
         title: "Persetujuan Treatment",
         url: "/dashboard/treatment/persetujuan-treatment",
-        accessRole: ["RISK_MANAGER", "TOP_MANAGEMENT"],
+        accessRole: ["RISK_MANAGER"],
       },
       {
         title: "Residu Risiko",
@@ -110,16 +117,19 @@ export const navMain = [
     title: "Kontrol & SoA",
     url: "/dashboard/kontrol",
     icon: PieChart,
+    accessRole: ["RISK_MANAGER", "RISK_OWNER"],
     items: [
       {
         title: "Daftar Kontrol",
         url: "/dashboard/kontrol/daftar-kontrol",
-        accessRole: ["RISK_MANAGER", "RISK_OWNER", "CONTROL_OWNER"],
+        accessRole: ["RISK_MANAGER", "RISK_OWNER"],
+        isViewOnly: ["RISK_OWNER"],
       },
       {
         title: "SoA",
         url: "/dashboard/kontrol/soa",
-        accessRole: ["RISK_MANAGER", "CONTROL_OWNER"],
+        accessRole: ["RISK_MANAGER", "RISK_OWNER"],
+        isViewOnly: ["RISK_OWNER"],
       },
     ],
   },
@@ -127,21 +137,17 @@ export const navMain = [
     title: "Monitoring",
     url: "/dashboard/monitoring",
     icon: ChartSpline,
+    accessRole: ["RISK_MANAGER", "RISK_OWNER"],
     items: [
       {
         title: "Rangkuman Risiko",
         url: "/dashboard/monitoring/rangkuman-risiko",
-        accessRole: [
-          "RISK_MANAGER",
-          "RISK_OWNER",
-          "CONTROL_OWNER",
-          "TOP_MANAGEMENT",
-        ],
+        accessRole: ["RISK_MANAGER", "RISK_OWNER"],
       },
       {
         title: "Daftar Tugas",
         url: "/dashboard/monitoring/daftar-tugas",
-        accessRole: ["RISK_MANAGER", "RISK_OWNER", "CONTROL_OWNER"],
+        accessRole: ["RISK_MANAGER", "RISK_OWNER"],
       },
     ],
   },
