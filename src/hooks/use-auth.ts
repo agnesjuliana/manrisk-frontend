@@ -39,7 +39,14 @@ export function useAuth() {
     checkAuth()
   }, [router])
 
-  return { isLoading, isAuthenticated, user, role }
+  const logout = () => {
+    authApi.logout()
+    setIsAuthenticated(false)
+    setUser(null)
+    setRole(null)
+  }
+
+  return { isLoading, isAuthenticated, user, role, logout }
 }
 
 export default useAuth
