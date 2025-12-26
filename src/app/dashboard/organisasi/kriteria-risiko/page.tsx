@@ -578,16 +578,19 @@ export default function KriteriaRisikoPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {Array.from({ length: Math.min(5, scaleSize) }).map((_, idx) => {
-                    const level = idx + 1;
-                    const rpn = level * level * level;
+                  {Array.from({ length: scaleSize * scaleSize * scaleSize }).map((_, idx) => {
+                    // Generate all combinations of severity, occurrence, detection
+                    const severity = Math.floor(idx / (scaleSize * scaleSize)) + 1;
+                    const occurrence = Math.floor((idx % (scaleSize * scaleSize)) / scaleSize) + 1;
+                    const detection = (idx % scaleSize) + 1;
+                    const rpn = severity * occurrence * detection;
                     const isCritical = rpn >= threshold;
                     return (
                       <TableRow key={idx}>
                         <TableCell className="font-medium">{idx + 1}</TableCell>
-                        <TableCell>{severityLabels[idx] || `Level ${level}`}</TableCell>
-                        <TableCell>{occurrenceLabels[idx] || `Level ${level}`}</TableCell>
-                        <TableCell>{detectionLabels[idx] || `Level ${level}`}</TableCell>
+                        <TableCell>{severityLabels[severity - 1] || `Level ${severity}`}</TableCell>
+                        <TableCell>{occurrenceLabels[occurrence - 1] || `Level ${occurrence}`}</TableCell>
+                        <TableCell>{detectionLabels[detection - 1] || `Level ${detection}`}</TableCell>
                         <TableCell className={`text-center font-semibold ${isCritical ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"} rounded`}>
                           {rpn}
                         </TableCell>
