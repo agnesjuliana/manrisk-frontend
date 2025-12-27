@@ -26,7 +26,7 @@ export interface GetAssetsResponse {
 }
 
 export const assetsApi = {
-  getAssets: async (page: number = 1, per_page: number = 20) => {
+  getAssets: async (page: number = 1, per_page: number = 20, status?: string) => {
     try {
       const response = await apiClient.get<ApiResponse<GetAssetsResponse>>(
         "/assets",
@@ -34,6 +34,7 @@ export const assetsApi = {
           params: {
             page,
             per_page,
+            ...(status && { status }),
           },
         }
       );

@@ -96,7 +96,12 @@ export default function DaftarAsetPage() {
     const loadAssetsFromAPI = async () => {
       setIsLoadingAssets(true);
       try {
-        const response = await assetsApi.getAssets(currentPage, 20);
+        // For TOP_MANAGEMENT, filter by approved and waiting for final approval statuses
+        const statusFilter = isTopManagement 
+          ? "DISETUJUI,MENUNGGU_PERSETUJUAN_FINAL" 
+          : undefined;
+
+        const response = await assetsApi.getAssets(currentPage, 20, statusFilter);
 
         if (response.status && response.data) {
           // Map API response to local Asset type
@@ -140,7 +145,7 @@ export default function DaftarAsetPage() {
     };
 
     loadAssetsFromAPI();
-  }, [currentPage]);
+  }, [currentPage, isTopManagement]);
 
   // Load asset types and classifications on mount
   React.useEffect(() => {

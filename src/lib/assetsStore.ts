@@ -8,6 +8,12 @@ export enum AssetStatus {
   DITOLAK = "DITOLAK",
 }
 
+export enum AssetApprovalTLStatus {
+  MENUNGGU_PERSETUJUAN_FINAL = "MENUNGGU_PERSETUJUAN_FINAL",
+  DITOLAK = "DITOLAK",
+  DISETUJUI = "DISETUJUI",
+}
+
 export type Asset = {
   id: string;
   name: string;

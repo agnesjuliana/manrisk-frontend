@@ -2,12 +2,25 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { loadAssets, type Asset } from "@/lib/assetsStore";
-import { createSubmission, saveSubmissions, loadSubmissions } from "@/lib/assetsSubmissionStore";
-import { loadUsers } from "@/lib/usersStore";
+import { toast } from "sonner";
+import { loadUsers, type User as StoreUser } from "@/lib/usersStore";
+import { type Asset, AssetStatus } from "@/lib/assetsStore";
 import { PaginatedTable, type ColumnDef } from "@/components/paginated-table";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Field, FieldLabel } from "@/components/ui/field";
+import { Textarea } from "@/components/ui/textarea";
+import { assetsApi } from "@/lib/api";
+import { apiClient } from "@/lib/api/config";
+
+type User = StoreUser;
 
 interface AssetWithCheckbox extends Asset {
   selected?: boolean;
@@ -15,13 +28,76 @@ interface AssetWithCheckbox extends Asset {
 
 export default function BuatAjuanPage() {
   const router = useRouter();
-  const [assets, setAssets] = React.useState<Asset[]>(() => {
-    if (typeof window === "undefined") return [];
-    return loadAssets();
-  });
 
-  const users = loadUsers();
+  const [assets, setAssets] = React.useState<Asset[]>([]);
+  const [users, setUsers] = React.useState<User[]>([]);
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [isSending, setIsSending] = React.useState(false);
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [totalPages, setTotalPages] = React.useState(1);
+  const [totalAssets, setTotalAssets] = React.useState(0);
+  const [showModal, setShowModal] = React.useState(false);
+  const [message, setMessage] = React.useState("");
+
+  // Load users on client side
+  React.useEffect(() => {
+    setUsers(loadUsers());
+  }, []);
+
+  // Load assets from API with DISETUJUI_RM status filter
+  React.useEffect(() => {
+    const loadAssetsFromAPI = async () => {
+      setIsLoading(true);
+      try {
+        const response = await assetsApi.getAssets(
+          currentPage,
+          20,
+          "DISETUJUI_RM"
+        );
+
+        if (response?.status && response?.data?.data) {
+          const mappedAssets: Asset[] = response.data.data.map((asset: any) => {
+            let mappedStatus: AssetStatus = AssetStatus.DRAFT;
+            const apiStatus = (asset.status || "").toUpperCase();
+
+            if (apiStatus in AssetStatus) {
+              mappedStatus = apiStatus as AssetStatus;
+            }
+
+            return {
+              id: asset.id,
+              name: asset.name,
+              type: asset.type?.title || "",
+              classification: asset.classification?.title || "",
+              location: asset.location || "",
+              status: mappedStatus,
+              ownerId: asset.owner?.id,
+              ownerName: asset.owner?.name,
+              division: asset.owner?.department?.name,
+            };
+          });
+
+          setAssets(mappedAssets);
+
+          if (response.data.metadata) {
+            setTotalPages(response.data.metadata.total_page);
+            setTotalAssets(response.data.metadata.total_data);
+          }
+        } else {
+          setAssets([]);
+        }
+      } catch (err) {
+        console.error("Error loading assets:", err);
+        toast.error("Gagal memuat daftar aset");
+        setAssets([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadAssetsFromAPI();
+  }, [currentPage]);
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -40,39 +116,66 @@ export default function BuatAjuanPage() {
     }
   }
 
-  function submitSubmission() {
-    if (selected.size === 0) return;
+  function handleAjukanClick() {
+    if (selected.size === 0) {
+      toast.error("Pilih minimal satu aset");
+      return;
+    }
+    setShowModal(true);
+  }
 
-    const newSubmission = createSubmission(Array.from(selected));
-    const submissions = loadSubmissions();
-    submissions.push(newSubmission);
-    saveSubmissions(submissions);
+  async function handleSubmitApproval() {
+    if (!message.trim()) {
+      toast.error("Pesan tidak boleh kosong");
+      return;
+    }
 
-    router.push("/dashboard/aset/persetujuan-aset/rm-view");
+    setIsSending(true);
+    try {
+      const payload = {
+        message: message.trim(),
+        assetIds: Array.from(selected),
+      };
+
+      const response = await apiClient.post("/asset-approvals", payload);
+
+      if (response.status === 200 || response.status === 201) {
+        toast.success(
+          `${selected.size} aset berhasil diajukan untuk persetujuan final`
+        );
+        setSelected(new Set());
+        setMessage("");
+        setShowModal(false);
+        router.back();
+      } else {
+        toast.error("Gagal mengirim pengajuan persetujuan");
+      }
+    } catch (err) {
+      console.error("Error submitting approval:", err);
+      toast.error("Gagal mengirim pengajuan persetujuan");
+    } finally {
+      setIsSending(false);
+    }
   }
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.back()}
-            className="flex items-center gap-1"
-          >
-            <ArrowLeft size={16} /> Kembali
-          </Button>
-          <h1 className="text-2xl font-semibold">Buat Ajuan Persetujuan Aset</h1>
+          <h1 className="text-2xl font-semibold">
+            Buat Pengajuan Persetujuan Final Aset
+          </h1>
         </div>
-        <Button onClick={submitSubmission} disabled={selected.size === 0}>
+        <Button
+          onClick={handleAjukanClick}
+          disabled={selected.size === 0}
+        >
           Ajukan ({selected.size} aset)
         </Button>
       </div>
 
-      <PaginatedTable<Asset>
-        data={assets}
-        columns={[
+      {(() => {
+        const columns: ColumnDef<Asset>[] = [
           {
             header: (
               <input
@@ -81,7 +184,8 @@ export default function BuatAjuanPage() {
                 onChange={toggleAll}
                 ref={(el) => {
                   if (el) {
-                    (el as HTMLInputElement).indeterminate = selected.size > 0 && selected.size < assets.length;
+                    (el as HTMLInputElement).indeterminate =
+                      selected.size > 0 && selected.size < assets.length;
                   }
                 }}
               />
@@ -94,40 +198,160 @@ export default function BuatAjuanPage() {
                 onChange={() => toggle(String(value))}
               />
             ),
+            searchable: false,
+          },
+          {
+            header: "No",
+            key: "id",
+            render: (_: any, row: Asset) => {
+              const index = assets.findIndex((a) => a.id === row.id);
+              return <span className="text-gray-600">{index + 1}</span>;
+            },
+            searchable: false,
           },
           {
             header: "Nama Aset",
             key: "name",
-            render: (value) => <span className="font-medium">{String(value)}</span>,
+            render: (value) => (
+              <span className="font-medium">{String(value)}</span>
+            ),
           },
           {
             header: "Tipe",
             key: "type",
           },
           {
-            header: "Owner",
-            key: (row: Asset) => {
-              const owner = users.find((u) => u.id === row.ownerId);
-              return owner?.name ?? "-";
-            },
+            header: "Klasifikasi",
+            key: "classification",
           },
           {
             header: "Lokasi",
-            key: (row: Asset) => row.location ?? "-",
+            key: "location",
+          },
+          {
+            header: "Owner",
+            key: "ownerName",
+          },
+          {
+            header: "Divisi",
+            key: "division",
           },
           {
             header: "Status",
-            key: (row: Asset) => row.status ?? "PENDING",
-            render: (value) => (
-              <span className="rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800">
-                {String(value)}
-              </span>
-            ),
+            key: "status",
+            render: (value: any) => {
+              const status = String(value || AssetStatus.DRAFT);
+              let statusClass = "bg-lime-100 text-lime-700";
+              let statusLabel = "Disetujui RM";
+
+              return (
+                <span
+                  className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${statusClass}`}
+                >
+                  {statusLabel}
+                </span>
+              );
+            },
+            searchable: false,
           },
-        ]}
-        pageSize={10}
-        emptyMessage="Belum ada aset yang terdaftar"
-      />
+        ];
+
+        return (
+          <PaginatedTable<Asset>
+            data={assets}
+            columns={columns}
+            pageSize={20}
+            emptyMessage="Belum ada aset dengan status Disetujui RM"
+          />
+        );
+      })()}
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between gap-4 mt-4">
+          <div className="text-sm text-muted-foreground">
+            Menampilkan halaman {currentPage} dari {totalPages} ({totalAssets}{" "}
+            total aset)
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+              disabled={currentPage === 1 || isLoading}
+            >
+              Sebelumnya
+            </Button>
+            <div className="flex items-center gap-1">
+              {Array.from({ length: totalPages }).map((_, i) => (
+                <Button
+                  key={i + 1}
+                  variant={currentPage === i + 1 ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setCurrentPage(i + 1)}
+                  disabled={isLoading}
+                >
+                  {i + 1}
+                </Button>
+              ))}
+            </div>
+            <Button
+              variant="outline"
+              onClick={() =>
+                setCurrentPage(Math.min(totalPages, currentPage + 1))
+              }
+              disabled={currentPage === totalPages || isLoading}
+            >
+              Selanjutnya
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Approval Message Modal */}
+      <Dialog open={showModal} onOpenChange={setShowModal}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ajukan Persetujuan Final Aset</DialogTitle>
+            <DialogDescription>
+              Masukkan pesan untuk persetujuan {selected.size} aset ke top level
+              management
+            </DialogDescription>
+          </DialogHeader>
+
+          <Field>
+            <FieldLabel>Pesan Persetujuan</FieldLabel>
+            <Textarea
+              placeholder="Contoh: Persetujuan untuk aset-aset berikut ke top level management"
+              value={message}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                setMessage(e.target.value)
+              }
+              rows={4}
+            />
+          </Field>
+
+          <DialogFooter>
+            <div className="flex justify-end w-full gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowModal(false);
+                  setMessage("");
+                }}
+                disabled={isSending}
+              >
+                Batal
+              </Button>
+              <Button
+                onClick={handleSubmitApproval}
+                disabled={isSending || !message.trim()}
+              >
+                {isSending ? "Mengirim..." : "Kirim Persetujuan"}
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
