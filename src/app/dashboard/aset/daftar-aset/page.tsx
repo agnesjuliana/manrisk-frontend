@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { toast } from "sonner";
 import { loadUsers, type User as StoreUser } from "@/lib/usersStore";
 import { loadAssets, saveAssets, type Asset, AssetStatus } from "@/lib/assetsStore";
 import { PaginatedTable, type ColumnDef } from "@/components/paginated-table";
@@ -32,7 +33,6 @@ export default function DaftarAsetPage() {
   const [open, setOpen] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isSaving, setIsSaving] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
 
   const [assetTypes, setAssetTypes] = React.useState<AssetType[]>([]);
   const [classifications, setClassifications] = React.useState<
@@ -118,7 +118,7 @@ export default function DaftarAsetPage() {
         }
       } catch (err) {
         console.error("Error loading assets:", err);
-        setError("Gagal memuat daftar aset");
+        toast.error("Gagal memuat daftar aset");
       } finally {
         setIsLoadingAssets(false);
       }
@@ -131,7 +131,6 @@ export default function DaftarAsetPage() {
   React.useEffect(() => {
     const loadDropdownData = async () => {
       setIsLoading(true);
-      setError(null);
       try {
         const [typesResponse, classificationsResponse] = await Promise.all([
           assetsApi.getTypes(),
@@ -150,7 +149,7 @@ export default function DaftarAsetPage() {
         }
       } catch (err) {
         console.error("Error loading dropdown data:", err);
-        setError("Gagal memuat data tipe dan klasifikasi aset");
+        toast.error("Gagal memuat data tipe dan klasifikasi aset");
       } finally {
         setIsLoading(false);
       }
@@ -161,30 +160,35 @@ export default function DaftarAsetPage() {
 
   function handleAdd() {
     if (!form.name.trim() || !form.type || !form.classification) {
-      setError("Nama, tipe, dan klasifikasi aset harus diisi");
+      toast.error("Nama, tipe, dan klasifikasi aset harus diisi");
       return;
     }
 
     setIsSaving(true);
-    setError(null);
 
     (async () => {
       try {
-        // Find selected type and classification from dropdown, or create new ones
-        const selectedType = assetTypes.find((t) => t.id === form.typeId);
-        const selectedClassification = classifications.find(
-          (c) => c.id === form.classificationId
-        );
+        // Determine if type is new or existing
+        // If typeId is empty, it means user typed a new value
+        const typeId = form.typeId 
+          ? form.typeId // User selected from dropdown
+          : null; // User typed new value, nullify ID
+        
+        // Determine if classification is new or existing
+        // If classificationId is empty, it means user typed a new value
+        const classificationId = form.classificationId 
+          ? form.classificationId // User selected from dropdown
+          : null; // User typed new value, nullify ID
 
         const response = await assetsApi.create({
           name: form.name,
           location: form.location || undefined,
           type: {
-            id: selectedType?.id || null,
+            id: typeId,
             name: form.type,
           },
           classification: {
-            id: selectedClassification?.id || null,
+            id: classificationId,
             name: form.classification,
           },
         });
@@ -216,12 +220,13 @@ export default function DaftarAsetPage() {
             location: "",
           });
           setOpen(false);
+          toast.success("Aset berhasil ditambahkan!");
         } else {
-          setError(response.message || "Gagal menambah aset");
+          toast.error(response.message || "Gagal menambah aset");
         }
       } catch (err) {
         console.error("Error adding asset:", err);
-        setError(
+        toast.error(
           err instanceof Error ? err.message : "Terjadi kesalahan saat menambah aset"
         );
       } finally {
@@ -243,13 +248,13 @@ export default function DaftarAsetPage() {
       const response = await assetsApi.delete(id);
       if (response.status) {
         removeAsset(id);
-        setError(null);
+        toast.success("Aset berhasil dihapus!");
       } else {
-        setError(response.message || "Gagal menghapus aset");
+        toast.error(response.message || "Gagal menghapus aset");
       }
     } catch (err) {
       console.error("Error deleting asset:", err);
-      setError(
+      toast.error(
         err instanceof Error ? err.message : "Terjadi kesalahan saat menghapus aset"
       );
     }
@@ -281,28 +286,30 @@ export default function DaftarAsetPage() {
     if (!editingAssetId) return;
 
     if (!form.name.trim() || !form.type || !form.classification) {
-      setError("Nama, tipe, dan klasifikasi aset harus diisi");
+      toast.error("Nama, tipe, dan klasifikasi aset harus diisi");
       return;
     }
 
     setIsSaving(true);
-    setError(null);
 
     try {
-      const selectedType = assetTypes.find((t) => t.id === form.typeId);
-      const selectedClassification = classifications.find(
-        (c) => c.id === form.classificationId
-      );
+      const typeId = form.typeId 
+        ? form.typeId // User selected from dropdown
+        : null; // User typed new value, nullify ID
+      
+      const classificationId = form.classificationId 
+        ? form.classificationId // User selected from dropdown
+        : null; // User typed new value, nullify ID
 
       const response = await assetsApi.update(editingAssetId, {
         name: form.name,
         location: form.location || undefined,
         type: {
-          id: selectedType?.id || null,
+          id: typeId,
           name: form.type,
         },
         classification: {
-          id: selectedClassification?.id || null,
+          id: classificationId,
           name: form.classification,
         },
       });
@@ -333,12 +340,13 @@ export default function DaftarAsetPage() {
         });
         setEditingAssetId(null);
         setOpen(false);
+        toast.success("Aset berhasil diperbarui!");
       } else {
-        setError(response.message || "Gagal mengupdate aset");
+        toast.error(response.message || "Gagal mengupdate aset");
       }
     } catch (err) {
       console.error("Error updating asset:", err);
-      setError(
+      toast.error(
         err instanceof Error ? err.message : "Terjadi kesalahan saat mengupdate aset"
       );
     } finally {
@@ -368,12 +376,6 @@ export default function DaftarAsetPage() {
                     : "Isi data aset baru di formulir berikut."}
                 </DialogDescription>
               </DialogHeader>
-
-              {error && (
-                <div className="p-3 rounded bg-red-100 text-red-800 text-sm">
-                  {error}
-                </div>
-              )}
 
               <FieldGroup>
                 <Field>

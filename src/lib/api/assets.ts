@@ -83,7 +83,7 @@ export const assetsApi = {
 
   update: async (id: string, payload: Partial<CreateAssetRequest>) => {
     try {
-      const response = await apiClient.put<ApiResponse<AssetResponse>>(
+      const response = await apiClient.patch<ApiResponse<AssetResponse>>(
         `/assets/${id}`,
         payload
       );

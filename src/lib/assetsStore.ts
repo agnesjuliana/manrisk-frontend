@@ -1,7 +1,7 @@
 export enum AssetStatus {
   DRAFT = "DRAFT",
-  MENUNGGU_PERSETUJUAN_RM = "MENUNGGU_PERSETUJUAN_RM",
-  MENUNGGU_PERSETUJUAN_FINAL = "MENUNGGU_PERSETUJUAN_FINAL",
+  MENUNGGU_PERSETUJUAN_RM = "MENUNGGU PERSETUJUAN_RM",
+  MENUNGGU_PERSETUJUAN_FINAL = "MENUNGGU PERSETUJUAN_FINAL",
   REVISI = "REVISI",
   DISETUJUI = "DISETUJUI",
   DITOLAK = "DITOLAK",
@@ -20,38 +20,7 @@ export type Asset = {
 
 const STORAGE_KEY = "isms:assets:v1";
 
-const DEFAULT_ASSETS: Asset[] = [
-  {
-    id: "asset-1",
-    name: "Server Database Utama",
-    type: "hardware",
-    classification: "rahasia",
-    ownerId: "u-1",
-    location: "Data Center A",
-    processes: ["Pembayaran", "Rekonsiliasi"],
-    status: "PENDING",
-  },
-  {
-    id: "asset-2",
-    name: "Aplikasi HR",
-    type: "software",
-    classification: "internal",
-    ownerId: "u-2",
-    location: "Cloud Provider - us-east-1",
-    processes: ["Penggajian", "Manajemen Karyawan"],
-    status: "PENDING",
-  },
-  {
-    id: "asset-3",
-    name: "File Backup Finance",
-    type: "data",
-    classification: "rahasia",
-    ownerId: undefined,
-    location: "Offsite Backup",
-    processes: ["Audit", "Pelaporan"],
-    status: "PENDING",
-  },
-];
+const DEFAULT_ASSETS: Asset[] = [];
 
 export function loadAssets(): Asset[] {
   try {
