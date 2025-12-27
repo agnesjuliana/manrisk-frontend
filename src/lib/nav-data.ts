@@ -87,7 +87,7 @@ export const navMain = [
       },
       {
         title: "Persetujuan Kajian",
-        url: "/dashboard/risiko/persetujuan-risiko/rm-view",
+        url: "/dashboard/risiko/persetujuan-risiko",
         accessRole: ["RISK_MANAGER", "TOP_MANAGEMENT"],
       },
     ],
