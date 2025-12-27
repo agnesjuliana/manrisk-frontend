@@ -21,7 +21,7 @@ import {
   DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, Trash, Edit, SendHorizontal, ArchiveX } from "lucide-react";
+import { Plus, Trash, Edit, SendHorizontal, ArchiveX, ArchiveRestore, X, CheckCircle } from "lucide-react";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import {
   Tooltip,
@@ -375,6 +375,147 @@ export default function DaftarAsetPage() {
     }
   }
 
+  async function handleReviseAsset(id: string) {
+    if (!confirm("Apakah Anda yakin ingin mengirim aset ini untuk revisi?")) return;
+
+    try {
+      const assetToRevise = assets.find((a) => a.id === id);
+      if (!assetToRevise) return;
+
+      const response = await assetsApi.update(id, {
+        name: assetToRevise.name,
+        location: assetToRevise.location || undefined,
+        type: {
+          id: null,
+          name: assetToRevise.type,
+        },
+        classification: {
+          id: null,
+          name: assetToRevise.classification,
+        },
+        status: AssetStatus.REVISI,
+      });
+
+      if (response.status) {
+        // Update local state
+        setAssets((prev) =>
+          prev.map((a) =>
+            a.id === id
+              ? {
+                  ...a,
+                  status: AssetStatus.REVISI,
+                }
+              : a
+          )
+        );
+        toast.success("Aset berhasil dikirim untuk revisi!");
+      } else {
+        toast.error(response.message || "Gagal mengirim aset untuk revisi");
+      }
+    } catch (err) {
+      console.error("Error revising asset:", err);
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Terjadi kesalahan saat mengirim aset untuk revisi"
+      );
+    }
+  }
+
+  async function handleRejectAsset(id: string) {
+    if (!confirm("Apakah Anda yakin ingin menolak aset ini?")) return;
+
+    try {
+      const assetToReject = assets.find((a) => a.id === id);
+      if (!assetToReject) return;
+
+      const response = await assetsApi.update(id, {
+        name: assetToReject.name,
+        location: assetToReject.location || undefined,
+        type: {
+          id: null,
+          name: assetToReject.type,
+        },
+        classification: {
+          id: null,
+          name: assetToReject.classification,
+        },
+        status: AssetStatus.DITOLAK,
+      });
+
+      if (response.status) {
+        // Update local state
+        setAssets((prev) =>
+          prev.map((a) =>
+            a.id === id
+              ? {
+                  ...a,
+                  status: AssetStatus.DITOLAK,
+                }
+              : a
+          )
+        );
+        toast.success("Aset berhasil ditolak!");
+      } else {
+        toast.error(response.message || "Gagal menolak aset");
+      }
+    } catch (err) {
+      console.error("Error rejecting asset:", err);
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Terjadi kesalahan saat menolak aset"
+      );
+    }
+  }
+
+  async function handleApproveAsset(id: string) {
+    if (!confirm("Apakah Anda yakin ingin menyetujui aset ini?")) return;
+
+    try {
+      const assetToApprove = assets.find((a) => a.id === id);
+      if (!assetToApprove) return;
+
+      const response = await assetsApi.update(id, {
+        name: assetToApprove.name,
+        location: assetToApprove.location || undefined,
+        type: {
+          id: null,
+          name: assetToApprove.type,
+        },
+        classification: {
+          id: null,
+          name: assetToApprove.classification,
+        },
+        status: AssetStatus.DISETUJUI_RM,
+      });
+
+      if (response.status) {
+        // Update local state
+        setAssets((prev) =>
+          prev.map((a) =>
+            a.id === id
+              ? {
+                  ...a,
+                  status: AssetStatus.DISETUJUI_RM,
+                }
+              : a
+          )
+        );
+        toast.success("Aset berhasil disetujui!");
+      } else {
+        toast.error(response.message || "Gagal menyetujui aset");
+      }
+    } catch (err) {
+      console.error("Error approving asset:", err);
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Terjadi kesalahan saat menyetujui aset"
+      );
+    }
+  }
+
   async function handleUpdateAsset(id: string) {
     const assetToEdit = assets.find((a) => a.id === id);
     if (!assetToEdit) return;
@@ -699,6 +840,10 @@ export default function DaftarAsetPage() {
                 statusClass = "bg-yellow-100 text-yellow-700";
                 statusLabel = "Menunggu Persetujuan RM";
                 break;
+              case AssetStatus.DISETUJUI_RM:
+                statusClass = "bg-lime-100 text-lime-700";
+                statusLabel = "Disetujui RM";
+                break;
               case AssetStatus.MENUNGGU_PERSETUJUAN_FINAL:
                 statusClass = "bg-blue-100 text-blue-700";
                 statusLabel = "Menunggu Persetujuan Final";
@@ -731,91 +876,56 @@ export default function DaftarAsetPage() {
         baseColumns.push({
           header: "Aksi",
           key: "id",
-          render: (_: any, row: Asset) => (
-            <div className="flex items-center gap-2">
-              {/* RISK_OWNER specific actions */}
-              {isRiskOwner ? (
-                <TooltipProvider>
-                  <>
-                    {/* DRAFT status: Show submit button */}
-                    {row.status === AssetStatus.DRAFT && (
-                      <>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              className="p-2 hover:bg-green-100 rounded transition-colors"
-                              onClick={() => handleSubmitForApproval(row.id)}
-                            >
-                              <SendHorizontal size={18} className="text-green-600" />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent>Kirim untuk persetujuan RM</TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              className="p-2 hover:bg-blue-100 rounded transition-colors"
-                              onClick={() => handleUpdateAsset(row.id)}
-                            >
-                              <Edit size={18} className="text-blue-600" />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent>Edit aset</TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              className="p-2 hover:bg-gray-100 rounded transition-colors"
-                              onClick={() => handleDeleteAsset(row.id)}
-                            >
-                              <Trash size={18} className="text-gray-600" />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent>Hapus aset</TooltipContent>
-                        </Tooltip>
-                      </>
-                    )}
+          render: (_: any, row: Asset) => {
+            const isOwner = row.ownerId === user?.id;
 
-                    {/* MENUNGGU_PERSETUJUAN_RM status: Show archive-x to revert to draft */}
-                    {row.status === AssetStatus.MENUNGGU_PERSETUJUAN_RM && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button
-                            className="p-2 hover:bg-yellow-100 rounded transition-colors"
-                            onClick={() => handleRevertToDraft(row.id)}
-                          >
-                            <ArchiveX size={18} className="text-yellow-600" />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent>Ubah status kembali ke Draft</TooltipContent>
-                      </Tooltip>
-                    )}
+            return (
+              <div className="flex items-center gap-2">
+                {/* RISK_OWNER specific actions */}
+                {isRiskOwner ? (
+                  <TooltipProvider>
+                    <>
+                      {/* DRAFT status: Show submit button */}
+                      {row.status === AssetStatus.DRAFT && (
+                        <>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                className="p-2 hover:bg-green-100 rounded transition-colors"
+                                onClick={() => handleSubmitForApproval(row.id)}
+                              >
+                                <SendHorizontal size={18} className="text-green-600" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>Kirim untuk persetujuan RM</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                className="p-2 hover:bg-blue-100 rounded transition-colors"
+                                onClick={() => handleUpdateAsset(row.id)}
+                              >
+                                <Edit size={18} className="text-blue-600" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>Edit aset</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                className="p-2 hover:bg-gray-100 rounded transition-colors"
+                                onClick={() => handleDeleteAsset(row.id)}
+                              >
+                                <Trash size={18} className="text-gray-600" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>Hapus aset</TooltipContent>
+                          </Tooltip>
+                        </>
+                      )}
 
-                    {/* REVISI status: Show edit, submit, and archive-x buttons */}
-                    {row.status === AssetStatus.REVISI && (
-                      <>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              className="p-2 hover:bg-green-100 rounded transition-colors"
-                              onClick={() => handleSubmitForApproval(row.id)}
-                            >
-                              <SendHorizontal size={18} className="text-green-600" />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent>Kirim untuk persetujuan RM</TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <button
-                              className="p-2 hover:bg-blue-100 rounded transition-colors"
-                              onClick={() => handleUpdateAsset(row.id)}
-                            >
-                              <Edit size={18} className="text-blue-600" />
-                            </button>
-                          </TooltipTrigger>
-                          <TooltipContent>Edit aset</TooltipContent>
-                        </Tooltip>
+                      {/* MENUNGGU_PERSETUJUAN_RM status: Show archive-x to revert to draft */}
+                      {row.status === AssetStatus.MENUNGGU_PERSETUJUAN_RM && (
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <button
@@ -827,61 +937,174 @@ export default function DaftarAsetPage() {
                           </TooltipTrigger>
                           <TooltipContent>Ubah status kembali ke Draft</TooltipContent>
                         </Tooltip>
-                      </>
-                    )}
+                      )}
 
-                    {/* MENUNGGU_PERSETUJUAN_FINAL and DISETUJUI: No actions */}
-                    {(row.status === AssetStatus.MENUNGGU_PERSETUJUAN_FINAL ||
-                      row.status === AssetStatus.DISETUJUI) && (
-                      <span className="text-xs text-gray-500">Tidak ada aksi</span>
-                    )}
+                      {/* REVISI status: Show edit, submit, and archive-x buttons */}
+                      {row.status === AssetStatus.REVISI && (
+                        <>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                className="p-2 hover:bg-green-100 rounded transition-colors"
+                                onClick={() => handleSubmitForApproval(row.id)}
+                              >
+                                <SendHorizontal size={18} className="text-green-600" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>Kirim untuk persetujuan RM</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                className="p-2 hover:bg-blue-100 rounded transition-colors"
+                                onClick={() => handleUpdateAsset(row.id)}
+                              >
+                                <Edit size={18} className="text-blue-600" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>Edit aset</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                className="p-2 hover:bg-yellow-100 rounded transition-colors"
+                                onClick={() => handleRevertToDraft(row.id)}
+                              >
+                                <ArchiveX size={18} className="text-yellow-600" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>Ubah status kembali ke Draft</TooltipContent>
+                          </Tooltip>
+                        </>
+                      )}
 
-                    {/* DITOLAK: Show delete button only */}
-                    {row.status === AssetStatus.DITOLAK && (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <button
-                            className="p-2 hover:bg-gray-100 rounded transition-colors"
-                            onClick={() => handleDeleteAsset(row.id)}
-                          >
-                            <Trash size={18} className="text-gray-600" />
-                          </button>
-                        </TooltipTrigger>
-                        <TooltipContent>Hapus aset</TooltipContent>
-                      </Tooltip>
-                    )}
-                  </>
-                </TooltipProvider>
-              ) : (
-                <TooltipProvider>
-                  <>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          className="p-2 hover:bg-blue-100 rounded transition-colors"
-                          onClick={() => handleUpdateAsset(row.id)}
-                        >
-                          <Edit size={18} className="text-blue-600" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>Edit aset</TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          className="p-2 hover:bg-gray-100 rounded transition-colors"
-                          onClick={() => handleDeleteAsset(row.id)}
-                        >
-                          <Trash size={18} className="text-gray-600" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent>Hapus aset</TooltipContent>
-                    </Tooltip>
-                  </>
-                </TooltipProvider>
-              )}
-            </div>
-          ),
+                      {/* MENUNGGU_PERSETUJUAN_FINAL and DISETUJUI: No actions */}
+                      {(row.status === AssetStatus.MENUNGGU_PERSETUJUAN_FINAL ||
+                        row.status === AssetStatus.DISETUJUI) && null}
+
+                      {/* DITOLAK: Show delete button only */}
+                      {row.status === AssetStatus.DITOLAK && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              className="p-2 hover:bg-gray-100 rounded transition-colors"
+                              onClick={() => handleDeleteAsset(row.id)}
+                            >
+                              <Trash size={18} className="text-gray-600" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>Hapus aset</TooltipContent>
+                        </Tooltip>
+                      )}
+                    </>
+                  </TooltipProvider>
+                ) : (
+                  /* RISK_MANAGER actions */
+                  <TooltipProvider>
+                    <>
+                      {/* DRAFT status: Show submit only if owner */}
+                      {row.status === AssetStatus.DRAFT && isOwner && (
+                        <>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                className="p-2 hover:bg-green-100 rounded transition-colors"
+                                onClick={() => handleSubmitForApproval(row.id)}
+                              >
+                                <SendHorizontal size={18} className="text-green-600" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>Kirim untuk persetujuan RM</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                className="p-2 hover:bg-blue-100 rounded transition-colors"
+                                onClick={() => handleUpdateAsset(row.id)}
+                              >
+                                <Edit size={18} className="text-blue-600" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>Edit aset</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                className="p-2 hover:bg-gray-100 rounded transition-colors"
+                                onClick={() => handleDeleteAsset(row.id)}
+                              >
+                                <Trash size={18} className="text-gray-600" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>Hapus aset</TooltipContent>
+                          </Tooltip>
+                        </>
+                      )}
+
+                      {/* MENUNGGU_PERSETUJUAN_RM status: Show revise and reject buttons */}
+                      {row.status === AssetStatus.MENUNGGU_PERSETUJUAN_RM && (
+                        <>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                className="p-2 hover:bg-green-100 rounded transition-colors"
+                                onClick={() => handleApproveAsset(row.id)}
+                              >
+                                <CheckCircle size={18} className="text-green-600" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>Setujui aset</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                className="p-2 hover:bg-orange-100 rounded transition-colors"
+                                onClick={() => handleReviseAsset(row.id)}
+                              >
+                                <ArchiveRestore size={18} className="text-orange-600" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>Kirim untuk revisi</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                className="p-2 hover:bg-red-100 rounded transition-colors"
+                                onClick={() => handleRejectAsset(row.id)}
+                              >
+                                <X size={18} className="text-red-600" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>Tolak aset</TooltipContent>
+                          </Tooltip>
+                        </>
+                      )}
+
+                      {/* REVISI status: Show edit button only */}
+                      {row.status === AssetStatus.REVISI && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              className="p-2 hover:bg-blue-100 rounded transition-colors"
+                              onClick={() => handleUpdateAsset(row.id)}
+                            >
+                              <Edit size={18} className="text-blue-600" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>Edit aset</TooltipContent>
+                        </Tooltip>
+                      )}
+
+                      {/* MENUNGGU_PERSETUJUAN_FINAL and DITOLAK: No actions */}
+                      {(row.status === AssetStatus.MENUNGGU_PERSETUJUAN_FINAL ||
+                        row.status === AssetStatus.DISETUJUI ||
+                        row.status === AssetStatus.DITOLAK) && null}
+                    </>
+                  </TooltipProvider>
+                )}
+              </div>
+            );
+          },
           searchable: false,
         });
 
