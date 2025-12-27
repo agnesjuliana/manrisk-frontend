@@ -8,6 +8,7 @@ export { externalStakeholdersApi } from "./external-stakeholders"
 export { ciaApi } from "./cia"
 export { regulationsApi } from "./regulations"
 export { riskCriteriaApi } from "./risk-criteria"
+export { assetsApi } from "./assets"
 export { apiClient } from "./config"
 export type {
   User,
@@ -49,4 +50,8 @@ export type {
   PaginationMetadata,
   ApiResponse,
   ApiError,
+  AssetType,
+  AssetClassification,
+  CreateAssetRequest,
+  AssetResponse,
 } from "./types"

@@ -289,3 +289,51 @@ export interface GetRegulationsResponse {
   metadata: PaginationMetadata
 }
 
+// Assets related types
+export interface AssetType {
+  id: string
+  title: string
+  organizationId: string | null
+  createdAt: string
+  updatedAt: string
+  deletedAt: string | null
+}
+
+export interface AssetClassification {
+  id: string
+  title: string
+  organizationId: string | null
+  createdAt: string
+  updatedAt: string
+  deletedAt: string | null
+}
+
+export interface CreateAssetRequest {
+  name: string
+  location?: string
+  type: {
+    id: string | null
+    name: string
+  }
+  classification: {
+    id: string | null
+    name: string
+  }
+}
+
+export interface AssetResponse {
+  id: string
+  name: string
+  location?: string
+  type: {
+    id: string
+    name: string
+  }
+  classification: {
+    id: string
+    name: string
+  }
+  status: string
+  createdAt: string
+  updatedAt: string
+}
