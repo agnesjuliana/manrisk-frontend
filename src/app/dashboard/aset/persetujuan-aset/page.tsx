@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { PaginatedTable } from "@/components/paginated-table";
 import { Button } from "@/components/ui/button";
-import { Plus, CheckCircle, X } from "lucide-react";
+import { Plus, CheckCircle, X, Eye } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { apiClient } from "@/lib/api/config";
 import { AssetApprovalTLStatus } from "@/lib/assetsStore";
 import { useAuth } from "@/hooks/use-auth";
@@ -240,49 +241,61 @@ export default function AssetApprovalPage() {
             key: "id",
             render: (value: any, row: AssetApproval) => {
               return (
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() =>
-                      router.push(`/dashboard/aset/persetujuan-aset/detail/${String(value)}`)
-                    }
-                    className="flex items-center gap-1"
-                    title="Lihat detail pengajuan"
-                  >
-                    Lihat Detail
-                  </Button>
-                  {isTopManagement &&
-                    row.status ===
-                      AssetApprovalTLStatus.MENUNGGU_PERSETUJUAN_FINAL && (
-                      <>
+                <TooltipProvider>
+                  <div className="flex items-center gap-2">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
                         <Button
                           size="sm"
                           variant="ghost"
                           onClick={() =>
-                            handleApproveApproval(String(value))
+                            router.push(`/dashboard/aset/persetujuan-aset/detail/${String(value)}`)
                           }
-                          className="flex items-center gap-1 text-green-600 hover:text-green-700 hover:bg-green-50"
-                          title="Setujui pengajuan"
+                          className="h-8 w-8 p-0"
                         >
-                          <CheckCircle size={16} />
-                          Setujui
+                          <Eye size={16} />
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() =>
-                            handleRejectApproval(String(value))
-                          }
-                          className="flex items-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50"
-                          title="Tolak pengajuan"
-                        >
-                          <X size={16} />
-                          Tolak
-                        </Button>
-                      </>
-                    )}
-                </div>
+                      </TooltipTrigger>
+                      <TooltipContent>Lihat detail pengajuan</TooltipContent>
+                    </Tooltip>
+                    {isTopManagement &&
+                      row.status ===
+                        AssetApprovalTLStatus.MENUNGGU_PERSETUJUAN_FINAL && (
+                        <>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() =>
+                                  handleApproveApproval(String(value))
+                                }
+                                className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                              >
+                                <CheckCircle size={16} />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Setujui pengajuan</TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() =>
+                                  handleRejectApproval(String(value))
+                                }
+                                className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <X size={16} />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Tolak pengajuan</TooltipContent>
+                          </Tooltip>
+                        </>
+                      )}
+                  </div>
+                </TooltipProvider>
               );
             },
             searchable: false,
