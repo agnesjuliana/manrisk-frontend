@@ -80,4 +80,29 @@ export const assetsApi = {
       throw error;
     }
   },
+
+  update: async (id: string, payload: Partial<CreateAssetRequest>) => {
+    try {
+      const response = await apiClient.put<ApiResponse<AssetResponse>>(
+        `/assets/${id}`,
+        payload
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error updating asset:", error);
+      throw error;
+    }
+  },
+
+  delete: async (id: string) => {
+    try {
+      const response = await apiClient.delete<ApiResponse<{ id: string }>>(
+        `/assets/${id}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error deleting asset:", error);
+      throw error;
+    }
+  },
 };

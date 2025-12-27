@@ -1,3 +1,12 @@
+export enum AssetStatus {
+  DRAFT = "DRAFT",
+  MENUNGGU_PERSETUJUAN_RM = "MENUNGGU_PERSETUJUAN_RM",
+  MENUNGGU_PERSETUJUAN_FINAL = "MENUNGGU_PERSETUJUAN_FINAL",
+  REVISI = "REVISI",
+  DISETUJUI = "DISETUJUI",
+  DITOLAK = "DITOLAK",
+}
+
 export type Asset = {
   id: string;
   name: string;
@@ -6,7 +15,7 @@ export type Asset = {
   ownerId?: string;
   location?: string;
   processes?: string[];
-  status?: "PENDING" | "APPROVED_BY_RM" | "SUBMITTED_TO_TOP" | "APPROVED_BY_TOP";
+  status?: AssetStatus;
 };
 
 const STORAGE_KEY = "isms:assets:v1";

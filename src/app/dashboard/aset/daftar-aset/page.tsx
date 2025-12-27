@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { loadUsers, type User as StoreUser } from "@/lib/usersStore";
-import { loadAssets, saveAssets, type Asset } from "@/lib/assetsStore";
+import { loadAssets, saveAssets, type Asset, AssetStatus } from "@/lib/assetsStore";
 import { PaginatedTable, type ColumnDef } from "@/components/paginated-table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -53,6 +53,9 @@ export default function DaftarAsetPage() {
     location: "",
   });
 
+  const [editingAssetId, setEditingAssetId] = React.useState<string | null>(
+    null
+  );
   const [showTypeSuggestions, setShowTypeSuggestions] = React.useState(false);
   const [showClassificationSuggestions, setShowClassificationSuggestions] =
     React.useState(false);
@@ -86,22 +89,20 @@ export default function DaftarAsetPage() {
         if (response.status && response.data) {
           // Map API response to local Asset type
           const mappedAssets: Asset[] = response.data.data.map((asset) => {
-            // Map API status to local status enum
-            let mappedStatus: Asset["status"] = "PENDING";
+            // Map API status to local AssetStatus enum
+            let mappedStatus: AssetStatus = AssetStatus.DRAFT;
             const apiStatus = (asset.status || "").toUpperCase();
-            if (
-              apiStatus === "APPROVED_BY_RM" ||
-              apiStatus === "SUBMITTED_TO_TOP" ||
-              apiStatus === "APPROVED_BY_TOP"
-            ) {
-              mappedStatus = apiStatus as Asset["status"];
+            
+            // Map API status to enum values
+            if (apiStatus in AssetStatus) {
+              mappedStatus = apiStatus as AssetStatus;
             }
 
             return {
               id: asset.id,
               name: asset.name,
-              type: asset.type?.name || "",
-              classification: asset.classification?.name || "",
+              type: asset.type?.title || "", // Changed from .name to .title
+              classification: asset.classification?.title || "", // Changed from .name to .title
               location: asset.location || "",
               status: mappedStatus,
             };
@@ -193,10 +194,10 @@ export default function DaftarAsetPage() {
           const newAsset: Asset = {
             id: response.data.id,
             name: response.data.name,
-            type: response.data.type.name,
-            classification: response.data.classification.name,
-            location: response.data.location,
-            status: "PENDING",
+            type: response.data.type.title,
+            classification: response.data.classification.title,
+            location: response.data.location || "",
+            status: AssetStatus.DRAFT,
           };
 
           setAssets((prev) => {
@@ -235,6 +236,116 @@ export default function DaftarAsetPage() {
     setCurrentPage(1);
   }
 
+  async function handleDeleteAsset(id: string) {
+    if (!confirm("Apakah Anda yakin ingin menghapus aset ini?")) return;
+
+    try {
+      const response = await assetsApi.delete(id);
+      if (response.status) {
+        removeAsset(id);
+        setError(null);
+      } else {
+        setError(response.message || "Gagal menghapus aset");
+      }
+    } catch (err) {
+      console.error("Error deleting asset:", err);
+      setError(
+        err instanceof Error ? err.message : "Terjadi kesalahan saat menghapus aset"
+      );
+    }
+  }
+
+  async function handleUpdateAsset(id: string) {
+    const assetToEdit = assets.find((a) => a.id === id);
+    if (!assetToEdit) return;
+
+    // Populate form with asset data
+    const selectedType = assetTypes.find((t) => t.title === assetToEdit.type);
+    const selectedClassification = classifications.find(
+      (c) => c.title === assetToEdit.classification
+    );
+
+    setForm({
+      name: assetToEdit.name,
+      type: assetToEdit.type,
+      typeId: selectedType?.id || "",
+      classification: assetToEdit.classification,
+      classificationId: selectedClassification?.id || "",
+      location: assetToEdit.location || "",
+    });
+    setEditingAssetId(id);
+    setOpen(true);
+  }
+
+  async function handleSaveEdit() {
+    if (!editingAssetId) return;
+
+    if (!form.name.trim() || !form.type || !form.classification) {
+      setError("Nama, tipe, dan klasifikasi aset harus diisi");
+      return;
+    }
+
+    setIsSaving(true);
+    setError(null);
+
+    try {
+      const selectedType = assetTypes.find((t) => t.id === form.typeId);
+      const selectedClassification = classifications.find(
+        (c) => c.id === form.classificationId
+      );
+
+      const response = await assetsApi.update(editingAssetId, {
+        name: form.name,
+        location: form.location || undefined,
+        type: {
+          id: selectedType?.id || null,
+          name: form.type,
+        },
+        classification: {
+          id: selectedClassification?.id || null,
+          name: form.classification,
+        },
+      });
+
+      if (response.status) {
+        // Update local state
+        setAssets((prev) =>
+          prev.map((a) =>
+            a.id === editingAssetId
+              ? {
+                  ...a,
+                  name: response.data.name,
+                  type: response.data.type?.title || "",
+                  classification: response.data.classification?.title || "",
+                  location: response.data.location || "",
+                }
+              : a
+          )
+        );
+
+        setForm({
+          name: "",
+          type: "",
+          typeId: "",
+          classification: "",
+          classificationId: "",
+          location: "",
+        });
+        setEditingAssetId(null);
+        setOpen(false);
+      } else {
+        setError(response.message || "Gagal mengupdate aset");
+      }
+    } catch (err) {
+      console.error("Error updating asset:", err);
+      setError(
+        err instanceof Error ? err.message : "Terjadi kesalahan saat mengupdate aset"
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
       <div className="flex items-center justify-between gap-4">
@@ -248,9 +359,13 @@ export default function DaftarAsetPage() {
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Tambah Aset</DialogTitle>
+                <DialogTitle>
+                  {editingAssetId ? "Edit Aset" : "Tambah Aset"}
+                </DialogTitle>
                 <DialogDescription>
-                  Isi data aset baru di formulir berikut.
+                  {editingAssetId
+                    ? "Ubah data aset di formulir berikut."
+                    : "Isi data aset baru di formulir berikut."}
                 </DialogDescription>
               </DialogHeader>
 
@@ -372,13 +487,33 @@ export default function DaftarAsetPage() {
                 <div className="flex justify-end w-full gap-2">
                   <Button
                     variant="outline"
-                    onClick={() => setOpen(false)}
+                    onClick={() => {
+                      setOpen(false);
+                      setEditingAssetId(null);
+                      setForm({
+                        name: "",
+                        type: "",
+                        typeId: "",
+                        classification: "",
+                        classificationId: "",
+                        location: "",
+                      });
+                    }}
                     disabled={isSaving}
                   >
                     Batal
                   </Button>
-                  <Button onClick={handleAdd} disabled={isSaving}>
-                    {isSaving ? "Menyimpan..." : "Tambah Aset"}
+                  <Button
+                    onClick={
+                      editingAssetId ? handleSaveEdit : handleAdd
+                    }
+                    disabled={isSaving}
+                  >
+                    {isSaving
+                      ? "Menyimpan..."
+                      : editingAssetId
+                      ? "Simpan Perubahan"
+                      : "Tambah Aset"}
                   </Button>
                 </div>
               </DialogFooter>
@@ -422,28 +557,32 @@ export default function DaftarAsetPage() {
             header: "Status",
             key: "status",
             render: (value: any) => {
-              const status = String(value || "PENDING");
+              const status = String(value || AssetStatus.DRAFT);
               let statusClass = "bg-gray-100 text-gray-700";
               let statusLabel = status;
 
               switch (status) {
-                case "PENDING":
+                case AssetStatus.DRAFT:
+                  statusClass = "bg-gray-100 text-gray-700";
+                  statusLabel = "Draft";
+                  break;
+                case AssetStatus.MENUNGGU_PERSETUJUAN_RM:
                   statusClass = "bg-yellow-100 text-yellow-700";
-                  statusLabel = "Pending";
+                  statusLabel = "Menunggu Persetujuan RM";
                   break;
-                case "APPROVED_BY_RM":
-                  statusClass = "bg-green-100 text-green-700";
-                  statusLabel = "Diterima RM";
-                  break;
-                case "SUBMITTED_TO_TOP":
+                case AssetStatus.MENUNGGU_PERSETUJUAN_FINAL:
                   statusClass = "bg-blue-100 text-blue-700";
-                  statusLabel = "Diajukan ke Top";
+                  statusLabel = "Menunggu Persetujuan Final";
                   break;
-                case "APPROVED_BY_TOP":
+                case AssetStatus.REVISI:
+                  statusClass = "bg-orange-100 text-orange-700";
+                  statusLabel = "Revisi";
+                  break;
+                case AssetStatus.DISETUJUI:
                   statusClass = "bg-green-100 text-green-700";
-                  statusLabel = "Disetujui Top";
+                  statusLabel = "Disetujui";
                   break;
-                case "REJECTED":
+                case AssetStatus.DITOLAK:
                   statusClass = "bg-red-100 text-red-700";
                   statusLabel = "Ditolak";
                   break;
@@ -462,17 +601,24 @@ export default function DaftarAsetPage() {
           {
             header: "Aksi",
             key: "id",
-            render: (_: any, row: Asset) =>
-              !isRiskOwner ? (
-                <div className="flex items-center gap-2">
-                  <button className="p-2 hover:bg-gray-100 rounded transition-colors">
-                    <Trash size={18} className="text-gray-600" />
-                  </button>
-                  <button className="p-2 hover:bg-gray-100 rounded transition-colors">
-                    <Edit size={18} className="text-gray-600" />
-                  </button>
-                </div>
-              ) : null,
+            render: (_: any, row: Asset) => (
+              <div className="flex items-center gap-2">
+                <button
+                  className="p-2 hover:bg-gray-100 rounded transition-colors"
+                  onClick={() => handleDeleteAsset(row.id)}
+                  title="Hapus aset"
+                >
+                  <Trash size={18} className="text-gray-600" />
+                </button>
+                <button
+                  className="p-2 hover:bg-gray-100 rounded transition-colors"
+                  onClick={() => handleUpdateAsset(row.id)}
+                  title="Edit aset"
+                >
+                  <Edit size={18} className="text-gray-600" />
+                </button>
+              </div>
+            ),
             searchable: false,
           },
         ]}

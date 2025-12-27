@@ -323,17 +323,23 @@ export interface CreateAssetRequest {
 
 export interface AssetResponse {
   id: string
+  organizationId: string
   name: string
-  location?: string
+  location?: string | null
   type: {
     id: string
-    name: string
+    title: string
   }
   classification: {
     id: string
-    name: string
+    title: string
   }
   status: string
   createdAt: string
-  updatedAt: string
+  updatedAt: string | null
+  deletedAt: string | null
+  owner?: {
+    id: string
+    name: string
+  }
 }
