@@ -23,12 +23,14 @@ export default function StakeholdersSection({
   openAddModal,
   openEditRow,
   removeArrayItem,
+  isReadOnly = false,
 }: {
   users: any[];
   external?: { name: string; interest?: string }[];
   openAddModal: (path: string) => void;
   openEditRow: (path: string, idx: number) => void;
   removeArrayItem: (path: string, idx: number) => void;
+  isReadOnly?: boolean;
 }) {
   return (
     <Card>
@@ -69,13 +71,15 @@ export default function StakeholdersSection({
         <div>
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-medium">External</h3>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => openAddModal("stakeholders.external")}
-            >
-              Tambah
-            </Button>
+            {!isReadOnly && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => openAddModal("stakeholders.external")}
+              >
+                Tambah
+              </Button>
+            )}
           </div>
 
           <Table>
@@ -84,7 +88,7 @@ export default function StakeholdersSection({
                 <TableHead>No</TableHead>
                 <TableHead>Nama</TableHead>
                 <TableHead>Interest</TableHead>
-                <TableHead>Aksi</TableHead>
+                {!isReadOnly && <TableHead>Aksi</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -93,24 +97,26 @@ export default function StakeholdersSection({
                   <TableCell className="w-8">{i + 1}</TableCell>
                   <TableCell>{s.name}</TableCell>
                   <TableCell>{s.interest}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <button
-                        className="p-2 hover:bg-gray-100 rounded transition-colors"
-                        onClick={() => openEditRow("stakeholders.external", i)}
-                      >
-                        <Edit size={18} className="text-gray-600" />
-                      </button>
-                      <button
-                        className="p-2 hover:bg-gray-100 rounded transition-colors"
-                        onClick={() =>
-                          removeArrayItem("stakeholders.external", i)
-                        }
-                      >
-                        <Trash size={18} className="text-gray-600" />
-                      </button>
-                    </div>
-                  </TableCell>
+                  {!isReadOnly && (
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <button
+                          className="p-2 hover:bg-gray-100 rounded transition-colors"
+                          onClick={() => openEditRow("stakeholders.external", i)}
+                        >
+                          <Edit size={18} className="text-gray-600" />
+                        </button>
+                        <button
+                          className="p-2 hover:bg-gray-100 rounded transition-colors"
+                          onClick={() =>
+                            removeArrayItem("stakeholders.external", i)
+                          }
+                        >
+                          <Trash size={18} className="text-gray-600" />
+                        </button>
+                      </div>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>

@@ -104,6 +104,9 @@ const initialData: ContextData = {
 export default function KonteksOrganisasiPage() {
   const { user, isLoading: authLoading } = useAuth();
 
+  // Check if user is RISK_OWNER
+  const isRiskOwner = user?.role === "RISK_OWNER";
+
   // profile state - initialized from user data
   const [profile, setProfile] = useState({
     name: "",
@@ -837,29 +840,31 @@ export default function KonteksOrganisasiPage() {
                 Informasi dasar instansi yang terdaftar
               </CardDescription>
             </div>
-            <Dialog>
-              <DialogContent className="sm:max-w-lg">
-                <DialogHeader>
-                  <DialogTitle>Perbarui Profil Instansi</DialogTitle>
-                  <DialogDescription>
-                    Ubah informasi instansi Anda di sini.
-                  </DialogDescription>
-                </DialogHeader>
-                <ProfileForm
-                  initialValues={profile}
-                  onSubmitProfile={(values) => {
-                    setProfile(values);
-                  }}
-                  submitLabel="Simpan Perubahan"
-                  isEditMode={true}
-                />
-              </DialogContent>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm">
-                  Edit Profil
-                </Button>
-              </DialogTrigger>
-            </Dialog>
+            {!isRiskOwner && (
+              <Dialog>
+                <DialogContent className="sm:max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle>Perbarui Profil Instansi</DialogTitle>
+                    <DialogDescription>
+                      Ubah informasi instansi Anda di sini.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <ProfileForm
+                    initialValues={profile}
+                    onSubmitProfile={(values) => {
+                      setProfile(values);
+                    }}
+                    submitLabel="Simpan Perubahan"
+                    isEditMode={true}
+                  />
+                </DialogContent>
+                <DialogTrigger asChild>
+                  <Button variant="outline" size="sm">
+                    Edit Profil
+                  </Button>
+                </DialogTrigger>
+              </Dialog>
+            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -906,6 +911,7 @@ export default function KonteksOrganisasiPage() {
           openAddModal={openAddModal}
           openEditRow={openEditRow}
           removeArrayItem={removeArrayItem}
+          isReadOnly={isRiskOwner}
         />
 
         <StakeholdersSection
@@ -914,6 +920,7 @@ export default function KonteksOrganisasiPage() {
           openAddModal={openAddModal}
           openEditRow={openEditRow}
           removeArrayItem={removeArrayItem}
+          isReadOnly={isRiskOwner}
         />
 
         <CiaSection
@@ -923,6 +930,7 @@ export default function KonteksOrganisasiPage() {
           openAddModal={openAddModal}
           openEditRow={openEditRow}
           removeArrayItem={removeArrayItem}
+          isReadOnly={isRiskOwner}
         />
 
         <RegulationsSection
@@ -930,184 +938,193 @@ export default function KonteksOrganisasiPage() {
           openAddModal={openAddModal}
           openEditRow={openEditRow}
           removeArrayItem={removeArrayItem}
+          isReadOnly={isRiskOwner}
         />
       </div>
 
       {/* CIA Edit Dialog */}
-      <Dialog
-        open={ciaEditOpen}
-        onOpenChange={(v) => (v ? null : closeCiaEdit())}
-      >
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="text-xl">Edit Objektif CIA</DialogTitle>
-            <DialogDescription>
-              Ubah Confidentiality, Integrity, dan Availability sekaligus.
-            </DialogDescription>
-          </DialogHeader>
+      {!isRiskOwner && (
+        <Dialog
+          open={ciaEditOpen}
+          onOpenChange={(v) => (v ? null : closeCiaEdit())}
+        >
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="text-xl">Edit Objektif CIA</DialogTitle>
+              <DialogDescription>
+                Ubah Confidentiality, Integrity, dan Availability sekaligus.
+              </DialogDescription>
+            </DialogHeader>
 
-          <div className="grid gap-4">
-            <div className="space-y-2">
-              <Label className="font-semibold text-gray-900">
-                Confidentiality
-              </Label>
-              <Textarea
-                value={ciaDraft.confidentiality}
-                onChange={(e) =>
-                  setCiaDraft((d) => ({
-                    ...d,
-                    confidentiality: e.target.value,
-                  }))
-                }
-                className="min-h-20"
-              />
+            <div className="grid gap-4">
+              <div className="space-y-2">
+                <Label className="font-semibold text-gray-900">
+                  Confidentiality
+                </Label>
+                <Textarea
+                  value={ciaDraft.confidentiality}
+                  onChange={(e) =>
+                    setCiaDraft((d) => ({
+                      ...d,
+                      confidentiality: e.target.value,
+                    }))
+                  }
+                  className="min-h-20"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="font-semibold text-gray-900">Integrity</Label>
+                <Textarea
+                  value={ciaDraft.integrity}
+                  onChange={(e) =>
+                    setCiaDraft((d) => ({ ...d, integrity: e.target.value }))
+                  }
+                  className="min-h-20"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="font-semibold text-gray-900">
+                  Availability
+                </Label>
+                <Textarea
+                  value={ciaDraft.availability}
+                  onChange={(e) =>
+                    setCiaDraft((d) => ({ ...d, availability: e.target.value }))
+                  }
+                  className="min-h-20"
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label className="font-semibold text-gray-900">Integrity</Label>
-              <Textarea
-                value={ciaDraft.integrity}
-                onChange={(e) =>
-                  setCiaDraft((d) => ({ ...d, integrity: e.target.value }))
-                }
-                className="min-h-20"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="font-semibold text-gray-900">
-                Availability
-              </Label>
-              <Textarea
-                value={ciaDraft.availability}
-                onChange={(e) =>
-                  setCiaDraft((d) => ({ ...d, availability: e.target.value }))
-                }
-                className="min-h-20"
-              />
-            </div>
-          </div>
 
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={closeCiaEdit}>
-              Batal
-            </Button>
-            <Button onClick={saveCiaEdit}>Simpan Perubahan</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={closeCiaEdit}>
+                Batal
+              </Button>
+              <Button onClick={saveCiaEdit}>Simpan Perubahan</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Generic edit dialog */}
-      <Dialog
-        open={!!editingSection}
-        onOpenChange={(v) => (v ? null : closeEdit())}
-      >
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="text-xl">Edit {editingSection}</DialogTitle>
-            <DialogDescription>
-              Ubah detail untuk bagian ini lalu simpan.
-            </DialogDescription>
-          </DialogHeader>
+      {!isRiskOwner && (
+        <Dialog
+          open={!!editingSection}
+          onOpenChange={(v) => (v ? null : closeEdit())}
+        >
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="text-xl">Edit {editingSection}</DialogTitle>
+              <DialogDescription>
+                Ubah detail untuk bagian ini lalu simpan.
+              </DialogDescription>
+            </DialogHeader>
 
-          <div className="space-y-2">
-            <Label className="font-semibold text-gray-900">Isi</Label>
-            <Textarea
-              value={draftText}
-              onChange={(e) => setDraftText(e.target.value)}
-              className="min-h-24"
-            />
-          </div>
+            <div className="space-y-2">
+              <Label className="font-semibold text-gray-900">Isi</Label>
+              <Textarea
+                value={draftText}
+                onChange={(e) => setDraftText(e.target.value)}
+                className="min-h-24"
+              />
+            </div>
 
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={closeEdit}>
-              Batal
-            </Button>
-            <Button onClick={saveEdit}>Simpan Perubahan</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={closeEdit}>
+                Batal
+              </Button>
+              <Button onClick={saveEdit}>Simpan Perubahan</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* User edit dialog */}
-      <Dialog
-        open={userEditOpen}
-        onOpenChange={(v) => (v ? null : closeUserEdit())}
-      >
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="text-xl">Edit Pengguna</DialogTitle>
-            <DialogDescription>
-              Ubah data pengguna internal stakeholder
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4">
-            <div className="space-y-2">
-              <Label className="font-semibold text-gray-900">Nama</Label>
-              <Input
-                value={userForm?.name ?? ""}
-                onChange={(e) =>
-                  setUserForm((p) => (p ? { ...p, name: e.target.value } : p))
-                }
-                className="border-gray-300"
-              />
+      {!isRiskOwner && (
+        <Dialog
+          open={userEditOpen}
+          onOpenChange={(v) => (v ? null : closeUserEdit())}
+        >
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="text-xl">Edit Pengguna</DialogTitle>
+              <DialogDescription>
+                Ubah data pengguna internal stakeholder
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4">
+              <div className="space-y-2">
+                <Label className="font-semibold text-gray-900">Nama</Label>
+                <Input
+                  value={userForm?.name ?? ""}
+                  onChange={(e) =>
+                    setUserForm((p) => (p ? { ...p, name: e.target.value } : p))
+                  }
+                  className="border-gray-300"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="font-semibold text-gray-900">Email</Label>
+                <Input
+                  type="email"
+                  value={userForm?.email ?? ""}
+                  onChange={(e) =>
+                    setUserForm((p) => (p ? { ...p, email: e.target.value } : p))
+                  }
+                  className="border-gray-300"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="font-semibold text-gray-900">Role</Label>
+                <Input
+                  value={userForm?.role ?? ""}
+                  onChange={(e) =>
+                    setUserForm((p) =>
+                      p ? { ...p, role: e.target.value as StoreMainRole } : p
+                    )
+                  }
+                  className="border-gray-300"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="font-semibold text-gray-900">Divisi</Label>
+                <Input
+                  value={userForm?.division ?? ""}
+                  onChange={(e) =>
+                    setUserForm((p) =>
+                      p ? { ...p, division: e.target.value } : p
+                    )
+                  }
+                  className="border-gray-300"
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label className="font-semibold text-gray-900">Email</Label>
-              <Input
-                type="email"
-                value={userForm?.email ?? ""}
-                onChange={(e) =>
-                  setUserForm((p) => (p ? { ...p, email: e.target.value } : p))
-                }
-                className="border-gray-300"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="font-semibold text-gray-900">Role</Label>
-              <Input
-                value={userForm?.role ?? ""}
-                onChange={(e) =>
-                  setUserForm((p) =>
-                    p ? { ...p, role: e.target.value as StoreMainRole } : p
-                  )
-                }
-                className="border-gray-300"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="font-semibold text-gray-900">Divisi</Label>
-              <Input
-                value={userForm?.division ?? ""}
-                onChange={(e) =>
-                  setUserForm((p) =>
-                    p ? { ...p, division: e.target.value } : p
-                  )
-                }
-                className="border-gray-300"
-              />
-            </div>
-          </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={closeUserEdit}>
-              Batal
-            </Button>
-            <Button onClick={saveUserEdit}>Simpan Perubahan</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={closeUserEdit}>
+                Batal
+              </Button>
+              <Button onClick={saveUserEdit}>Simpan Perubahan</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Array item dialog (extracted) */}
-      <ArrayItemDialog
-        open={arrayModal.open}
-        path={arrayModal.path}
-        mode={arrayModal.mode}
-        draft={itemDraft}
-        onChangeDraft={(v) => setItemDraft(v)}
-        onClose={closeArrayModal}
-        onSave={(validatedDraft) => saveArrayItemFromDialog(validatedDraft)}
-        contexts={data.scope.technical_bounds.map((ctx) => ({
-          id: ctx.id || "",
-          name: ctx.name,
-        }))}
-      />
+      {!isRiskOwner && (
+        <ArrayItemDialog
+          open={arrayModal.open}
+          path={arrayModal.path}
+          mode={arrayModal.mode}
+          draft={itemDraft}
+          onChangeDraft={(v) => setItemDraft(v)}
+          onClose={closeArrayModal}
+          onSave={(validatedDraft) => saveArrayItemFromDialog(validatedDraft)}
+          contexts={data.scope.technical_bounds.map((ctx) => ({
+            id: ctx.id || "",
+            name: ctx.name,
+          }))}
+        />
+      )}
     </div>
   );
 }

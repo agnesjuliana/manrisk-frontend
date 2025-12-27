@@ -23,11 +23,13 @@ export default function RegulationsSection({
   openAddModal,
   openEditRow,
   removeArrayItem,
+  isReadOnly = false,
 }: {
   selected: { id?: string; name: string }[];
   openAddModal: (path: string) => void;
   openEditRow: (path: string, idx: number) => void;
   removeArrayItem: (path: string, idx: number) => void;
+  isReadOnly?: boolean;
 }) {
   return (
     <Card>
@@ -41,20 +43,22 @@ export default function RegulationsSection({
         <div className="mb-4">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-medium">Regulasi Terpilih</h3>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => openAddModal("regulations.selected")}
-            >
-              Tambah
-            </Button>
+            {!isReadOnly && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => openAddModal("regulations.selected")}
+              >
+                Tambah
+              </Button>
+            )}
           </div>
           <Table>
             <TableHeader>
               <TableRow className="bg-gray-50">
                 <TableHead>No</TableHead>
                 <TableHead>Regulasi</TableHead>
-                <TableHead>Aksi</TableHead>
+                {!isReadOnly && <TableHead>Aksi</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -62,24 +66,26 @@ export default function RegulationsSection({
                 <TableRow key={i}>
                   <TableCell className="w-8">{i + 1}</TableCell>
                   <TableCell>{r.name}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <button
-                        className="p-2 hover:bg-gray-100 rounded transition-colors"
-                        onClick={() => openEditRow("regulations.selected", i)}
-                      >
-                        <Edit size={18} className="text-gray-600" />
-                      </button>
-                      <button
-                        className="p-2 hover:bg-gray-100 rounded transition-colors"
-                        onClick={() =>
-                          removeArrayItem("regulations.selected", i)
-                        }
-                      >
-                        <Trash size={18} className="text-gray-600" />
-                      </button>
-                    </div>
-                  </TableCell>
+                  {!isReadOnly && (
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <button
+                          className="p-2 hover:bg-gray-100 rounded transition-colors"
+                          onClick={() => openEditRow("regulations.selected", i)}
+                        >
+                          <Edit size={18} className="text-gray-600" />
+                        </button>
+                        <button
+                          className="p-2 hover:bg-gray-100 rounded transition-colors"
+                          onClick={() =>
+                            removeArrayItem("regulations.selected", i)
+                          }
+                        >
+                          <Trash size={18} className="text-gray-600" />
+                        </button>
+                      </div>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>

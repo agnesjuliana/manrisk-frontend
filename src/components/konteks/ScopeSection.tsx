@@ -24,11 +24,13 @@ export default function ScopeSection({
   openAddModal,
   openEditRow,
   removeArrayItem,
+  isReadOnly = false,
 }: {
   technical_bounds: TechnicalBound[];
   openAddModal: (path: string) => void;
   openEditRow: (path: string, idx: number) => void;
   removeArrayItem: (path: string, idx: number) => void;
+  isReadOnly?: boolean;
 }) {
   return (
     <Card>
@@ -42,13 +44,15 @@ export default function ScopeSection({
         <div className="mb-4">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-medium">Batasan Teknis</h3>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => openAddModal("scope.technical_bounds")}
-            >
-              Tambah
-            </Button>
+            {!isReadOnly && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => openAddModal("scope.technical_bounds")}
+              >
+                Tambah
+              </Button>
+            )}
           </div>
           <Table>
             <TableHeader>
@@ -56,7 +60,7 @@ export default function ScopeSection({
                 <TableHead>No</TableHead>
                 <TableHead>Nama</TableHead>
                 <TableHead>Deskripsi</TableHead>
-                <TableHead>Aksi</TableHead>
+                {!isReadOnly && <TableHead>Aksi</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -69,24 +73,26 @@ export default function ScopeSection({
                       ? t.description.slice(0, 30).replace(/\s+$/, "") + "..."
                       : t.description}
                   </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <button
-                        className="p-2 hover:bg-gray-100 rounded transition-colors"
-                        onClick={() => openEditRow("scope.technical_bounds", i)}
-                      >
-                        <Edit size={18} className="text-gray-600" />
-                      </button>
-                      <button
-                        className="p-2 hover:bg-gray-100 rounded transition-colors"
-                        onClick={() =>
-                          removeArrayItem("scope.technical_bounds", i)
-                        }
-                      >
-                        <Trash size={18} className="text-gray-600" />
-                      </button>
-                    </div>
-                  </TableCell>
+                  {!isReadOnly && (
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <button
+                          className="p-2 hover:bg-gray-100 rounded transition-colors"
+                          onClick={() => openEditRow("scope.technical_bounds", i)}
+                        >
+                          <Edit size={18} className="text-gray-600" />
+                        </button>
+                        <button
+                          className="p-2 hover:bg-gray-100 rounded transition-colors"
+                          onClick={() =>
+                            removeArrayItem("scope.technical_bounds", i)
+                          }
+                        >
+                          <Trash size={18} className="text-gray-600" />
+                        </button>
+                      </div>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>

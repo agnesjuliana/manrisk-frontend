@@ -27,6 +27,7 @@ export default function CiaSection({
   openAddModal,
   openEditRow,
   removeArrayItem,
+  isReadOnly = false,
 }: {
   cia: any;
   ciaLoadError: boolean;
@@ -34,6 +35,7 @@ export default function CiaSection({
   openAddModal: (path: string) => void;
   openEditRow: (path: string, idx: number) => void;
   removeArrayItem: (path: string, idx: number) => void;
+  isReadOnly?: boolean;
 }) {
   const handleAddServicePriority = () => {
     if (ciaLoadError) {
@@ -49,11 +51,13 @@ export default function CiaSection({
         <CardDescription>
           Confidentiality / Integrity / Availability dan prioritas layanan.
         </CardDescription>
-        <CardAction>
-          <Button variant="outline" onClick={onEdit}>
-            Edit
-          </Button>
-        </CardAction>
+        {!isReadOnly && (
+          <CardAction>
+            <Button variant="outline" onClick={onEdit}>
+              Edit
+            </Button>
+          </CardAction>
+        )}
       </CardHeader>
       <CardContent>
         <div className="mb-4">
@@ -72,13 +76,15 @@ export default function CiaSection({
         <div>
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-medium">Prioritas Layanan</h3>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleAddServicePriority}
-            >
-              Tambah
-            </Button>
+            {!isReadOnly && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleAddServicePriority}
+              >
+                Tambah
+              </Button>
+            )}
           </div>
 
           <Table>
@@ -89,7 +95,7 @@ export default function CiaSection({
                 <TableHead>C</TableHead>
                 <TableHead>I</TableHead>
                 <TableHead>A</TableHead>
-                <TableHead>Aksi</TableHead>
+                {!isReadOnly && <TableHead>Aksi</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -100,24 +106,26 @@ export default function CiaSection({
                   <TableCell>{s.C}</TableCell>
                   <TableCell>{s.I}</TableCell>
                   <TableCell>{s.A}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <button
-                        className="p-2 hover:bg-gray-100 rounded transition-colors"
-                        onClick={() => openEditRow("cia.service_priorities", i)}
-                      >
-                        <Edit size={18} className="text-gray-600" />
-                      </button>
-                      <button
-                        className="p-2 hover:bg-gray-100 rounded transition-colors"
-                        onClick={() =>
-                          removeArrayItem("cia.service_priorities", i)
-                        }
-                      >
-                        <Trash size={18} className="text-gray-600" />
-                      </button>
-                    </div>
-                  </TableCell>
+                  {!isReadOnly && (
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <button
+                          className="p-2 hover:bg-gray-100 rounded transition-colors"
+                          onClick={() => openEditRow("cia.service_priorities", i)}
+                        >
+                          <Edit size={18} className="text-gray-600" />
+                        </button>
+                        <button
+                          className="p-2 hover:bg-gray-100 rounded transition-colors"
+                          onClick={() =>
+                            removeArrayItem("cia.service_priorities", i)
+                          }
+                        >
+                          <Trash size={18} className="text-gray-600" />
+                        </button>
+                      </div>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))}
             </TableBody>

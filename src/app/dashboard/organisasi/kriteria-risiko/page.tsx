@@ -37,9 +37,15 @@ import {
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { useAuth } from "@/hooks/use-auth";
 import { riskCriteriaApi } from "@/lib/api";
 
 export default function KriteriaRisikoPage() {
+  const { user } = useAuth();
+  
+  // Check if user is RISK_OWNER
+  const isRiskOwner = user?.role === "RISK_OWNER";
+
   const [useFmea, setUseFmea] = useState(false);
   const [editingScale, setEditingScale] = useState(false);
   const [scaleSize, setScaleSize] = useState<number>(0);
@@ -308,52 +314,56 @@ export default function KriteriaRisikoPage() {
                   </div>
                 </div>
                 <div>
-                  {!useFmea ? (
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="outline" disabled={savingFmea}>
-                          {savingFmea ? "Menyimpan..." : "Aktifkan"}
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Aktifkan FMEA?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Mengaktifkan FMEA akan menambahkan langkah deteksi
-                            dan perhitungan RPN. Lanjutkan?
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Batalkan</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => handleFmeaToggle(true)}>
-                            Ya, aktifkan
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  ) : (
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="outline" disabled={savingFmea}>
-                          {savingFmea ? "Menyimpan..." : "Nonaktifkan"}
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Nonaktifkan FMEA?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Menonaktifkan FMEA akan menghapus konfigurasi
-                            deteksi dan RPN. Yakin ingin melanjutkan?
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Batalkan</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => handleFmeaToggle(false)}>
-                            Ya, nonaktifkan
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
+                  {!isRiskOwner && (
+                    <>
+                      {!useFmea ? (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="outline" disabled={savingFmea}>
+                              {savingFmea ? "Menyimpan..." : "Aktifkan"}
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Aktifkan FMEA?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Mengaktifkan FMEA akan menambahkan langkah deteksi
+                                dan perhitungan RPN. Lanjutkan?
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Batalkan</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleFmeaToggle(true)}>
+                                Ya, aktifkan
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      ) : (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="outline" disabled={savingFmea}>
+                              {savingFmea ? "Menyimpan..." : "Nonaktifkan"}
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Nonaktifkan FMEA?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Menonaktifkan FMEA akan menghapus konfigurasi
+                                deteksi dan RPN. Yakin ingin melanjutkan?
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Batalkan</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleFmeaToggle(false)}>
+                                Ya, nonaktifkan
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -371,15 +381,17 @@ export default function KriteriaRisikoPage() {
                     Atur ukuran skala dan label untuk semua dimensi penilaian risiko (misal 1–5).
                   </CardDescription>
                 </div>
-                <div>
-                  <Button
-                    variant={editingScale ? "default" : "outline"}
-                    onClick={() => editingScale ? handleSaveScale() : setEditingScale(true)}
-                    disabled={scaleSize === 0 || savingScale}
-                  >
-                    {savingScale ? "Menyimpan..." : editingScale ? "Simpan" : "Edit"}
-                  </Button>
-                </div>
+                {!isRiskOwner && (
+                  <div>
+                    <Button
+                      variant={editingScale ? "default" : "outline"}
+                      onClick={() => editingScale ? handleSaveScale() : setEditingScale(true)}
+                      disabled={scaleSize === 0 || savingScale}
+                    >
+                      {savingScale ? "Menyimpan..." : editingScale ? "Simpan" : "Edit"}
+                    </Button>
+                  </div>
+                )}
               </div>
             </CardHeader>
             <CardContent>
@@ -400,7 +412,7 @@ export default function KriteriaRisikoPage() {
                       <div className="text-sm text-muted-foreground">(2–10)</div>
                     </div>
                     <Input
-                      readOnly={!editingScale}
+                      readOnly={!editingScale || isRiskOwner}
                       type="number"
                       value={scaleSize}
                       onChange={(e) => onChangeScaleSize(Number(e.target.value))}
@@ -421,7 +433,7 @@ export default function KriteriaRisikoPage() {
                               <div className="grid grid-cols-1 gap-2 mt-2">
                                 {Array.from({ length: scaleSize }).map((_, i) => (
                                   <Input
-                                    readOnly={!editingScale}
+                                    readOnly={!editingScale || isRiskOwner}
                                     className="w-full"
                                     key={i}
                                     value={
@@ -491,25 +503,27 @@ export default function KriteriaRisikoPage() {
                       : "Atur nilai batas risiko yang dianggap diterima (≤ threshold = diterima)."}
                   </CardDescription>
                 </div>
-                <div>
-                  <Button
-                    variant={useFmea ? (editingRpnThreshold ? "default" : "outline") : (editingThreshold ? "default" : "outline")}
-                    onClick={() => {
-                      if (useFmea) {
-                        editingRpnThreshold ? handleSaveThreshold() : setEditingRpnThreshold(true);
-                      } else {
-                        editingThreshold ? handleSaveThreshold() : setEditingThreshold(true);
-                      }
-                    }}
-                    disabled={scaleSize === 0 || savingThreshold}
-                  >
-                    {savingThreshold 
-                      ? "Menyimpan..." 
-                      : useFmea 
-                        ? (editingRpnThreshold ? "Simpan" : "Edit") 
-                        : (editingThreshold ? "Simpan" : "Edit")}
-                  </Button>
-                </div>
+                {!isRiskOwner && (
+                  <div>
+                    <Button
+                      variant={useFmea ? (editingRpnThreshold ? "default" : "outline") : (editingThreshold ? "default" : "outline")}
+                      onClick={() => {
+                        if (useFmea) {
+                          editingRpnThreshold ? handleSaveThreshold() : setEditingRpnThreshold(true);
+                        } else {
+                          editingThreshold ? handleSaveThreshold() : setEditingThreshold(true);
+                        }
+                      }}
+                      disabled={scaleSize === 0 || savingThreshold}
+                    >
+                      {savingThreshold 
+                        ? "Menyimpan..." 
+                        : useFmea 
+                          ? (editingRpnThreshold ? "Simpan" : "Edit") 
+                          : (editingThreshold ? "Simpan" : "Edit")}
+                    </Button>
+                  </div>
+                )}
               </div>
             </CardHeader>
             <CardContent>
@@ -530,7 +544,7 @@ export default function KriteriaRisikoPage() {
                         {useFmea ? "Threshold RPN" : "Threshold"}
                       </FieldLabel>
                       <Input
-                        readOnly={useFmea ? !editingRpnThreshold : !editingThreshold}
+                        readOnly={useFmea ? (!editingRpnThreshold || isRiskOwner) : (!editingThreshold || isRiskOwner)}
                         type="number"
                         value={threshold}
                         onChange={(e) => setThreshold(Number(e.target.value))}
