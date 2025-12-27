@@ -319,6 +319,7 @@ export interface CreateAssetRequest {
     id: string | null
     name: string
   }
+  status?: string
 }
 
 export interface AssetResponse {
@@ -341,5 +342,9 @@ export interface AssetResponse {
   owner?: {
     id: string
     name: string
+    department?: {
+      id: string
+      name: string
+    }
   }
 }

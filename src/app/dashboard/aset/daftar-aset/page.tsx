@@ -3,7 +3,12 @@
 import * as React from "react";
 import { toast } from "sonner";
 import { loadUsers, type User as StoreUser } from "@/lib/usersStore";
-import { loadAssets, saveAssets, type Asset, AssetStatus } from "@/lib/assetsStore";
+import {
+  loadAssets,
+  saveAssets,
+  type Asset,
+  AssetStatus,
+} from "@/lib/assetsStore";
 import { PaginatedTable, type ColumnDef } from "@/components/paginated-table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -16,8 +21,14 @@ import {
   DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, Trash, Edit } from "lucide-react";
+import { Plus, Trash, Edit, SendHorizontal, ArchiveX } from "lucide-react";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/use-auth";
 import { assetsApi, type AssetType, type AssetClassification } from "@/lib/api";
 
@@ -92,7 +103,7 @@ export default function DaftarAsetPage() {
             // Map API status to local AssetStatus enum
             let mappedStatus: AssetStatus = AssetStatus.DRAFT;
             const apiStatus = (asset.status || "").toUpperCase();
-            
+
             // Map API status to enum values
             if (apiStatus in AssetStatus) {
               mappedStatus = apiStatus as AssetStatus;
@@ -105,6 +116,9 @@ export default function DaftarAsetPage() {
               classification: asset.classification?.title || "", // Changed from .name to .title
               location: asset.location || "",
               status: mappedStatus,
+              ownerId: asset.owner?.id,
+              ownerName: asset.owner?.name,
+              division: asset.owner?.department?.name,
             };
           });
 
@@ -168,15 +182,11 @@ export default function DaftarAsetPage() {
 
     (async () => {
       try {
-        // Determine if type is new or existing
-        // If typeId is empty, it means user typed a new value
-        const typeId = form.typeId 
+        const typeId = form.typeId
           ? form.typeId // User selected from dropdown
           : null; // User typed new value, nullify ID
-        
-        // Determine if classification is new or existing
-        // If classificationId is empty, it means user typed a new value
-        const classificationId = form.classificationId 
+
+        const classificationId = form.classificationId
           ? form.classificationId // User selected from dropdown
           : null; // User typed new value, nullify ID
 
@@ -227,7 +237,9 @@ export default function DaftarAsetPage() {
       } catch (err) {
         console.error("Error adding asset:", err);
         toast.error(
-          err instanceof Error ? err.message : "Terjadi kesalahan saat menambah aset"
+          err instanceof Error
+            ? err.message
+            : "Terjadi kesalahan saat menambah aset"
         );
       } finally {
         setIsSaving(false);
@@ -255,7 +267,110 @@ export default function DaftarAsetPage() {
     } catch (err) {
       console.error("Error deleting asset:", err);
       toast.error(
-        err instanceof Error ? err.message : "Terjadi kesalahan saat menghapus aset"
+        err instanceof Error
+          ? err.message
+          : "Terjadi kesalahan saat menghapus aset"
+      );
+    }
+  }
+
+  async function handleSubmitForApproval(id: string) {
+    if (
+      !confirm(
+        "Apakah Anda yakin ingin mengirim aset ini untuk persetujuan RM?"
+      )
+    )
+      return;
+
+    try {
+      const assetToSubmit = assets.find((a) => a.id === id);
+      if (!assetToSubmit) return;
+
+      const response = await assetsApi.update(id, {
+        name: assetToSubmit.name,
+        location: assetToSubmit.location || undefined,
+        type: {
+          id: null,
+          name: assetToSubmit.type,
+        },
+        classification: {
+          id: null,
+          name: assetToSubmit.classification,
+        },
+        status: AssetStatus.MENUNGGU_PERSETUJUAN_RM,
+      });
+
+      if (response.status) {
+        // Update local state
+        setAssets((prev) =>
+          prev.map((a) =>
+            a.id === id
+              ? {
+                  ...a,
+                  status: AssetStatus.MENUNGGU_PERSETUJUAN_RM,
+                }
+              : a
+          )
+        );
+        toast.success("Aset berhasil dikirim untuk persetujuan RM!");
+      } else {
+        toast.error(
+          response.message || "Gagal mengirim aset untuk persetujuan"
+        );
+      }
+    } catch (err) {
+      console.error("Error submitting asset for approval:", err);
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Terjadi kesalahan saat mengirim aset untuk persetujuan"
+      );
+    }
+  }
+
+  async function handleRevertToDraft(id: string) {
+    if (!confirm("Apakah Anda yakin ingin mengubah status aset kembali ke Draft?")) return;
+
+    try {
+      const assetToRevert = assets.find((a) => a.id === id);
+      if (!assetToRevert) return;
+
+      const response = await assetsApi.update(id, {
+        name: assetToRevert.name,
+        location: assetToRevert.location || undefined,
+        type: {
+          id: null,
+          name: assetToRevert.type,
+        },
+        classification: {
+          id: null,
+          name: assetToRevert.classification,
+        },
+        status: AssetStatus.DRAFT,
+      });
+
+      if (response.status) {
+        // Update local state
+        setAssets((prev) =>
+          prev.map((a) =>
+            a.id === id
+              ? {
+                  ...a,
+                  status: AssetStatus.DRAFT,
+                }
+              : a
+          )
+        );
+        toast.success("Status aset berhasil diubah kembali ke Draft!");
+      } else {
+        toast.error(response.message || "Gagal mengubah status aset");
+      }
+    } catch (err) {
+      console.error("Error reverting asset to draft:", err);
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Terjadi kesalahan saat mengubah status aset"
       );
     }
   }
@@ -293,11 +408,11 @@ export default function DaftarAsetPage() {
     setIsSaving(true);
 
     try {
-      const typeId = form.typeId 
+      const typeId = form.typeId
         ? form.typeId // User selected from dropdown
         : null; // User typed new value, nullify ID
-      
-      const classificationId = form.classificationId 
+
+      const classificationId = form.classificationId
         ? form.classificationId // User selected from dropdown
         : null; // User typed new value, nullify ID
 
@@ -347,7 +462,9 @@ export default function DaftarAsetPage() {
     } catch (err) {
       console.error("Error updating asset:", err);
       toast.error(
-        err instanceof Error ? err.message : "Terjadi kesalahan saat mengupdate aset"
+        err instanceof Error
+          ? err.message
+          : "Terjadi kesalahan saat mengupdate aset"
       );
     } finally {
       setIsSaving(false);
@@ -506,9 +623,7 @@ export default function DaftarAsetPage() {
                     Batal
                   </Button>
                   <Button
-                    onClick={
-                      editingAssetId ? handleSaveEdit : handleAdd
-                    }
+                    onClick={editingAssetId ? handleSaveEdit : handleAdd}
                     disabled={isSaving}
                   >
                     {isSaving
@@ -524,9 +639,8 @@ export default function DaftarAsetPage() {
         </div>
       </div>
 
-      <PaginatedTable<Asset>
-        data={assets}
-        columns={[
+      {(() => {
+        const baseColumns: ColumnDef<Asset>[] = [
           {
             header: "No",
             key: "id",
@@ -556,83 +670,237 @@ export default function DaftarAsetPage() {
             key: "location",
           },
           {
-            header: "Status",
-            key: "status",
-            render: (value: any) => {
-              const status = String(value || AssetStatus.DRAFT);
-              let statusClass = "bg-gray-100 text-gray-700";
-              let statusLabel = status;
-
-              switch (status) {
-                case AssetStatus.DRAFT:
-                  statusClass = "bg-gray-100 text-gray-700";
-                  statusLabel = "Draft";
-                  break;
-                case AssetStatus.MENUNGGU_PERSETUJUAN_RM:
-                  statusClass = "bg-yellow-100 text-yellow-700";
-                  statusLabel = "Menunggu Persetujuan RM";
-                  break;
-                case AssetStatus.MENUNGGU_PERSETUJUAN_FINAL:
-                  statusClass = "bg-blue-100 text-blue-700";
-                  statusLabel = "Menunggu Persetujuan Final";
-                  break;
-                case AssetStatus.REVISI:
-                  statusClass = "bg-orange-100 text-orange-700";
-                  statusLabel = "Revisi";
-                  break;
-                case AssetStatus.DISETUJUI:
-                  statusClass = "bg-green-100 text-green-700";
-                  statusLabel = "Disetujui";
-                  break;
-                case AssetStatus.DITOLAK:
-                  statusClass = "bg-red-100 text-red-700";
-                  statusLabel = "Ditolak";
-                  break;
-              }
-
-              return (
-                <span
-                  className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${statusClass}`}
-                >
-                  {statusLabel}
-                </span>
-              );
-            },
-            searchable: false,
+            header: "Owner",
+            key: "ownerName",
           },
-          {
-            header: "Aksi",
-            key: "id",
-            render: (_: any, row: Asset) => (
-              <div className="flex items-center gap-2">
-                <button
-                  className="p-2 hover:bg-gray-100 rounded transition-colors"
-                  onClick={() => handleDeleteAsset(row.id)}
-                  title="Hapus aset"
-                >
-                  <Trash size={18} className="text-gray-600" />
-                </button>
-                <button
-                  className="p-2 hover:bg-gray-100 rounded transition-colors"
-                  onClick={() => handleUpdateAsset(row.id)}
-                  title="Edit aset"
-                >
-                  <Edit size={18} className="text-gray-600" />
-                </button>
-              </div>
-            ),
-            searchable: false,
+        ];
+
+        if (!isRiskOwner) {
+          baseColumns.push({
+            header: "Divisi",
+            key: "division",
+          });
+        }
+
+        baseColumns.push({
+          header: "Status",
+          key: "status",
+          render: (value: any) => {
+            const status = String(value || AssetStatus.DRAFT);
+            let statusClass = "bg-gray-100 text-gray-700";
+            let statusLabel = status;
+
+            switch (status) {
+              case AssetStatus.DRAFT:
+                statusClass = "bg-gray-100 text-gray-700";
+                statusLabel = "Draft";
+                break;
+              case AssetStatus.MENUNGGU_PERSETUJUAN_RM:
+                statusClass = "bg-yellow-100 text-yellow-700";
+                statusLabel = "Menunggu Persetujuan RM";
+                break;
+              case AssetStatus.MENUNGGU_PERSETUJUAN_FINAL:
+                statusClass = "bg-blue-100 text-blue-700";
+                statusLabel = "Menunggu Persetujuan Final";
+                break;
+              case AssetStatus.REVISI:
+                statusClass = "bg-orange-100 text-orange-700";
+                statusLabel = "Revisi";
+                break;
+              case AssetStatus.DISETUJUI:
+                statusClass = "bg-green-100 text-green-700";
+                statusLabel = "Disetujui";
+                break;
+              case AssetStatus.DITOLAK:
+                statusClass = "bg-red-100 text-red-700";
+                statusLabel = "Ditolak";
+                break;
+            }
+
+            return (
+              <span
+                className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${statusClass}`}
+              >
+                {statusLabel}
+              </span>
+            );
           },
-        ]}
-        pageSize={20}
-        emptyMessage="Belum ada aset yang terdaftar"
-      />
+          searchable: false,
+        });
+
+        baseColumns.push({
+          header: "Aksi",
+          key: "id",
+          render: (_: any, row: Asset) => (
+            <div className="flex items-center gap-2">
+              {/* RISK_OWNER specific actions */}
+              {isRiskOwner ? (
+                <TooltipProvider>
+                  <>
+                    {/* DRAFT status: Show submit button */}
+                    {row.status === AssetStatus.DRAFT && (
+                      <>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              className="p-2 hover:bg-green-100 rounded transition-colors"
+                              onClick={() => handleSubmitForApproval(row.id)}
+                            >
+                              <SendHorizontal size={18} className="text-green-600" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>Kirim untuk persetujuan RM</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              className="p-2 hover:bg-blue-100 rounded transition-colors"
+                              onClick={() => handleUpdateAsset(row.id)}
+                            >
+                              <Edit size={18} className="text-blue-600" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>Edit aset</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              className="p-2 hover:bg-gray-100 rounded transition-colors"
+                              onClick={() => handleDeleteAsset(row.id)}
+                            >
+                              <Trash size={18} className="text-gray-600" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>Hapus aset</TooltipContent>
+                        </Tooltip>
+                      </>
+                    )}
+
+                    {/* MENUNGGU_PERSETUJUAN_RM status: Show archive-x to revert to draft */}
+                    {row.status === AssetStatus.MENUNGGU_PERSETUJUAN_RM && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            className="p-2 hover:bg-yellow-100 rounded transition-colors"
+                            onClick={() => handleRevertToDraft(row.id)}
+                          >
+                            <ArchiveX size={18} className="text-yellow-600" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>Ubah status kembali ke Draft</TooltipContent>
+                      </Tooltip>
+                    )}
+
+                    {/* REVISI status: Show edit, submit, and archive-x buttons */}
+                    {row.status === AssetStatus.REVISI && (
+                      <>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              className="p-2 hover:bg-green-100 rounded transition-colors"
+                              onClick={() => handleSubmitForApproval(row.id)}
+                            >
+                              <SendHorizontal size={18} className="text-green-600" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>Kirim untuk persetujuan RM</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              className="p-2 hover:bg-blue-100 rounded transition-colors"
+                              onClick={() => handleUpdateAsset(row.id)}
+                            >
+                              <Edit size={18} className="text-blue-600" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>Edit aset</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <button
+                              className="p-2 hover:bg-yellow-100 rounded transition-colors"
+                              onClick={() => handleRevertToDraft(row.id)}
+                            >
+                              <ArchiveX size={18} className="text-yellow-600" />
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent>Ubah status kembali ke Draft</TooltipContent>
+                        </Tooltip>
+                      </>
+                    )}
+
+                    {/* MENUNGGU_PERSETUJUAN_FINAL and DISETUJUI: No actions */}
+                    {(row.status === AssetStatus.MENUNGGU_PERSETUJUAN_FINAL ||
+                      row.status === AssetStatus.DISETUJUI) && (
+                      <span className="text-xs text-gray-500">Tidak ada aksi</span>
+                    )}
+
+                    {/* DITOLAK: Show delete button only */}
+                    {row.status === AssetStatus.DITOLAK && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            className="p-2 hover:bg-gray-100 rounded transition-colors"
+                            onClick={() => handleDeleteAsset(row.id)}
+                          >
+                            <Trash size={18} className="text-gray-600" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>Hapus aset</TooltipContent>
+                      </Tooltip>
+                    )}
+                  </>
+                </TooltipProvider>
+              ) : (
+                <TooltipProvider>
+                  <>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          className="p-2 hover:bg-blue-100 rounded transition-colors"
+                          onClick={() => handleUpdateAsset(row.id)}
+                        >
+                          <Edit size={18} className="text-blue-600" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>Edit aset</TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          className="p-2 hover:bg-gray-100 rounded transition-colors"
+                          onClick={() => handleDeleteAsset(row.id)}
+                        >
+                          <Trash size={18} className="text-gray-600" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>Hapus aset</TooltipContent>
+                    </Tooltip>
+                  </>
+                </TooltipProvider>
+              )}
+            </div>
+          ),
+          searchable: false,
+        });
+
+        return (
+          <PaginatedTable<Asset>
+            data={assets}
+            columns={baseColumns}
+            pageSize={20}
+            emptyMessage="Belum ada aset yang terdaftar"
+          />
+        );
+      })()}
 
       {/* Pagination Controls */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between gap-4 mt-4">
           <div className="text-sm text-muted-foreground">
-            Menampilkan halaman {currentPage} dari {totalPages} ({totalAssets} total aset)
+            Menampilkan halaman {currentPage} dari {totalPages} ({totalAssets}{" "}
+            total aset)
           </div>
           <div className="flex items-center gap-2">
             <Button
@@ -657,7 +925,9 @@ export default function DaftarAsetPage() {
             </div>
             <Button
               variant="outline"
-              onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+              onClick={() =>
+                setCurrentPage(Math.min(totalPages, currentPage + 1))
+              }
               disabled={currentPage === totalPages || isLoadingAssets}
             >
               Selanjutnya

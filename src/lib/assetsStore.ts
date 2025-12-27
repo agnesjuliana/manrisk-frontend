@@ -1,7 +1,7 @@
 export enum AssetStatus {
   DRAFT = "DRAFT",
-  MENUNGGU_PERSETUJUAN_RM = "MENUNGGU PERSETUJUAN_RM",
-  MENUNGGU_PERSETUJUAN_FINAL = "MENUNGGU PERSETUJUAN_FINAL",
+  MENUNGGU_PERSETUJUAN_RM = "MENUNGGU_PERSETUJUAN_RM",
+  MENUNGGU_PERSETUJUAN_FINAL = "MENUNGGU_PERSETUJUAN_FINAL",
   REVISI = "REVISI",
   DISETUJUI = "DISETUJUI",
   DITOLAK = "DITOLAK",
@@ -13,6 +13,8 @@ export type Asset = {
   type: string;
   classification: string;
   ownerId?: string;
+  ownerName?: string;
+  division?: string;
   location?: string;
   processes?: string[];
   status?: AssetStatus;
