@@ -407,6 +407,129 @@ export default function DaftarRisikoPage() {
     }
   };
 
+  const handleApproveRisk = async (risk: Risk) => {
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        status: "DISETUJUI_RM",
+      };
+
+      const response = await apiClient.patch(`/risk-registers/${risk.id}`, payload);
+
+      if (response.status === 200) {
+        toast.success("Risiko berhasil disetujui");
+        setCurrentPage(1);
+        const reloadResponse = await apiClient.get("/risk-registers", {
+          params: {
+            page: 1,
+            per_page: 10,
+          },
+        });
+        if (reloadResponse.data?.status && reloadResponse.data?.data?.data) {
+          setRisks(reloadResponse.data.data.data);
+          // Update selectedRisk dengan data terbaru
+          const updatedRisk = reloadResponse.data.data.data.find((r: Risk) => r.id === risk.id);
+          if (updatedRisk) {
+            setSelectedRisk(updatedRisk);
+          }
+          if (reloadResponse.data.data.metadata) {
+            setTotalPages(reloadResponse.data.data.metadata.total_page);
+            setTotalRisks(reloadResponse.data.data.metadata.total_data);
+          }
+        }
+        // Close modal after action
+        setDetailOpen(false);
+      }
+    } catch (err) {
+      console.error("Error approving risk:", err);
+      toast.error("Gagal menyetujui risiko");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleRequestRevision = async (risk: Risk) => {
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        status: "REVISI",
+      };
+
+      const response = await apiClient.patch(`/risk-registers/${risk.id}`, payload);
+
+      if (response.status === 200) {
+        toast.success("Risiko diminta untuk direvisi");
+        setCurrentPage(1);
+        const reloadResponse = await apiClient.get("/risk-registers", {
+          params: {
+            page: 1,
+            per_page: 10,
+          },
+        });
+        if (reloadResponse.data?.status && reloadResponse.data?.data?.data) {
+          setRisks(reloadResponse.data.data.data);
+          // Update selectedRisk dengan data terbaru
+          const updatedRisk = reloadResponse.data.data.data.find((r: Risk) => r.id === risk.id);
+          if (updatedRisk) {
+            setSelectedRisk(updatedRisk);
+          }
+          if (reloadResponse.data.data.metadata) {
+            setTotalPages(reloadResponse.data.data.metadata.total_page);
+            setTotalRisks(reloadResponse.data.data.metadata.total_data);
+          }
+        }
+        // Close modal after action
+        setDetailOpen(false);
+      }
+    } catch (err) {
+      console.error("Error requesting revision:", err);
+      toast.error("Gagal meminta revisi");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleRejectRisk = async (risk: Risk) => {
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        status: "DITOLAK",
+      };
+
+      const response = await apiClient.patch(`/risk-registers/${risk.id}`, payload);
+
+      if (response.status === 200) {
+        toast.success("Risiko berhasil ditolak");
+        setCurrentPage(1);
+        const reloadResponse = await apiClient.get("/risk-registers", {
+          params: {
+            page: 1,
+            per_page: 10,
+          },
+        });
+        if (reloadResponse.data?.status && reloadResponse.data?.data?.data) {
+          setRisks(reloadResponse.data.data.data);
+          // Update selectedRisk dengan data terbaru
+          const updatedRisk = reloadResponse.data.data.data.find((r: Risk) => r.id === risk.id);
+          if (updatedRisk) {
+            setSelectedRisk(updatedRisk);
+          }
+          if (reloadResponse.data.data.metadata) {
+            setTotalPages(reloadResponse.data.data.metadata.total_page);
+            setTotalRisks(reloadResponse.data.data.metadata.total_data);
+          }
+        }
+        // Close modal after action
+        setDetailOpen(false);
+      }
+    } catch (err) {
+      console.error("Error rejecting risk:", err);
+      toast.error("Gagal menolak risiko");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleDelete = async (risk: Risk) => {
     if (!confirm(`Apakah Anda yakin ingin menghapus risiko ${risk.customRiskId}?`)) {
       return;
@@ -1234,7 +1357,7 @@ export default function DaftarRisikoPage() {
                       </>
                     )}
 
-                    {isRiskManager && (isPending || isRevisi) && (
+                    {isRiskManager && isPending && (
                       <>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -1242,8 +1365,10 @@ export default function DaftarRisikoPage() {
                               size="sm"
                               variant="ghost"
                               className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                              onClick={() => handleApproveRisk(row)}
+                              disabled={isSubmitting}
                             >
-                              <SendHorizontal size={16} />
+                              <CheckCircle size={16} />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>Setujui risiko</TooltipContent>
@@ -1254,6 +1379,8 @@ export default function DaftarRisikoPage() {
                               size="sm"
                               variant="ghost"
                               className="h-8 w-8 p-0 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                              onClick={() => handleRequestRevision(row)}
+                              disabled={isSubmitting}
                             >
                               <ArchiveX size={16} />
                             </Button>
@@ -1266,6 +1393,8 @@ export default function DaftarRisikoPage() {
                               size="sm"
                               variant="ghost"
                               className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                              onClick={() => handleRejectRisk(row)}
+                              disabled={isSubmitting}
                             >
                               <X size={16} />
                             </Button>
@@ -1341,32 +1470,68 @@ export default function DaftarRisikoPage() {
 
           {selectedRisk && (
             <div className="space-y-5">
-              {/* Header Section with ID and Status */}
-              <div className="border border-blue-200 rounded-lg p-4 bg-blue-50">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">
-                      Risk ID
-                    </p>
-                    <p className="text-lg font-mono font-bold text-blue-900 mt-2">
-                      {selectedRisk.customRiskId}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">
-                      Status
-                    </p>
-                    <div className="mt-2">
-                      <span
-                        className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadgeColor(
-                          selectedRisk.status
-                        )}`}
-                      >
-                        {getStatusLabel(selectedRisk.status)}
-                      </span>
+              {/* Header Section with ID, Status and Action Buttons */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+                {/* Left: ID and Status Box */}
+                <div className="md:col-span-2">
+                  <div className="border border-blue-200 rounded-lg p-4 bg-blue-50">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">
+                          Risk ID
+                        </p>
+                        <p className="text-lg font-mono font-bold text-blue-900 mt-2">
+                          {selectedRisk.customRiskId}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">
+                          Status
+                        </p>
+                        <div className="mt-2">
+                          <span
+                            className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadgeColor(
+                              selectedRisk.status
+                            )}`}
+                          >
+                            {getStatusLabel(selectedRisk.status)}
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
+
+                {/* Right: Action Buttons (only for Risk Manager when status is MENUNGGU_PERSETUJUAN_RM) */}
+                {isRiskManager && selectedRisk.status === RiskStatus.MENUNGGU_PERSETUJUAN_RM && (
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      onClick={() => handleApproveRisk(selectedRisk)}
+                      disabled={isSubmitting}
+                      className="w-full bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      Setujui
+                    </Button>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        onClick={() => handleRequestRevision(selectedRisk)}
+                        disabled={isSubmitting}
+                        className="w-full border-orange-500 hover:bg-orange-50 text-orange-600"
+                        variant="outline"
+                      >
+                        Revisi
+                      </Button>
+                      <Button
+                        onClick={() => handleRejectRisk(selectedRisk)}
+                        disabled={isSubmitting}
+                        className="w-full border-red-500 hover:bg-red-50 text-red-600"
+                        variant="outline"
+                      >
+                        Tolak
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Single Column Layout */}
