@@ -212,7 +212,9 @@ export default function DaftarRisikoPage() {
 
     setIsSubmitting(true);
     try {
-      const nextRiskId = customRiskId.trim() || `RISK-${String(totalRisks + 1).padStart(3, "0")}`;
+      const nextRiskId =
+        customRiskId.trim() ||
+        `RISK-${String(totalRisks + 1).padStart(3, "0")}`;
       const payload = {
         customRiskId: nextRiskId,
         vulnerability: form.vulnerability,
@@ -1068,181 +1070,278 @@ export default function DaftarRisikoPage() {
 
       {/* Detail Modal */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto !max-w-5xl w-full">
           <DialogHeader>
-            <DialogTitle>Detail Risiko</DialogTitle>
+            <DialogTitle className="text-xl">Detail Risiko</DialogTitle>
             <DialogDescription>
-              Informasi lengkap risiko: {selectedRisk?.customRiskId}
+              Informasi lengkap risiko:{" "}
+              <span className="font-mono font-semibold text-slate-700">
+                {selectedRisk?.customRiskId}
+              </span>
             </DialogDescription>
           </DialogHeader>
 
           {selectedRisk && (
-            <FieldGroup className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-700">
-                    Risk ID
-                  </label>
-                  <p className="text-sm text-gray-900 mt-1">
-                    {selectedRisk.customRiskId}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-700">
-                    Status
-                  </label>
-                  <p className="text-sm mt-1">
-                    <span
-                      className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(
-                        selectedRisk.status
-                      )}`}
-                    >
-                      {getStatusLabel(selectedRisk.status)}
-                    </span>
-                  </p>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-gray-700">
-                    Kategori
-                  </label>
-                  <p className="text-sm text-gray-900 mt-1">
-                    {selectedRisk.category?.title || "-"}
-                  </p>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-gray-700">
-                    Sumber Risiko
-                  </label>
-                  <p className="text-sm text-gray-900 mt-1">
-                    {selectedRisk.source?.title || "-"}
-                  </p>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-gray-700">
-                    Vulnerability
-                  </label>
-                  <p className="text-sm text-gray-900 mt-1">
-                    {selectedRisk.vulnerability}
-                  </p>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-gray-700">
-                    Threat
-                  </label>
-                  <p className="text-sm text-gray-900 mt-1">
-                    {selectedRisk.threat || "-"}
-                  </p>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-gray-700">
-                    Identified Risk
-                  </label>
-                  <p className="text-sm text-gray-900 mt-1">
-                    {selectedRisk.identifiedRisk || "-"}
-                  </p>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-gray-700">
-                    Asset
-                  </label>
-                  <p className="text-sm text-gray-900 mt-1">
-                    {selectedRisk.asset?.name || "-"}
-                  </p>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-gray-700">
-                    Context
-                  </label>
-                  <p className="text-sm text-gray-900 mt-1">
-                    {selectedRisk.context?.name || "-"}
-                  </p>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-gray-700">
-                    Risk Owner
-                  </label>
-                  <p className="text-sm text-gray-900 mt-1">
-                    {selectedRisk.owner?.name || selectedRisk.owner?.id || "-"}
-                  </p>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-gray-700">
-                    CIA Impact
-                  </label>
-                  <p className="text-sm text-gray-900 mt-1">
-                    {[
-                      selectedRisk.isConfidentiality && "Confidentiality",
-                      selectedRisk.isIntegrity && "Integrity",
-                      selectedRisk.isAvailability && "Availability",
-                    ]
-                      .filter(Boolean)
-                      .join(", ") || "-"}
-                  </p>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-gray-700">
-                    Impact Severity
-                  </label>
-                  <p className="text-sm text-gray-900 mt-1">
-                    {selectedRisk.impactSeverity || "-"}
-                  </p>
-                </div>
-
-                <div>
-                  <label className="text-sm font-medium text-gray-700">
-                    Likelihood
-                  </label>
-                  <p className="text-sm text-gray-900 mt-1">
-                    {selectedRisk.likelihoodOccurence || "-"}
-                  </p>
-                </div>
-
-                {riskCriteria?.isFMEA && (
+            <div className="space-y-5">
+              {/* Header Section with ID and Status */}
+              <div className="border border-blue-200 rounded-lg p-4 bg-blue-50">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-gray-700">
-                      Detection
-                    </label>
-                    <p className="text-sm text-gray-900 mt-1">
-                      {selectedRisk.detection || "-"}
+                    <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">
+                      Risk ID
+                    </p>
+                    <p className="text-lg font-mono font-bold text-blue-900 mt-2">
+                      {selectedRisk.customRiskId}
                     </p>
                   </div>
-                )}
-
-                <div>
-                  <label className="text-sm font-medium text-gray-700">
-                    Created At
-                  </label>
-                  <p className="text-sm text-gray-900 mt-1">
-                    {selectedRisk.createdAt
-                      ? new Date(selectedRisk.createdAt).toLocaleString("id-ID")
-                      : "-"}
-                  </p>
-                </div>
-
-                <div className="col-span-1 md:col-span-2">
-                  <label className="text-sm font-medium text-gray-700">
-                    Detail
-                  </label>
-                  <p className="text-sm text-gray-900 mt-1 whitespace-pre-wrap">
-                    {selectedRisk.detail || "-"}
-                  </p>
+                  <div>
+                    <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">
+                      Status
+                    </p>
+                    <div className="mt-2">
+                      <span
+                        className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadgeColor(
+                          selectedRisk.status
+                        )}`}
+                      >
+                        {getStatusLabel(selectedRisk.status)}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </FieldGroup>
+
+              {/* Single Column Layout */}
+              <div className="space-y-5">
+                {/* Risk Classification Section */}
+                <div className="border border-slate-200 rounded-lg p-4 bg-white">
+                  <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+                    Klasifikasi Risiko
+                  </h3>
+                  <div className="grid grid-cols-1 gap-3">
+                    <div>
+                      <p className="text-xs font-medium text-slate-500 uppercase mb-1">
+                        Kategori
+                      </p>
+                      <p className="text-sm text-slate-900 font-medium">
+                        {selectedRisk.category?.title || "-"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-slate-500 uppercase mb-1">
+                        Sumber Risiko
+                      </p>
+                      <p className="text-sm text-slate-900 font-medium">
+                        {selectedRisk.source?.title || "-"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Risk Elements Section */}
+                <div className="border border-slate-200 rounded-lg p-4 bg-white">
+                  <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-red-600"></span>
+                    Elemen Risiko
+                  </h3>
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-xs font-medium text-slate-500 uppercase mb-1">
+                        Identified Risk
+                      </p>
+                      <p className="text-sm text-slate-900 border-l-2 border-red-600 pl-2 py-1">
+                        {selectedRisk.identifiedRisk || "-"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-slate-500 uppercase mb-1">
+                        Vulnerability
+                      </p>
+                      <p className="text-sm text-slate-900 font-mono border-l-2 border-slate-200 pl-2 py-1">
+                        {selectedRisk.vulnerability}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-slate-500 uppercase mb-1">
+                        Threat
+                      </p>
+                      <p className="text-sm text-slate-900 font-mono border-l-2 border-slate-200 pl-2 py-1">
+                        {selectedRisk.threat || "-"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Assets & Context Section */}
+                <div className="border border-slate-200 rounded-lg p-4 bg-white">
+                  <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-green-600"></span>
+                    Aset & Konteks
+                  </h3>
+                  <div className="grid grid-cols-1 gap-3">
+                    <div>
+                      <p className="text-xs font-medium text-slate-500 uppercase mb-1">
+                        Asset
+                      </p>
+                      <p className="text-sm text-slate-900 font-medium">
+                        {selectedRisk.asset?.name || "-"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-slate-500 uppercase mb-1">
+                        Context
+                      </p>
+                      <p className="text-sm text-slate-900 font-medium">
+                        {selectedRisk.context?.name || "-"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-medium text-slate-500 uppercase mb-1">
+                        Risk Owner
+                      </p>
+                      <p className="text-sm text-slate-900 font-medium">
+                        {selectedRisk.owner?.name ||
+                          selectedRisk.owner?.id ||
+                          "-"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* CIA Impact & Scoring Section */}
+                <div className="border border-slate-200 rounded-lg p-4 bg-white">
+                  <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-amber-600"></span>
+                    Penilaian & Dampak
+                  </h3>
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-xs font-medium text-slate-500 uppercase mb-2">
+                        CIA Impact
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedRisk.isConfidentiality && (
+                          <span className="px-2.5 py-1 rounded text-xs font-medium bg-slate-100 text-slate-700">
+                            C - Confidentiality
+                          </span>
+                        )}
+                        {selectedRisk.isIntegrity && (
+                          <span className="px-2.5 py-1 rounded text-xs font-medium bg-slate-100 text-slate-700">
+                            I - Integrity
+                          </span>
+                        )}
+                        {selectedRisk.isAvailability && (
+                          <span className="px-2.5 py-1 rounded text-xs font-medium bg-slate-100 text-slate-700">
+                            A - Availability
+                          </span>
+                        )}
+                        {!selectedRisk.isConfidentiality &&
+                          !selectedRisk.isIntegrity &&
+                          !selectedRisk.isAvailability && (
+                            <span className="text-slate-500 text-sm">-</span>
+                          )}
+                      </div>
+                    </div>
+
+                    <div
+                      className={`grid ${
+                        riskCriteria?.isFMEA ? "grid-cols-3" : "grid-cols-2"
+                      } gap-2`}
+                    >
+                      <div className="bg-white p-3 rounded border border-slate-200 text-center">
+                        <p className="text-xs font-medium text-slate-600 uppercase">
+                          {riskCriteria?.isFMEA ? "Severity" : "Impact"}
+                        </p>
+                        <p className="text-2xl font-bold text-slate-900 mt-1">
+                          {selectedRisk.impactSeverity || "-"}
+                        </p>
+                      </div>
+                      <div className="bg-white p-3 rounded border border-slate-200 text-center">
+                        <p className="text-xs font-medium text-slate-600 uppercase">
+                          {riskCriteria?.isFMEA ? "Occurence" : "Likelihood"}
+                        </p>
+                        <p className="text-2xl font-bold text-slate-900 mt-1">
+                          {selectedRisk.likelihoodOccurence || "-"}
+                        </p>
+                      </div>
+                      {riskCriteria?.isFMEA && (
+                        <div className="bg-white p-3 rounded border border-slate-200 text-center">
+                          <p className="text-xs font-medium text-slate-600 uppercase">
+                            Detection
+                          </p>
+                          <p className="text-2xl font-bold text-slate-900 mt-1">
+                            {selectedRisk.detection || "-"}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Risk Score or RPN */}
+                    <div
+                      className={`p-4 rounded border text-center ${getRiskScoreColor(
+                        riskCriteria?.isFMEA
+                          ? (selectedRisk.impactSeverity ?? 1) *
+                              (selectedRisk.likelihoodOccurence ?? 1) *
+                              (selectedRisk.detection ?? 1)
+                          : (selectedRisk.impactSeverity ?? 1) *
+                              (selectedRisk.likelihoodOccurence ?? 1)
+                      )} border-slate-200`}
+                    >
+                      <p className="text-xs font-medium uppercase mb-2 opacity-75">
+                        {riskCriteria?.isFMEA ? "RPN Score" : "Risk Score"}
+                      </p>
+                      <p className="text-3xl font-bold">
+                        {riskCriteria?.isFMEA
+                          ? (selectedRisk.impactSeverity ?? 1) *
+                            (selectedRisk.likelihoodOccurence ?? 1) *
+                            (selectedRisk.detection ?? 1)
+                          : (selectedRisk.impactSeverity ?? 1) *
+                            (selectedRisk.likelihoodOccurence ?? 1)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Detail & Metadata Section - Full Width */}
+              <div className="border border-slate-200 rounded-lg p-4 bg-white">
+                <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-slate-600"></span>
+                  Detail Tambahan
+                </h3>
+                <div className="space-y-3">
+                  {selectedRisk.detail && (
+                    <div>
+                      <p className="text-xs font-medium text-slate-500 uppercase mb-1">
+                        Keterangan Detail
+                      </p>
+                      <p className="text-sm text-slate-900 whitespace-pre-wrap font-mono bg-slate-50 border border-slate-200 p-2 rounded">
+                        {selectedRisk.detail}
+                      </p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-xs font-medium text-slate-500 uppercase mb-1">
+                      Dibuat Pada
+                    </p>
+                    <p className="text-sm text-slate-900">
+                      {selectedRisk.createdAt
+                        ? new Date(selectedRisk.createdAt).toLocaleString(
+                            "id-ID"
+                          )
+                        : "-"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
 
           <DialogFooter>
-            <Button onClick={() => setDetailOpen(false)}>Tutup</Button>
+            <Button onClick={() => setDetailOpen(false)} className="w-full">
+              Tutup
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
