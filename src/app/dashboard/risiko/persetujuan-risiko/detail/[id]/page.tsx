@@ -12,15 +12,27 @@ import { useAuth } from "@/hooks/use-auth";
 
 interface Risk {
   id: string;
-  name: string;
-  description?: string;
-  likelihood?: string;
-  impact?: string;
-  inherentRisk?: number;
-  owner?: {
-    id: string;
-    name: string;
-  };
+  customRiskId: string;
+  vulnerability: string;
+  threat: string;
+  identifiedRisk: string;
+  assetId?: string;
+  contextId?: string;
+  detail?: string;
+  isConfidentiality?: boolean;
+  isIntegrity?: boolean;
+  isAvailability?: boolean;
+  impactSeverity?: number;
+  likelihoodOccurence?: number;
+  detection?: number;
+  status: string;
+  category?: { id: string; title: string };
+  source?: { id: string; title: string };
+  asset?: { id: string; name: string };
+  context?: { id: string; name: string };
+  owner?: { id: string; name: string };
+  createdAt: string;
+  updatedAt?: string;
 }
 
 interface Manager {
@@ -110,15 +122,31 @@ export default function DetailApprovalPage() {
   }
 
   function getStatusLabel(status?: string) {
-    switch (status) {
-      case RiskApprovalTLStatus.MENUNGGU_PERSETUJUAN_FINAL:
-        return "Menunggu Persetujuan Final";
-      case RiskApprovalTLStatus.DISETUJUI:
-        return "Disetujui";
-      case RiskApprovalTLStatus.DITOLAK:
-        return "Ditolak";
-      default:
-        return status || "-";
+    const statusMap: Record<string, string> = {
+      DRAFT: "Draft",
+      MENUNGGU_PERSETUJUAN_RM: "Menunggu Persetujuan RM",
+      DISETUJUI_RM: "Disetujui RM",
+      MENUNGGU_PERSETUJUAN_FINAL: "Menunggu Persetujuan Final",
+      REVISI: "Revisi",
+      DISETUJUI: "Disetujui",
+      DITOLAK: "Ditolak",
+    };
+    return statusMap[String(status)] || status || "-";
+  }
+
+  function getRiskScoreColor(score: number) {
+    // Assuming default threshold of 9 if not available from criteria
+    const threshold = 9;
+    if (score <= threshold) {
+      return "bg-green-100 text-green-800";
+    } else if (score <= 10) {
+      return "bg-orange-100 text-orange-800";
+    } else if (score <= 15) {
+      return "bg-yellow-100 text-yellow-800";
+    } else if (score <= 20) {
+      return "bg-pink-100 text-pink-800";
+    } else {
+      return "bg-red-100 text-red-800";
     }
   }
 
@@ -303,35 +331,89 @@ export default function DetailApprovalPage() {
               searchable: false,
             },
             {
-              header: "Nama Risiko",
-              key: "name",
+              header: "Risk ID",
+              key: "customRiskId",
               render: (value) => (
                 <span className="font-medium">{String(value)}</span>
               ),
             },
             {
-              header: "Deskripsi",
-              key: "description",
+              header: "Kategori",
+              key: "category",
+              render: (value: any) => value?.title || "-",
+            },
+            {
+              header: "Identified Risk",
+              key: "identifiedRisk",
               render: (value) => (
-                <span className="text-sm text-gray-600 truncate max-w-xs">
-                  {String(value ?? "-")}
-                </span>
+                <span className="font-bold">{String(value || "-")}</span>
               ),
             },
             {
-              header: "Owner",
-              key: "owner",
-              render: (value: any) => value?.name || "-",
+              header: "Vulnerability",
+              key: "vulnerability",
             },
             {
-              header: "Likelihood",
-              key: "likelihood",
-              render: (value) => String(value ?? "-"),
+              header: "Threat",
+              key: "threat",
+            },
+            {
+              header: "CIA Impact",
+              key: (row) => {
+                const cias = [];
+                if (row.isConfidentiality) cias.push("C");
+                if (row.isIntegrity) cias.push("I");
+                if (row.isAvailability) cias.push("A");
+                return cias.join(", ") || "-";
+              },
             },
             {
               header: "Impact",
-              key: "impact",
-              render: (value) => String(value ?? "-"),
+              key: "impactSeverity",
+              render: (value) => (
+                <span className="text-center">{String(value ?? "-")}</span>
+              ),
+              searchable: false,
+            },
+            {
+              header: "Likelihood",
+              key: "likelihoodOccurence",
+              render: (value) => (
+                <span className="text-center">{String(value ?? "-")}</span>
+              ),
+              searchable: false,
+            },
+            {
+              header: "Risk Score",
+              key: (row: Risk) => {
+                const score =
+                  (row.impactSeverity ?? 1) *
+                  (row.likelihoodOccurence ?? 1);
+                return score;
+              },
+              render: (value: any) => {
+                const score = Number(value);
+                return (
+                  <span
+                    className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getRiskScoreColor(
+                      score
+                    )}`}
+                  >
+                    {String(value ?? "-")}
+                  </span>
+                );
+              },
+              searchable: false,
+            },
+            {
+              header: "Status",
+              key: "status",
+              render: (value) => (
+                <span className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                  {getStatusLabel(String(value))}
+                </span>
+              ),
+              searchable: false,
             },
           ]}
           pageSize={10}
