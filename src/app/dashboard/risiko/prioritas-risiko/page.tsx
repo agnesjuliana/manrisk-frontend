@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/use-auth";
 import {
   Table,
   TableHeader,
@@ -46,12 +47,25 @@ function riskLevelForScore(score: number) {
 }
 
 export default function PrioritasRisikoPage() {
+  const { user } = useAuth();
+  const [mounted, setMounted] = React.useState(false);
   const [risks, setRisks] = React.useState<Risk[]>([]);
   const [riskCriteria, setRiskCriteria] = React.useState<RiskCriteria | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
 
+  // Mark component as mounted to prevent hydration mismatches
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const isRiskManager = user?.role === "RISK_MANAGER";
+  const isTopManagement = user?.role === "TOP_MANAGEMENT";
+
   // Load risk criteria and risks from API
   React.useEffect(() => {
+    // Only load if user is loaded and component is mounted
+    if (!mounted || !user) return;
+
     const loadData = async () => {
       setIsLoading(true);
       try {
@@ -61,11 +75,20 @@ export default function PrioritasRisikoPage() {
           setRiskCriteria(criteriaResponse.data.data);
         }
 
+        // Determine status filter based on role
+        let statusFilter: string;
+        if (isRiskManager) {
+          statusFilter = "DISETUJUI_RM,MENUNGGU_PERSETUJUAN_FINAL,MENUNGGU_PERSETUJUAN_RM,DISETUJUI";
+        } else {
+          // Default for TOP_MANAGEMENT and other roles
+          statusFilter = "MENUNGGU_PERSETUJUAN_FINAL,DISETUJUI";
+        }
+
         // Fetch all risks
         const risksResponse = await apiClient.get("/risk-registers", {
           params: {
             per_page: 1000,
-            status: "MENUNGGU_PERSETUJUAN_FINAL,DISETUJUI",
+            status: statusFilter,
           },
         });
 
@@ -81,7 +104,7 @@ export default function PrioritasRisikoPage() {
     };
 
     loadData();
-  }, []);
+  }, [mounted, user]);
 
   const computed = React.useMemo(() => {
     return risks

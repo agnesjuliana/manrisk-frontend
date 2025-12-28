@@ -193,15 +193,22 @@ export default function DaftarRisikoPage() {
   React.useEffect(() => {
     const loadDropdownData = async () => {
       try {
-        const [catRes, srcRes, assetRes, ctxRes, criteriaRes, usersRes] =
-          await Promise.all([
-            apiClient.get("/risk-registers/category"),
-            apiClient.get("/risk-registers/source"),
-            apiClient.get("/assets"),
-            apiClient.get("/contexts"),
-            apiClient.get("/risk-criteria"),
-            apiClient.get("/user-management"),
-          ]);
+        const requests = [
+          apiClient.get("/risk-registers/category"),
+          apiClient.get("/risk-registers/source"),
+          apiClient.get("/assets"),
+          apiClient.get("/contexts"),
+          apiClient.get("/risk-criteria"),
+        ];
+
+        // Only fetch users if RISK_MANAGER
+        if (isRiskManager) {
+          requests.push(apiClient.get("/user-management"));
+        }
+
+        const responses = await Promise.all(requests);
+
+        const [catRes, srcRes, assetRes, ctxRes, criteriaRes, usersRes] = responses;
 
         if (catRes.data?.data) setCategories(catRes.data.data);
         if (srcRes.data?.data) setSources(srcRes.data.data);
@@ -215,13 +222,15 @@ export default function DaftarRisikoPage() {
           }
         }
 
-        // Handle users response - could be array or nested in data
-        if (usersRes.data?.data?.data) {
-          setUsers(usersRes.data.data.data);
-        } else if (usersRes.data?.data) {
-          setUsers(usersRes.data.data);
-        } else if (Array.isArray(usersRes.data)) {
-          setUsers(usersRes.data);
+        // Handle users response only if RISK_MANAGER and response exists
+        if (isRiskManager && usersRes) {
+          if (usersRes.data?.data?.data) {
+            setUsers(usersRes.data.data.data);
+          } else if (usersRes.data?.data) {
+            setUsers(usersRes.data.data);
+          } else if (Array.isArray(usersRes.data)) {
+            setUsers(usersRes.data);
+          }
         }
       } catch (err) {
         console.error("Error loading dropdown data:", err);
@@ -229,7 +238,7 @@ export default function DaftarRisikoPage() {
     };
 
     loadDropdownData();
-  }, []);
+  }, [isRiskManager]);
 
   const handleAdd = async () => {
     if (!form.vulnerability?.trim() || !form.category?.title || !form.source?.title) {
