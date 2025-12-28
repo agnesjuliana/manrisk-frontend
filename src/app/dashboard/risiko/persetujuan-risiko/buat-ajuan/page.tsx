@@ -16,21 +16,40 @@ import {
 } from "@/components/ui/dialog";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Eye } from "lucide-react";
 import { apiClient } from "@/lib/api/config";
 
 type User = StoreUser;
 
 interface Risk {
   id: string;
-  name: string;
-  description?: string;
-  likelihood?: string;
-  impact?: string;
-  inherentRisk?: number;
-  owner?: {
-    id: string;
-    name: string;
-  };
+  customRiskId: string;
+  vulnerability: string;
+  threat: string;
+  identifiedRisk: string;
+  assetId?: string;
+  contextId?: string;
+  detail?: string;
+  isConfidentiality?: boolean;
+  isIntegrity?: boolean;
+  isAvailability?: boolean;
+  impactSeverity?: number;
+  likelihoodOccurence?: number;
+  detection?: number;
+  status: string;
+  category?: { id: string; title: string };
+  source?: { id: string; title: string };
+  asset?: { id: string; name: string };
+  context?: { id: string; name: string };
+  owner?: { id: string; name: string };
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export default function BuatAjuanPage() {
@@ -46,10 +65,29 @@ export default function BuatAjuanPage() {
   const [totalRisks, setTotalRisks] = React.useState(0);
   const [showModal, setShowModal] = React.useState(false);
   const [message, setMessage] = React.useState("");
+  const [selectedRisk, setSelectedRisk] = React.useState<Risk | null>(null);
+  const [detailOpen, setDetailOpen] = React.useState(false);
+  const [riskCriteria, setRiskCriteria] = React.useState<any>(null);
 
   // Load users on client side
   React.useEffect(() => {
     setUsers(loadUsers());
+  }, []);
+
+  // Load risk criteria and users on client side
+  React.useEffect(() => {
+    const loadCriteria = async () => {
+      try {
+        const response = await apiClient.get("/risk-criteria");
+        if (response.data?.data) {
+          setRiskCriteria(response.data.data);
+        }
+      } catch (err) {
+        console.error("Error loading risk criteria:", err);
+      }
+    };
+
+    loadCriteria();
   }, []);
 
   // Load risks from API with DISETUJUI_RM status filter
@@ -57,7 +95,7 @@ export default function BuatAjuanPage() {
     const loadRisksFromAPI = async () => {
       setIsLoading(true);
       try {
-        const response = await apiClient.get("/risks", {
+        const response = await apiClient.get("/risk-registers", {
           params: {
             page: currentPage,
             per_page: 20,
@@ -66,19 +104,7 @@ export default function BuatAjuanPage() {
         });
 
         if (response.data?.status && response.data?.data?.data) {
-          const mappedRisks: Risk[] = response.data.data.data.map(
-            (risk: any) => ({
-              id: risk.id,
-              name: risk.name,
-              description: risk.description || "",
-              likelihood: risk.likelihood || "",
-              impact: risk.impact || "",
-              inherentRisk: risk.inherentRisk || 0,
-              owner: risk.owner,
-            })
-          );
-
-          setRisks(mappedRisks);
+          setRisks(response.data.data.data);
 
           if (response.data.data.metadata) {
             setTotalPages(response.data.data.metadata.total_page);
@@ -113,6 +139,77 @@ export default function BuatAjuanPage() {
       setSelected(new Set());
     } else {
       setSelected(new Set(risks.map((r) => r.id)));
+    }
+  }
+
+  function handleViewDetail(risk: Risk) {
+    setSelectedRisk(risk);
+    setDetailOpen(true);
+  }
+
+  function getStatusBadgeColor(status?: string) {
+    switch (status) {
+      case "DRAFT":
+        return "bg-gray-100 text-gray-700";
+      case "MENUNGGU_PERSETUJUAN_RM":
+        return "bg-yellow-100 text-yellow-700";
+      case "DISETUJUI_RM":
+        return "bg-lime-100 text-lime-700";
+      case "MENUNGGU_PERSETUJUAN_FINAL":
+        return "bg-blue-100 text-blue-700";
+      case "REVISI":
+        return "bg-orange-100 text-orange-700";
+      case "DISETUJUI":
+        return "bg-green-100 text-green-700";
+      case "DITOLAK":
+        return "bg-red-100 text-red-700";
+      default:
+        return "bg-gray-100 text-gray-700";
+    }
+  }
+
+  function getStatusLabel(status?: string) {
+    const statusMap: Record<string, string> = {
+      DRAFT: "Draft",
+      MENUNGGU_PERSETUJUAN_RM: "Menunggu Persetujuan RM",
+      DISETUJUI_RM: "Disetujui RM",
+      MENUNGGU_PERSETUJUAN_FINAL: "Menunggu Persetujuan Final",
+      REVISI: "Revisi",
+      DISETUJUI: "Disetujui",
+      DITOLAK: "Ditolak",
+    };
+    return statusMap[String(status)] || status || "-";
+  }
+
+  function formatDate(dateString?: string): string {
+    if (!dateString) return "-";
+    try {
+      const date = new Date(dateString);
+      const day = String(date.getDate()).padStart(2, "0");
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const year = date.getFullYear();
+      const hours = String(date.getHours()).padStart(2, "0");
+      const minutes = String(date.getMinutes()).padStart(2, "0");
+      const seconds = String(date.getSeconds()).padStart(2, "0");
+      return `${day}/${month}/${year}, ${hours}:${minutes}:${seconds}`;
+    } catch {
+      return "-";
+    }
+  }
+
+  function getRiskScoreColor(score: number) {
+    const threshold = riskCriteria?.threshold ?? 9;
+
+    if (score <= threshold) {
+      return "bg-green-100 text-green-800";
+    } else if (score <= 10) {
+      return "bg-orange-100 text-orange-800";
+    } else if (score <= 15) {
+      return "bg-yellow-100 text-yellow-800";
+    } else if (score <= 20) {
+      return "bg-pink-100 text-pink-800";
+    } else {
+      return "bg-red-100 text-red-800";
     }
   }
 
@@ -203,49 +300,118 @@ export default function BuatAjuanPage() {
           {
             header: "No",
             key: "id",
-            render: (_: any, row: Risk) => {
+            render: (_, row) => {
               const index = risks.findIndex((r) => r.id === row.id);
               return <span className="text-gray-600">{index + 1}</span>;
             },
             searchable: false,
           },
           {
-            header: "Nama Risiko",
-            key: "name",
+            header: "Risk ID",
+            key: "customRiskId",
             render: (value) => (
               <span className="font-medium">{String(value)}</span>
             ),
           },
           {
-            header: "Deskripsi",
-            key: "description",
+            header: "Kategori",
+            key: "category",
+            render: (value: any) => value?.title || "-",
+          },
+          {
+            header: "Identified Risk",
+            key: "identifiedRisk",
             render: (value) => (
-              <span className="text-sm text-gray-600 truncate max-w-xs">
-                {String(value ?? "-")}
-              </span>
+              <span className="font-bold">{String(value || "-")}</span>
             ),
           },
-          {
-            header: "Owner",
-            key: "owner",
-            render: (value: any) => value?.name || "-",
-          },
-          {
-            header: "Likelihood",
-            key: "likelihood",
-          },
-          {
-            header: "Impact",
-            key: "impact",
-          },
+          ...(riskCriteria?.isFMEA
+            ? [
+                {
+                  header: "RPN",
+                  key: (row: Risk) => {
+                    const rpn =
+                      (row.impactSeverity ?? 1) *
+                      (row.likelihoodOccurence ?? 1) *
+                      (row.detection ?? 1);
+                    return rpn;
+                  },
+                  render: (value: any) => {
+                    const score = Number(value);
+                    return (
+                      <span
+                        className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getRiskScoreColor(
+                          score
+                        )}`}
+                      >
+                        {String(value ?? "-")}
+                      </span>
+                    );
+                  },
+                  searchable: false,
+                } as const,
+              ]
+            : [
+                {
+                  header: "Risk Score",
+                  key: (row: Risk) => {
+                    const score =
+                      (row.impactSeverity ?? 1) *
+                      (row.likelihoodOccurence ?? 1);
+                    return score;
+                  },
+                  render: (value: any) => {
+                    const score = Number(value);
+                    return (
+                      <span
+                        className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getRiskScoreColor(
+                          score
+                        )}`}
+                      >
+                        {String(value ?? "-")}
+                      </span>
+                    );
+                  },
+                  searchable: false,
+                } as const,
+              ]),
           {
             header: "Status",
+            key: "status",
+            render: (value) => (
+              <span
+                className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(
+                  String(value)
+                )}`}
+              >
+                {getStatusLabel(String(value))}
+              </span>
+            ),
+            searchable: false,
+          },
+          {
+            header: "Aksi",
             key: "id",
-            render: (value: any) => {
+            render: (value: any, row: Risk) => {
               return (
-                <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium bg-lime-100 text-lime-700`}>
-                  Disetujui RM
-                </span>
+                <TooltipProvider>
+                  <div className="flex items-center gap-2">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 w-8 p-0"
+                          title="Lihat detail"
+                          onClick={() => handleViewDetail(row)}
+                        >
+                          <Eye size={16} />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Lihat detail risiko</TooltipContent>
+                    </Tooltip>
+                  </div>
+                </TooltipProvider>
               );
             },
             searchable: false,
@@ -345,6 +511,213 @@ export default function BuatAjuanPage() {
                 {isSending ? "Mengirim..." : "Kirim Persetujuan"}
               </Button>
             </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Detail Modal */}
+      <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto !max-w-5xl w-full">
+          <DialogHeader>
+            <DialogTitle className="text-xl">Detail Risiko</DialogTitle>
+            <DialogDescription>
+              Informasi lengkap risiko:{" "}
+              <span className="font-mono font-semibold text-slate-700">
+                {selectedRisk?.customRiskId}
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedRisk && (
+            <div className="space-y-5">
+              {/* Header Section with ID and Status */}
+              <div className="border border-blue-200 rounded-lg p-4 bg-blue-50">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">
+                      Risk ID
+                    </p>
+                    <p className="text-lg font-mono font-bold text-blue-900 mt-2">
+                      {selectedRisk.customRiskId}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">
+                      Status
+                    </p>
+                    <div className="mt-2">
+                      <span
+                        className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadgeColor(
+                          selectedRisk.status
+                        )}`}
+                      >
+                        {getStatusLabel(selectedRisk.status)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Risk Classification */}
+              <div className="border border-slate-200 rounded-lg p-4 bg-white">
+                <h3 className="text-sm font-semibold text-slate-900 mb-3">
+                  Klasifikasi Risiko
+                </h3>
+                <div className="grid grid-cols-1 gap-3">
+                  <div>
+                    <p className="text-xs font-medium text-slate-500 uppercase mb-1">
+                      Kategori
+                    </p>
+                    <p className="text-sm text-slate-900">
+                      {selectedRisk.category?.title || "-"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-slate-500 uppercase mb-1">
+                      Sumber Risiko
+                    </p>
+                    <p className="text-sm text-slate-900">
+                      {selectedRisk.source?.title || "-"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Risk Elements */}
+              <div className="border border-slate-200 rounded-lg p-4 bg-white">
+                <h3 className="text-sm font-semibold text-slate-900 mb-3">
+                  Elemen Risiko
+                </h3>
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-xs font-medium text-slate-500 uppercase mb-1">
+                      Identified Risk
+                    </p>
+                    <p className="text-sm text-slate-900">
+                      {selectedRisk.identifiedRisk || "-"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-slate-500 uppercase mb-1">
+                      Vulnerability
+                    </p>
+                    <p className="text-sm text-slate-900 font-mono">
+                      {selectedRisk.vulnerability || "-"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-slate-500 uppercase mb-1">
+                      Threat
+                    </p>
+                    <p className="text-sm text-slate-900 font-mono">
+                      {selectedRisk.threat || "-"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Assets & Context */}
+              <div className="border border-slate-200 rounded-lg p-4 bg-white">
+                <h3 className="text-sm font-semibold text-slate-900 mb-3">
+                  Aset & Konteks
+                </h3>
+                <div className="grid grid-cols-1 gap-3">
+                  <div>
+                    <p className="text-xs font-medium text-slate-500 uppercase mb-1">
+                      Asset
+                    </p>
+                    <p className="text-sm text-slate-900">
+                      {selectedRisk.asset?.name || "-"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-slate-500 uppercase mb-1">
+                      Context
+                    </p>
+                    <p className="text-sm text-slate-900">
+                      {selectedRisk.context?.name || "-"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-slate-500 uppercase mb-1">
+                      Risk Owner
+                    </p>
+                    <p className="text-sm text-slate-900">
+                      {selectedRisk.owner?.name || selectedRisk.owner?.id || "-"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Scoring */}
+              <div className="border border-slate-200 rounded-lg p-4 bg-white">
+                <h3 className="text-sm font-semibold text-slate-900 mb-3">
+                  Penilaian
+                </h3>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-white p-3 rounded border border-slate-200 text-center">
+                      <p className="text-xs font-medium text-slate-600 uppercase">
+                        Impact
+                      </p>
+                      <p className="text-2xl font-bold text-slate-900 mt-1">
+                        {selectedRisk.impactSeverity || "-"}
+                      </p>
+                    </div>
+                    <div className="bg-white p-3 rounded border border-slate-200 text-center">
+                      <p className="text-xs font-medium text-slate-600 uppercase">
+                        Likelihood
+                      </p>
+                      <p className="text-2xl font-bold text-slate-900 mt-1">
+                        {selectedRisk.likelihoodOccurence || "-"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="p-4 rounded border border-slate-200 text-center bg-slate-50">
+                    <p className="text-xs font-medium text-slate-600 uppercase mb-2">
+                      Risk Score
+                    </p>
+                    <p className="text-3xl font-bold text-slate-900">
+                      {(selectedRisk.impactSeverity ?? 1) *
+                        (selectedRisk.likelihoodOccurence ?? 1)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Detail */}
+              <div className="border border-slate-200 rounded-lg p-4 bg-white">
+                <h3 className="text-sm font-semibold text-slate-900 mb-3">
+                  Detail Tambahan
+                </h3>
+                {selectedRisk.detail && (
+                  <div>
+                    <p className="text-xs font-medium text-slate-500 uppercase mb-1">
+                      Keterangan
+                    </p>
+                    <p className="text-sm text-slate-900 whitespace-pre-wrap font-mono bg-slate-50 border border-slate-200 p-2 rounded">
+                      {selectedRisk.detail}
+                    </p>
+                  </div>
+                )}
+                {selectedRisk.createdAt && (
+                  <div className="mt-3">
+                    <p className="text-xs font-medium text-slate-500 uppercase mb-1">
+                      Dibuat Pada
+                    </p>
+                    <p className="text-sm text-slate-900">
+                      {formatDate(selectedRisk.createdAt)}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button onClick={() => setDetailOpen(false)} className="w-full">
+              Tutup
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
