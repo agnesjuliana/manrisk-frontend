@@ -105,6 +105,7 @@ interface RiskCriteria {
 
 export default function DaftarRisikoPage() {
   const { user } = useAuth();
+  const [mounted, setMounted] = React.useState(false);
   const [risks, setRisks] = React.useState<Risk[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [open, setOpen] = React.useState(false);
@@ -124,6 +125,11 @@ export default function DaftarRisikoPage() {
   );
   const [scaleStatuses, setScaleStatuses] = React.useState<ScaleStatus[]>([]);
 
+  // Mark component as mounted to prevent hydration mismatches
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const isRiskOwner = user?.role === "RISK_OWNER";
   const isRiskManager = user?.role === "RISK_MANAGER";
 
@@ -139,6 +145,10 @@ export default function DaftarRisikoPage() {
     likelihoodOccurence: 3,
     detection: undefined,
   });
+  const [categorySearch, setCategorySearch] = React.useState("");
+  const [sourceSearch, setSourceSearch] = React.useState("");
+  const [showCategoryDropdown, setShowCategoryDropdown] = React.useState(false);
+  const [showSourceDropdown, setShowSourceDropdown] = React.useState(false);
   const [showCustomRiskId, setShowCustomRiskId] = React.useState(false);
   const [customRiskId, setCustomRiskId] = React.useState("");
 
@@ -205,7 +215,7 @@ export default function DaftarRisikoPage() {
   }, []);
 
   const handleAdd = async () => {
-    if (!form.vulnerability?.trim() || !form.category?.id || !form.source?.id) {
+    if (!form.vulnerability?.trim() || !form.category?.title || !form.source?.title) {
       toast.error("Isi field yang diperlukan");
       return;
     }
@@ -215,7 +225,9 @@ export default function DaftarRisikoPage() {
       const nextRiskId =
         customRiskId.trim() ||
         `RISK-${String(totalRisks + 1).padStart(3, "0")}`;
-      const payload = {
+      
+      // Build payload with conditional category and source
+      const payload: any = {
         customRiskId: nextRiskId,
         vulnerability: form.vulnerability,
         threat: form.threat || "",
@@ -229,10 +241,22 @@ export default function DaftarRisikoPage() {
         impactSeverity: form.impactSeverity || 3,
         likelihoodOccurence: form.likelihoodOccurence,
         detection: form.detection,
-        riskcategory: form.category,
-        source: form.source,
         ownerId: form.owner?.id,
       };
+
+      // Add category - with id if exists, otherwise just name
+      if (form.category?.id) {
+        payload.riskcategory = { id: form.category.id, name: form.category.title };
+      } else {
+        payload.riskcategory = { name: form.category?.title };
+      }
+
+      // Add source - with id if exists, otherwise just name
+      if (form.source?.id) {
+        payload.source = { id: form.source.id, name: form.source.title };
+      } else {
+        payload.source = { name: form.source?.title };
+      }
 
       let response;
       if (selectedRisk?.id) {
@@ -259,6 +283,8 @@ export default function DaftarRisikoPage() {
         });
         setShowCustomRiskId(false);
         setCustomRiskId("");
+        setCategorySearch("");
+        setSourceSearch("");
         setSelectedRisk(null);
         // Reload risks list to show new/updated data
         setCurrentPage(1);
@@ -431,11 +457,30 @@ export default function DaftarRisikoPage() {
     return statusMap[String(status)] || status || "-";
   }
 
+  function formatDate(dateString?: string): string {
+    if (!dateString) return "-";
+    try {
+      const date = new Date(dateString);
+      // Format: DD/MM/YYYY, HH:MM:SS
+      const day = String(date.getDate()).padStart(2, "0");
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const year = date.getFullYear();
+      const hours = String(date.getHours()).padStart(2, "0");
+      const minutes = String(date.getMinutes()).padStart(2, "0");
+      const seconds = String(date.getSeconds()).padStart(2, "0");
+      return `${day}/${month}/${year}, ${hours}:${minutes}:${seconds}`;
+    } catch {
+      return "-";
+    }
+  }
+
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 pt-0 w-full min-w-0">
-      <div className="flex items-center justify-between gap-4 flex-shrink-0">
-        <h1 className="text-2xl font-semibold">Daftar Risiko & Assessment</h1>
-        {(isRiskOwner || isRiskManager) && (
+      {!mounted ? null : (
+        <>
+          <div className="flex items-center justify-between gap-4 flex-shrink-0">
+            <h1 className="text-2xl font-semibold">Daftar Risiko & Assessment</h1>
+            {(isRiskOwner || isRiskManager) && (
           <Dialog open={open} onOpenChange={(newOpen) => {
             setOpen(newOpen);
             if (!newOpen) {
@@ -453,6 +498,10 @@ export default function DaftarRisikoPage() {
               });
               setShowCustomRiskId(false);
               setCustomRiskId("");
+              setCategorySearch("");
+              setSourceSearch("");
+              setShowCategoryDropdown(false);
+              setShowSourceDropdown(false);
             }
           }}>
             <DialogTrigger asChild>
@@ -506,29 +555,52 @@ export default function DaftarRisikoPage() {
                   <div>
                     <Field>
                       <FieldLabel>Risk Category *</FieldLabel>
-                      <Select
-                        value={form.category?.id || ""}
-                        onValueChange={(id) => {
-                          const cat = categories.find((c) => c.id === id);
-                          if (cat) {
+                      <div className="relative">
+                        <Input
+                          placeholder="Pilih atau ketik kategori"
+                          value={categorySearch || form.category?.title || ""}
+                          onChange={(e) => {
+                            setCategorySearch(e.target.value);
                             setForm((p) => ({
                               ...p,
-                              category: { id: cat.id, title: cat.title },
+                              category: { id: "", title: e.target.value },
                             }));
-                          }
-                        }}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Pilih kategori" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {categories.map((c) => (
-                            <SelectItem key={c.id} value={c.id}>
-                              {c.title}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                            setShowCategoryDropdown(true);
+                          }}
+                          onFocus={() => setShowCategoryDropdown(true)}
+                          onBlur={() => setTimeout(() => setShowCategoryDropdown(false), 200)}
+                          className="w-full"
+                        />
+                        {showCategoryDropdown && (
+                          <div className="absolute top-full left-0 right-0 bg-white border border-slate-200 rounded-md shadow-lg max-h-48 overflow-y-auto z-50 mt-1">
+                            {categories
+                              .filter((c) =>
+                                c.title
+                                  .toLowerCase()
+                                  .includes(
+                                    (categorySearch || form.category?.title || "").toLowerCase()
+                                  )
+                              )
+                              .map((c) => (
+                                <button
+                                  key={c.id}
+                                  type="button"
+                                  className="w-full text-left px-3 py-2 hover:bg-slate-100 text-sm text-slate-900"
+                                  onClick={() => {
+                                    setForm((p) => ({
+                                      ...p,
+                                      category: { id: c.id, title: c.title },
+                                    }));
+                                    setCategorySearch("");
+                                    setShowCategoryDropdown(false);
+                                  }}
+                                >
+                                  {c.title}
+                                </button>
+                              ))}
+                          </div>
+                        )}
+                      </div>
                     </Field>
                   </div>
 
@@ -581,29 +653,52 @@ export default function DaftarRisikoPage() {
                   <div>
                     <Field>
                       <FieldLabel>Risk Source *</FieldLabel>
-                      <Select
-                        value={form.source?.id || ""}
-                        onValueChange={(id) => {
-                          const src = sources.find((s) => s.id === id);
-                          if (src) {
+                      <div className="relative">
+                        <Input
+                          placeholder="Pilih atau ketik sumber"
+                          value={sourceSearch || form.source?.title || ""}
+                          onChange={(e) => {
+                            setSourceSearch(e.target.value);
                             setForm((p) => ({
                               ...p,
-                              source: { id: src.id, title: src.title },
+                              source: { id: "", title: e.target.value },
                             }));
-                          }
-                        }}
-                      >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Pilih sumber" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {sources.map((s) => (
-                            <SelectItem key={s.id} value={s.id}>
-                              {s.title}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                            setShowSourceDropdown(true);
+                          }}
+                          onFocus={() => setShowSourceDropdown(true)}
+                          onBlur={() => setTimeout(() => setShowSourceDropdown(false), 200)}
+                          className="w-full"
+                        />
+                        {showSourceDropdown && (
+                          <div className="absolute top-full left-0 right-0 bg-white border border-slate-200 rounded-md shadow-lg max-h-48 overflow-y-auto z-50 mt-1">
+                            {sources
+                              .filter((s) =>
+                                s.title
+                                  .toLowerCase()
+                                  .includes(
+                                    (sourceSearch || form.source?.title || "").toLowerCase()
+                                  )
+                              )
+                              .map((s) => (
+                                <button
+                                  key={s.id}
+                                  type="button"
+                                  className="w-full text-left px-3 py-2 hover:bg-slate-100 text-sm text-slate-900"
+                                  onClick={() => {
+                                    setForm((p) => ({
+                                      ...p,
+                                      source: { id: s.id, title: s.title },
+                                    }));
+                                    setSourceSearch("");
+                                    setShowSourceDropdown(false);
+                                  }}
+                                >
+                                  {s.title}
+                                </button>
+                              ))}
+                          </div>
+                        )}
+                      </div>
                     </Field>
                   </div>
 
@@ -1453,11 +1548,7 @@ export default function DaftarRisikoPage() {
                       Dibuat Pada
                     </p>
                     <p className="text-sm text-slate-900">
-                      {selectedRisk.createdAt
-                        ? new Date(selectedRisk.createdAt).toLocaleString(
-                            "id-ID"
-                          )
-                        : "-"}
+                      {formatDate(selectedRisk.createdAt)}
                     </p>
                   </div>
                 </div>
@@ -1472,6 +1563,8 @@ export default function DaftarRisikoPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+        </>
+      )}
     </div>
   );
 }
