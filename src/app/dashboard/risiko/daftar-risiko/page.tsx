@@ -89,6 +89,12 @@ interface ContextOption {
   name: string;
 }
 
+interface UserOption {
+  id: string;
+  email: string;
+  name: string;
+}
+
 interface ScaleStatus {
   id: string;
   level: number;
@@ -117,6 +123,7 @@ export default function DaftarRisikoPage() {
   const [sources, setSources] = React.useState<SourceOption[]>([]);
   const [assets, setAssets] = React.useState<AssetOption[]>([]);
   const [contexts, setContexts] = React.useState<ContextOption[]>([]);
+  const [users, setUsers] = React.useState<UserOption[]>([]);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [selectedRisk, setSelectedRisk] = React.useState<Risk | null>(null);
   const [detailOpen, setDetailOpen] = React.useState(false);
@@ -186,13 +193,14 @@ export default function DaftarRisikoPage() {
   React.useEffect(() => {
     const loadDropdownData = async () => {
       try {
-        const [catRes, srcRes, assetRes, ctxRes, criteriaRes] =
+        const [catRes, srcRes, assetRes, ctxRes, criteriaRes, usersRes] =
           await Promise.all([
             apiClient.get("/risk-registers/category"),
             apiClient.get("/risk-registers/source"),
             apiClient.get("/assets"),
             apiClient.get("/contexts"),
             apiClient.get("/risk-criteria"),
+            apiClient.get("/user-management"),
           ]);
 
         if (catRes.data?.data) setCategories(catRes.data.data);
@@ -205,6 +213,15 @@ export default function DaftarRisikoPage() {
           if (criteriaRes.data.data.scaleStatuses) {
             setScaleStatuses(criteriaRes.data.data.scaleStatuses);
           }
+        }
+
+        // Handle users response - could be array or nested in data
+        if (usersRes.data?.data?.data) {
+          setUsers(usersRes.data.data.data);
+        } else if (usersRes.data?.data) {
+          setUsers(usersRes.data.data);
+        } else if (Array.isArray(usersRes.data)) {
+          setUsers(usersRes.data);
         }
       } catch (err) {
         console.error("Error loading dropdown data:", err);
@@ -911,17 +928,29 @@ export default function DaftarRisikoPage() {
                     <div>
                       <Field>
                         <FieldLabel>Risk Owner</FieldLabel>
-                        <Input
-                          type="text"
-                          placeholder="Owner ID atau name"
+                        <Select
                           value={form.owner?.id || ""}
-                          onChange={(e) =>
-                            setForm((p) => ({
-                              ...p,
-                              owner: { id: e.target.value, name: "" },
-                            }))
-                          }
-                        />
+                          onValueChange={(id) => {
+                            const selectedUser = users.find((u) => u.id === id);
+                            if (selectedUser) {
+                              setForm((p) => ({
+                                ...p,
+                                owner: { id: selectedUser.id, name: selectedUser.name },
+                              }));
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Pilih risk owner" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {users.map((user) => (
+                              <SelectItem key={user.id} value={user.id}>
+                                {user.name} ({user.email})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </Field>
                     </div>
                   )}
