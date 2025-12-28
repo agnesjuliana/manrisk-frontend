@@ -1,8 +1,23 @@
-export type RiskStatus = "DRAFT" | "SUBMITTED" | "APPROVED";
+export enum RiskStatus {
+  DRAFT = "DRAFT",
+  MENUNGGU_PERSETUJUAN_RM = "MENUNGGU_PERSETUJUAN_RM",
+  DISETUJUI_RM = "DISETUJUI_RM",
+  MENUNGGU_PERSETUJUAN_FINAL = "MENUNGGU_PERSETUJUAN_FINAL",
+  REVISI = "REVISI",
+  DISETUJUI = "DISETUJUI",
+  DITOLAK = "DITOLAK",
+}
+
+export enum RiskApprovalTLStatus {
+  MENUNGGU_PERSETUJUAN_FINAL = "MENUNGGU_PERSETUJUAN_FINAL",
+  DITOLAK = "DITOLAK",
+  DISETUJUI = "DISETUJUI",
+}
+
 export type Cia = "Confidentiality" | "Integrity" | "Availability";
 
 export type Risk = {
-  id: string; // R001
+  id: string;
   category: string;
   vulnerability: string;
   threat: string;
@@ -11,13 +26,15 @@ export type Risk = {
   cia: Cia[];
   unit?: string;
   ownerId?: string;
-  identifiedAt: string; // ISO date
+  identifiedAt: string;
   status: RiskStatus;
   notes?: string;
-  severity: number; // 1-5
-  likelihood: number; // 1-5
-  detection?: number; // 1-5, optional for non-FMEA
+  severity: number;
+  likelihood: number;
+  detection?: number;
   priority?: "High" | "Medium" | "Low";
+  assetId?: string;
+  contextId?: string;
 };
 
 const STORAGE_KEY = "isms:risks:v1";
