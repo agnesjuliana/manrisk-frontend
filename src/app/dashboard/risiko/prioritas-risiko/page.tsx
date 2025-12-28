@@ -283,36 +283,48 @@ export default function PrioritasRisikoPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {Array.from({ length: 5 }).map((_, impact) =>
-                          Array.from({ length: 5 }).map((_, likelihood) =>
-                            Array.from({ length: 5 }).map((_, detection) => {
-                              const count = computed.filter(
-                                (item) =>
-                                  item.r.impactSeverity === impact + 1 &&
-                                  item.r.likelihoodOccurence === likelihood + 1 &&
-                                  item.r.detection === detection + 1
-                              ).length;
+                        {computed.length === 0 ? (
+                          <tr>
+                            <td colSpan={5} className="text-center py-4 text-gray-500">
+                              Tidak ada data FMEA untuk ditampilkan
+                            </td>
+                          </tr>
+                        ) : (
+                          computed.map(({ r, score }) => {
+                            const rpn = score;
+                            const lvl = riskLevelForScore(rpn);
+                            const countByGroup = computed.filter(
+                              (item) =>
+                                item.r.impactSeverity === r.impactSeverity &&
+                                item.r.likelihoodOccurence === r.likelihoodOccurence &&
+                                item.r.detection === r.detection
+                            ).length;
 
-                              if (count === 0) return null;
+                            // Only show unique combinations (using stringified key)
+                            const key = `${r.impactSeverity}-${r.likelihoodOccurence}-${r.detection}`;
+                            const isFirst = computed.findIndex(
+                              (item) =>
+                                item.r.impactSeverity === r.impactSeverity &&
+                                item.r.likelihoodOccurence === r.likelihoodOccurence &&
+                                item.r.detection === r.detection
+                            ) === computed.findIndex((item) => item.r.id === r.id);
 
-                              const rpn = (impact + 1) * (likelihood + 1) * (detection + 1);
-                              const lvl = riskLevelForScore(rpn);
+                            if (!isFirst) return null;
 
-                              return (
-                                <tr key={`${impact}-${likelihood}-${detection}`} className="border-b hover:bg-gray-50">
-                                  <TableCell className="text-center text-sm">{impact + 1}</TableCell>
-                                  <TableCell className="text-center text-sm">{likelihood + 1}</TableCell>
-                                  <TableCell className="text-center text-sm">{detection + 1}</TableCell>
-                                  <TableCell className="text-center">
-                                    <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${lvl.className}`}>
-                                      {rpn}
-                                    </span>
-                                  </TableCell>
-                                  <TableCell className="text-center text-sm font-medium">{count}</TableCell>
-                                </tr>
-                              );
-                            })
-                          )
+                            return (
+                              <tr key={key} className="border-b hover:bg-gray-50">
+                                <TableCell className="text-center text-sm">{r.impactSeverity}</TableCell>
+                                <TableCell className="text-center text-sm">{r.likelihoodOccurence}</TableCell>
+                                <TableCell className="text-center text-sm">{r.detection}</TableCell>
+                                <TableCell className="text-center">
+                                  <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${lvl.className}`}>
+                                    {rpn}
+                                  </span>
+                                </TableCell>
+                                <TableCell className="text-center text-sm font-medium">{countByGroup}</TableCell>
+                              </tr>
+                            );
+                          })
                         )}
                       </tbody>
                     </table>
