@@ -234,10 +234,17 @@ export default function DaftarRisikoPage() {
         ownerId: form.owner?.id,
       };
 
-      const response = await apiClient.post("/risk-registers", payload);
+      let response;
+      if (selectedRisk?.id) {
+        // Update existing risk
+        response = await apiClient.patch(`/risk-registers/${selectedRisk.id}`, payload);
+      } else {
+        // Create new risk
+        response = await apiClient.post("/risk-registers", payload);
+      }
 
       if (response.status === 200 || response.status === 201) {
-        toast.success("Risiko berhasil ditambahkan");
+        toast.success(selectedRisk?.id ? "Risiko berhasil diperbarui" : "Risiko berhasil ditambahkan");
         setOpen(false);
         setForm({
           vulnerability: "",
@@ -252,7 +259,8 @@ export default function DaftarRisikoPage() {
         });
         setShowCustomRiskId(false);
         setCustomRiskId("");
-        // Reload risks list to show new data
+        setSelectedRisk(null);
+        // Reload risks list to show new/updated data
         setCurrentPage(1);
         const reloadResponse = await apiClient.get("/risk-registers", {
           params: {
@@ -269,8 +277,8 @@ export default function DaftarRisikoPage() {
         }
       }
     } catch (err) {
-      console.error("Error adding risk:", err);
-      toast.error("Gagal menambahkan risiko");
+      console.error("Error adding/updating risk:", err);
+      toast.error(selectedRisk?.id ? "Gagal memperbarui risiko" : "Gagal menambahkan risiko");
     } finally {
       setIsSubmitting(false);
     }
@@ -279,6 +287,98 @@ export default function DaftarRisikoPage() {
   const handleViewDetail = (risk: Risk) => {
     setSelectedRisk(risk);
     setDetailOpen(true);
+  };
+
+  const handleEdit = async (risk: Risk) => {
+    setSelectedRisk(risk);
+    setForm({
+      vulnerability: risk.vulnerability,
+      threat: risk.threat || "",
+      identifiedRisk: risk.identifiedRisk || "",
+      assetId: risk.assetId,
+      contextId: risk.contextId,
+      detail: risk.detail || "",
+      isConfidentiality: risk.isConfidentiality || false,
+      isIntegrity: risk.isIntegrity || false,
+      isAvailability: risk.isAvailability || false,
+      impactSeverity: risk.impactSeverity || 3,
+      likelihoodOccurence: risk.likelihoodOccurence || 3,
+      detection: risk.detection,
+      category: risk.category,
+      source: risk.source,
+      owner: risk.owner,
+    });
+    setCustomRiskId(risk.customRiskId || "");
+    setShowCustomRiskId(true);
+    setOpen(true);
+  };
+
+  const handleSubmitForApproval = async (risk: Risk) => {
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        status: "MENUNGGU_PERSETUJUAN_RM",
+      };
+
+      const response = await apiClient.patch(`/risk-registers/${risk.id}`, payload);
+
+      if (response.status === 200) {
+        toast.success("Risiko berhasil diajukan untuk persetujuan");
+        setCurrentPage(1);
+        const reloadResponse = await apiClient.get("/risk-registers", {
+          params: {
+            page: 1,
+            per_page: 10,
+          },
+        });
+        if (reloadResponse.data?.status && reloadResponse.data?.data?.data) {
+          setRisks(reloadResponse.data.data.data);
+          if (reloadResponse.data.data.metadata) {
+            setTotalPages(reloadResponse.data.data.metadata.total_page);
+            setTotalRisks(reloadResponse.data.data.metadata.total_data);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error submitting for approval:", err);
+      toast.error("Gagal mengajukan risiko untuk persetujuan");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (risk: Risk) => {
+    if (!confirm(`Apakah Anda yakin ingin menghapus risiko ${risk.customRiskId}?`)) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await apiClient.delete(`/risk-registers/${risk.id}`);
+
+      if (response.status === 200) {
+        toast.success("Risiko berhasil dihapus");
+        setCurrentPage(1);
+        const reloadResponse = await apiClient.get("/risk-registers", {
+          params: {
+            page: 1,
+            per_page: 10,
+          },
+        });
+        if (reloadResponse.data?.status && reloadResponse.data?.data?.data) {
+          setRisks(reloadResponse.data.data.data);
+          if (reloadResponse.data.data.metadata) {
+            setTotalPages(reloadResponse.data.data.metadata.total_page);
+            setTotalRisks(reloadResponse.data.data.metadata.total_data);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error deleting risk:", err);
+      toast.error("Gagal menghapus risiko");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   function getStatusBadgeColor(status?: string) {
@@ -336,7 +436,25 @@ export default function DaftarRisikoPage() {
       <div className="flex items-center justify-between gap-4 flex-shrink-0">
         <h1 className="text-2xl font-semibold">Daftar Risiko & Assessment</h1>
         {(isRiskOwner || isRiskManager) && (
-          <Dialog open={open} onOpenChange={setOpen}>
+          <Dialog open={open} onOpenChange={(newOpen) => {
+            setOpen(newOpen);
+            if (!newOpen) {
+              setSelectedRisk(null);
+              setForm({
+                vulnerability: "",
+                threat: "",
+                identifiedRisk: "",
+                detail: "",
+                isConfidentiality: false,
+                isIntegrity: false,
+                isAvailability: false,
+                impactSeverity: 3,
+                likelihoodOccurence: 3,
+              });
+              setShowCustomRiskId(false);
+              setCustomRiskId("");
+            }
+          }}>
             <DialogTrigger asChild>
               <Button className="flex items-center gap-2">
                 <Plus size={16} /> Tambah Risiko
@@ -344,9 +462,9 @@ export default function DaftarRisikoPage() {
             </DialogTrigger>
             <DialogContent className="max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Tambah Risiko</DialogTitle>
+                <DialogTitle>{selectedRisk?.id ? "Edit Risiko" : "Tambah Risiko"}</DialogTitle>
                 <DialogDescription>
-                  Isi detail risiko dan metrik penilaian.
+                  {selectedRisk?.id ? "Perbarui detail risiko dan metrik penilaian." : "Isi detail risiko dan metrik penilaian."}
                 </DialogDescription>
               </DialogHeader>
 
@@ -736,13 +854,16 @@ export default function DaftarRisikoPage() {
                 <div className="flex justify-end w-full gap-2">
                   <Button
                     variant="outline"
-                    onClick={() => setOpen(false)}
+                    onClick={() => {
+                      setOpen(false);
+                      setSelectedRisk(null);
+                    }}
                     disabled={isSubmitting}
                   >
                     Batal
                   </Button>
                   <Button onClick={handleAdd} disabled={isSubmitting}>
-                    {isSubmitting ? "Menambahkan..." : "Tambah Risiko"}
+                    {isSubmitting ? (selectedRisk?.id ? "Memperbarui..." : "Menambahkan...") : (selectedRisk?.id ? "Perbarui Risiko" : "Tambah Risiko")}
                   </Button>
                 </div>
               </DialogFooter>
@@ -924,6 +1045,8 @@ export default function DaftarRisikoPage() {
                               size="sm"
                               variant="ghost"
                               className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              onClick={() => handleEdit(row)}
+                              disabled={isSubmitting}
                             >
                               <Edit size={16} />
                             </Button>
@@ -936,6 +1059,8 @@ export default function DaftarRisikoPage() {
                               size="sm"
                               variant="ghost"
                               className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
+                              onClick={() => handleSubmitForApproval(row)}
+                              disabled={isSubmitting}
                             >
                               <SendHorizontal size={16} />
                             </Button>
@@ -950,6 +1075,8 @@ export default function DaftarRisikoPage() {
                               size="sm"
                               variant="ghost"
                               className="h-8 w-8 p-0 text-gray-600 hover:text-gray-700 hover:bg-gray-50"
+                              onClick={() => handleDelete(row)}
+                              disabled={isSubmitting}
                             >
                               <Trash size={16} />
                             </Button>
