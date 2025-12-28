@@ -373,6 +373,40 @@ export default function DaftarRisikoPage() {
     }
   };
 
+  const handleReturnToDraft = async (risk: Risk) => {
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        status: "DRAFT",
+      };
+
+      const response = await apiClient.patch(`/risk-registers/${risk.id}`, payload);
+
+      if (response.status === 200) {
+        toast.success("Risiko berhasil dikembalikan ke draft");
+        setCurrentPage(1);
+        const reloadResponse = await apiClient.get("/risk-registers", {
+          params: {
+            page: 1,
+            per_page: 10,
+          },
+        });
+        if (reloadResponse.data?.status && reloadResponse.data?.data?.data) {
+          setRisks(reloadResponse.data.data.data);
+          if (reloadResponse.data.data.metadata) {
+            setTotalPages(reloadResponse.data.data.metadata.total_page);
+            setTotalRisks(reloadResponse.data.data.metadata.total_data);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error returning to draft:", err);
+      toast.error("Gagal mengembalikan risiko ke draft");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleDelete = async (risk: Risk) => {
     if (!confirm(`Apakah Anda yakin ingin menghapus risiko ${risk.customRiskId}?`)) {
       return;
@@ -1189,6 +1223,8 @@ export default function DaftarRisikoPage() {
                               size="sm"
                               variant="ghost"
                               className="h-8 w-8 p-0 text-yellow-600 hover:text-yellow-700 hover:bg-yellow-50"
+                              onClick={() => handleReturnToDraft(row)}
+                              disabled={isSubmitting}
                             >
                               <ArchiveRestore size={16} />
                             </Button>
