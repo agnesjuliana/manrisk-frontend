@@ -113,17 +113,12 @@ export default function DaftarKontrolPage() {
   const [loadingStats, setLoadingStats] = useState(false);
   const [loadingControls, setLoadingControls] = useState(false);
 
-  const [form, setForm] = useState<Partial<Control>>({
-    name: "",
+  const [form, setForm] = useState({
+    code: "",
+    category: "",
+    title: "",
     description: "",
-    treatmentId: undefined,
-    owner: undefined,
-    targetDate: "",
-    relevanceStatus: "BELUM_DITENTUKAN",
-    evidence: [],
-    effectivenessRating: undefined,
-    remarks: "",
-    isAnnexA: true,
+    isAnnex: false,
   });
 
   useEffect(() => {
@@ -192,36 +187,70 @@ export default function DaftarKontrolPage() {
   }, []);
 
   const handleSave = () => {
-    if (!form.name?.trim()) {
+    if (!form.code?.trim()) {
+      alert("Kode kontrol tidak boleh kosong");
+      return;
+    }
+    if (!form.title?.trim()) {
       alert("Nama kontrol tidak boleh kosong");
       return;
     }
+    if (!token) return;
 
-    // TODO: Implement API save functionality
-    /*
-    if (editingId) {
-      const updated = updateControl(editingId, form);
-      if (updated) {
-        const newControls = loadControls();
-        setControls(newControls);
-      }
-    } else {
-      const newControl = addControl(
-        form as Omit<Control, "id" | "createdAt" | "updatedAt">
-      );
-      if (newControl) {
-        const newControls = loadControls();
-        setControls(newControls);
-      }
-    }
-    */
+    const payload = {
+      code: form.code,
+      category: form.category,
+      title: form.title,
+      description: form.description,
+      isAnnex: form.isAnnex,
+    };
 
-    resetForm();
-    setIsOpen(false);
+    const saveControl = async () => {
+      try {
+        const url = editingId
+          ? `${API_BASE_URL}/controls/${editingId}`
+          : `${API_BASE_URL}/controls`;
+
+        const response = await fetch(url, {
+          method: editingId ? "PATCH" : "POST",
+          headers: getHeaders(),
+          body: JSON.stringify(payload),
+        });
+
+        const result = await response.json();
+        if (result.status) {
+          // Refresh controls list
+          const controlsResponse = await fetch(
+            `${API_BASE_URL}/controls?search=&is_annex=`,
+            { headers: getHeaders() }
+          );
+          const controlsResult = await controlsResponse.json();
+          if (controlsResult.status && controlsResult.data) {
+            setControls(controlsResult.data);
+          }
+
+          resetForm();
+          setIsOpen(false);
+        } else {
+          alert(result.message || "Gagal menyimpan kontrol");
+        }
+      } catch (error) {
+        console.error("Failed to save control:", error);
+        alert("Gagal menyimpan kontrol");
+      }
+    };
+
+    saveControl();
   };
 
-  const handleEdit = (control: Control) => {
-    setForm(control);
+  const handleEdit = (control: ControlResponse) => {
+    setForm({
+      code: control.code,
+      category: control.category,
+      title: control.title,
+      description: control.description,
+      isAnnex: control.isAnnex,
+    });
     setEditingId(control.id);
     setIsOpen(true);
   };
@@ -237,16 +266,11 @@ export default function DaftarKontrolPage() {
 
   const resetForm = () => {
     setForm({
-      name: "",
+      code: "",
+      category: "",
+      title: "",
       description: "",
-      treatmentId: undefined,
-      owner: undefined,
-      targetDate: "",
-      relevanceStatus: "BELUM_DITENTUKAN",
-      evidence: [],
-      effectivenessRating: undefined,
-      remarks: "",
-      isAnnexA: true,
+      isAnnex: false,
     });
     setEditingId(null);
   };
@@ -330,198 +354,51 @@ export default function DaftarKontrolPage() {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4 max-h-96 overflow-y-auto">
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="name">Nama Kontrol *</Label>
+                  <Label htmlFor="code">Kode Kontrol *</Label>
                   <Input
-                    id="name"
-                    value={form.name || ""}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    placeholder="Misal: Backup Otomatis"
+                    id="code"
+                    value={form.code || ""}
+                    onChange={(e) => setForm({ ...form, code: e.target.value })}
+                    placeholder="Misal: 8.17, A1"
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="status">Status Relevansi</Label>
-                  <Select
-                    value={form.relevanceStatus || "BELUM_DITENTUKAN"}
-                    onValueChange={(value) =>
-                      setForm({
-                        ...form,
-                        relevanceStatus: value as RelevanceStatus,
-                      })
+                  <Label htmlFor="category">Kategori *</Label>
+                  <Input
+                    id="category"
+                    value={form.category || ""}
+                    onChange={(e) =>
+                      setForm({ ...form, category: e.target.value })
                     }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="BELUM_DITENTUKAN">
-                        Belum Ditentukan
-                      </SelectItem>
-                      <SelectItem value="RELEVAN">Relevan</SelectItem>
-                      <SelectItem value="TIDAK_RELEVAN">
-                        Tidak Relevan
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
+                    placeholder="Misal: Technological Controls"
+                  />
                 </div>
 
-                <div>
-                  <Label htmlFor="annexA">Tipe Kontrol</Label>
-                  <Select
-                    value={form.isAnnexA ? "ANNEX_A" : "ADDITIONAL"}
-                    onValueChange={(value) =>
-                      setForm({ ...form, isAnnexA: value === "ANNEX_A" })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ANNEX_A">
-                        Annex A (ISO 27001)
-                      </SelectItem>
-                      <SelectItem value="ADDITIONAL">
-                        Tambahan Organisasi
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="col-span-2">
+                  <Label htmlFor="title">Nama Kontrol *</Label>
+                  <Input
+                    id="title"
+                    value={form.title || ""}
+                    onChange={(e) => setForm({ ...form, title: e.target.value })}
+                    placeholder="Misal: Clock synchronization"
+                  />
                 </div>
 
                 <div className="col-span-2">
                   <Label htmlFor="description">Deskripsi</Label>
-                  <Input
+                  <textarea
                     id="description"
                     value={form.description || ""}
                     onChange={(e) =>
                       setForm({ ...form, description: e.target.value })
                     }
-                    placeholder="Detail implementasi kontrol"
-                    className="h-20 align-top"
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="treatment">Terkait Treatment</Label>
-                  <Select
-                    value={form.treatmentId || "NONE"}
-                    onValueChange={(value) =>
-                      setForm({
-                        ...form,
-                        treatmentId: value === "NONE" ? undefined : value,
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="NONE">Tidak ada</SelectItem>
-                      {treatments.map((t) => (
-                        <SelectItem key={t.id} value={t.id}>
-                          {t.id}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="owner">Pemilik Implementasi</Label>
-                  <Select
-                    value={form.owner || "NONE"}
-                    onValueChange={(value) =>
-                      setForm({
-                        ...form,
-                        owner: value === "NONE" ? undefined : value,
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="NONE">Belum ditentukan</SelectItem>
-                      {users.map((u) => (
-                        <SelectItem key={u.id} value={u.id}>
-                          {u.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label htmlFor="targetDate">
-                    Target Tanggal Implementasi
-                  </Label>
-                  <Input
-                    id="targetDate"
-                    type="date"
-                    value={form.targetDate || ""}
-                    onChange={(e) =>
-                      setForm({ ...form, targetDate: e.target.value })
-                    }
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="rating">Rating Efektivitas (1-5)</Label>
-                  <Select
-                    value={String(form.effectivenessRating || "NONE")}
-                    onValueChange={(value) =>
-                      setForm({
-                        ...form,
-                        effectivenessRating:
-                          value === "NONE" ? undefined : parseInt(value),
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="NONE">Belum dinilai</SelectItem>
-                      <SelectItem value="1">1 - Sangat Lemah</SelectItem>
-                      <SelectItem value="2">2 - Lemah</SelectItem>
-                      <SelectItem value="3">3 - Cukup</SelectItem>
-                      <SelectItem value="4">4 - Baik</SelectItem>
-                      <SelectItem value="5">5 - Sangat Baik</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="col-span-2">
-                  <Label htmlFor="remarks">Catatan / Remarks</Label>
-                  <Input
-                    id="remarks"
-                    value={form.remarks || ""}
-                    onChange={(e) =>
-                      setForm({ ...form, remarks: e.target.value })
-                    }
-                    placeholder="Catatan tambahan mengenai implementasi"
-                    className="h-20 align-top"
-                  />
-                </div>
-
-                <div className="col-span-2">
-                  <Label htmlFor="evidence">
-                    Evidence / Bukti (comma-separated)
-                  </Label>
-                  <Input
-                    id="evidence"
-                    value={(form.evidence || []).join(", ")}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        evidence: e.target.value
-                          .split(",")
-                          .map((v) => v.trim()),
-                      })
-                    }
-                    placeholder="Misal: backup_log.txt, test_restore_20250110.log"
+                    placeholder="Detail deskripsi kontrol..."
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    rows={4}
                   />
                 </div>
               </div>
