@@ -8,7 +8,7 @@ import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { PaginatedTable } from "@/components/paginated-table"
-import { Eye, X, Edit, CheckCircle, CheckCircle2, XCircle } from "lucide-react"
+import { Eye, X, Edit, CheckCircle2, XCircle } from "lucide-react"
 import { toast } from "sonner"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api"
@@ -411,15 +411,13 @@ export default function DaftarTreatmentPage() {
     sendUpdate()
   }
 
-  function approveTreatment() {
-    if (!selectedRisk || !token) return
-
-    const treatment = data.find((t) => t.risk.id === selectedRisk.id)?.treatment
-    if (!treatment) return
+  function approveTreatment(treatmentId?: string) {
+    const id = treatmentId || (selectedRisk ? data.find((t) => t.risk.id === selectedRisk.id)?.treatment?.id : null)
+    if (!id || !token) return
 
     const sendApproval = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/treatments/${treatment.id}`, {
+        const response = await fetch(`${API_BASE_URL}/treatments/${id}`, {
           method: "PATCH",
           headers: getHeaders(),
           body: JSON.stringify({ isApprovedByTop: true }),
@@ -449,15 +447,13 @@ export default function DaftarTreatmentPage() {
     sendApproval()
   }
 
-  function rejectTreatment() {
-    if (!selectedRisk || !token) return
-
-    const treatment = data.find((t) => t.risk.id === selectedRisk.id)?.treatment
-    if (!treatment) return
+  function rejectTreatment(treatmentId?: string) {
+    const id = treatmentId || (selectedRisk ? data.find((t) => t.risk.id === selectedRisk.id)?.treatment?.id : null)
+    if (!id || !token) return
 
     const sendRejection = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/treatments/${treatment.id}`, {
+        const response = await fetch(`${API_BASE_URL}/treatments/${id}`, {
           method: "PATCH",
           headers: getHeaders(),
           body: JSON.stringify({ isApprovedByTop: false }),
@@ -1092,14 +1088,14 @@ export default function DaftarTreatmentPage() {
                         <>
                           <Button 
                             variant="destructive" 
-                            onClick={rejectTreatment}
+                            onClick={() => rejectTreatment(row.treatment?.id)}
                             className="gap-2"
                           >
                             <XCircle className="w-4 h-4" />
                             Tolak
                           </Button>
                           <Button 
-                            onClick={approveTreatment}
+                            onClick={() => approveTreatment(row.treatment?.id)}
                             className="gap-2 bg-emerald-600 hover:bg-emerald-700"
                           >
                             <CheckCircle2 className="w-4 h-4" />
@@ -1115,7 +1111,7 @@ export default function DaftarTreatmentPage() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={rejectTreatment}
+                      onClick={() => rejectTreatment(row.treatment?.id)}
                       className="text-red-600 hover:bg-red-50 hover:text-red-700"
                     >
                       <X className="w-4 h-4" />
@@ -1123,10 +1119,10 @@ export default function DaftarTreatmentPage() {
                     <Button
                       size="sm"
                       variant="ghost"
-                      onClick={approveTreatment}
+                      onClick={() => approveTreatment(row.treatment?.id)}
                       className="text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
                     >
-                      <CheckCircle className="w-4 h-4" />
+                      <CheckCircle2 className="w-4 h-4" />
                     </Button>
                   </>
                 )}
