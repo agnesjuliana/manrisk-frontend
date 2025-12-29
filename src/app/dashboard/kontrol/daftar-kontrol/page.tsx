@@ -11,6 +11,50 @@ import {
 } from "@/lib/controlsStore";
 import { loadUsers, User } from "@/lib/usersStore";
 import { loadTreatments, Treatment } from "@/lib/treatmentsStore";
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+
+interface ControlStatistics {
+  totalAnnexControl: number;
+  totalAnnexControlAssessed: number;
+  totalAddedControl: number;
+  totalAddedControlAssessed: number;
+  totalUnassessed: number;
+}
+
+interface SOA {
+  id: string;
+  organizationId: string;
+  controlId: string;
+  managerId: string;
+  status: "RELEVAN" | "TIDAK_RELEVAN";
+  notes?: string;
+  targetDate?: string;
+  createdAt: string;
+  updatedAt?: string;
+  deletedAt?: string;
+  manager?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
+
+interface ControlResponse {
+  id: string;
+  code: string;
+  category: string;
+  title: string;
+  description: string;
+  isAnnex: boolean;
+  organizationId?: string;
+  createdAt: string;
+  updatedAt?: string;
+  deletedAt?: string;
+  countRelatedTreatment: number;
+  soa?: SOA;
+}
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -58,12 +102,16 @@ import {
 type RelevanceStatus = "BELUM_DITENTUKAN" | "RELEVAN" | "TIDAK_RELEVAN";
 
 export default function DaftarKontrolPage() {
-  const [controls, setControls] = useState<Control[]>([]);
+  const [controls, setControls] = useState<ControlResponse[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [treatments, setTreatments] = useState<Treatment[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [filter, setFilter] = useState<RelevanceStatus | "ALL">("ALL");
+  const [token, setToken] = useState<string | null>(null);
+  const [stats, setStats] = useState<ControlStatistics | null>(null);
+  const [loadingStats, setLoadingStats] = useState(false);
+  const [loadingControls, setLoadingControls] = useState(false);
 
   const [form, setForm] = useState<Partial<Control>>({
     name: "",
@@ -79,21 +127,69 @@ export default function DaftarKontrolPage() {
   });
 
   useEffect(() => {
-    setControls(loadControls());
+    const storedToken = localStorage.getItem("token");
+    setToken(storedToken);
+  }, []);
+
+  const getHeaders = (): Record<string, string> => {
+    return {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token || ""}`,
+    };
+  };
+
+  // Fetch statistics from API
+  useEffect(() => {
+    if (!token) return;
+
+    const fetchStatistics = async () => {
+      try {
+        setLoadingStats(true);
+        const response = await fetch(`${API_BASE_URL}/controls/statistics`, {
+          headers: getHeaders(),
+        });
+        const result = await response.json();
+        if (result.status && result.data) {
+          setStats(result.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch statistics:", error);
+      } finally {
+        setLoadingStats(false);
+      }
+    };
+
+    fetchStatistics();
+  }, [token]);
+
+  // Fetch controls from API
+  useEffect(() => {
+    if (!token) return;
+
+    const fetchControls = async () => {
+      try {
+        setLoadingControls(true);
+        const response = await fetch(`${API_BASE_URL}/controls?search=&is_annex=`, {
+          headers: getHeaders(),
+        });
+        const result = await response.json();
+        if (result.status && result.data) {
+          setControls(result.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch controls:", error);
+      } finally {
+        setLoadingControls(false);
+      }
+    };
+
+    fetchControls();
+  }, [token]);
+
+  useEffect(() => {
     setUsers(loadUsers());
     setTreatments(loadTreatments());
   }, []);
-
-  // Calculate statistics
-  const stats = {
-    total: controls.length,
-    annexA: controls.filter((c) => c.isAnnexA).length,
-    additional: controls.filter((c) => !c.isAnnexA).length,
-    relevant: controls.filter((c) => c.relevanceStatus === "RELEVAN").length,
-    notYetDetermined: controls.filter(
-      (c) => c.relevanceStatus === "BELUM_DITENTUKAN"
-    ).length,
-  };
 
   const handleSave = () => {
     if (!form.name?.trim()) {
@@ -101,6 +197,8 @@ export default function DaftarKontrolPage() {
       return;
     }
 
+    // TODO: Implement API save functionality
+    /*
     if (editingId) {
       const updated = updateControl(editingId, form);
       if (updated) {
@@ -116,6 +214,7 @@ export default function DaftarKontrolPage() {
         setControls(newControls);
       }
     }
+    */
 
     resetForm();
     setIsOpen(false);
@@ -129,9 +228,10 @@ export default function DaftarKontrolPage() {
 
   const handleDelete = (id: string) => {
     if (confirm("Yakin ingin menghapus kontrol ini?")) {
-      deleteControl(id);
-      const newControls = loadControls();
-      setControls(newControls);
+      // TODO: Implement API delete functionality
+      // deleteControl(id);
+      // const newControls = loadControls();
+      // setControls(newControls);
     }
   };
 
@@ -151,10 +251,22 @@ export default function DaftarKontrolPage() {
     setEditingId(null);
   };
 
-  const filteredControls =
-    filter === "ALL"
-      ? controls
-      : controls.filter((c) => c.relevanceStatus === filter);
+  const filteredControls = (() => {
+    if (filter === "ALL") {
+      return controls;
+    }
+    
+    return controls.filter((c) => {
+      if (filter === "BELUM_DITENTUKAN") {
+        return !c.soa; // No SOA means not yet determined
+      } else if (filter === "RELEVAN") {
+        return c.soa && c.soa.status === "RELEVAN";
+      } else if (filter === "TIDAK_RELEVAN") {
+        return c.soa && c.soa.status === "TIDAK_RELEVAN";
+      }
+      return true;
+    });
+  })();
 
   const statusColors: Record<RelevanceStatus, string> = {
     BELUM_DITENTUKAN: "bg-gray-100 text-gray-800",
@@ -174,10 +286,20 @@ export default function DaftarKontrolPage() {
     return user?.name || userId;
   };
 
-  const getTreatmentName = (treatmentId?: string) => {
-    if (!treatmentId) return "-";
-    const treatment = treatments.find((t) => t.id === treatmentId);
-    return treatment?.id || treatmentId;
+  const getTreatmentName = (countRelatedTreatment?: number) => {
+    if (!countRelatedTreatment || countRelatedTreatment === 0) return "-";
+    return `${countRelatedTreatment} Treatment${countRelatedTreatment > 1 ? "s" : ""}`;
+  };
+
+  const getRelevanceStatus = (soa?: SOA): RelevanceStatus => {
+    if (!soa) return "BELUM_DITENTUKAN";
+    if (soa.status === "RELEVAN") return "RELEVAN";
+    return "TIDAK_RELEVAN";
+  };
+
+  const truncateText = (text: string, maxLength: number = 80): string => {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + "...";
   };
 
   return (
@@ -419,73 +541,83 @@ export default function DaftarKontrolPage() {
 
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              Total Kontrol
-            </CardTitle>
-            <CardDescription className="text-xs">Annex + Org</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-          </CardContent>
-        </Card>
+        {loadingStats ? (
+          <div className="col-span-5 text-center py-8 text-gray-500">Loading statistics...</div>
+        ) : stats ? (
+          <>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-gray-600">
+                  Total Control Annex
+                </CardTitle>
+                <CardDescription className="text-xs">ISO 27001</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-blue-600">
+                  {stats.totalAnnexControl}
+                </div>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              Kontrol Annex A
-            </CardTitle>
-            <CardDescription className="text-xs">ISO 27001</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {stats.annexA}
-            </div>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-gray-600">
+                  Annex Dinilai
+                </CardTitle>
+                <CardDescription className="text-xs">Sudah Assessed</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">
+                  {stats.totalAnnexControlAssessed}
+                </div>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              Kontrol Tambahan
-            </CardTitle>
-            <CardDescription className="text-xs">Organisasi</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">
-              {stats.additional}
-            </div>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-gray-600">
+                  Total Control Tambahan
+                </CardTitle>
+                <CardDescription className="text-xs">Organisasi</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-purple-600">
+                  {stats.totalAddedControl}
+                </div>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              Kontrol Relevan
-            </CardTitle>
-            <CardDescription className="text-xs">(SOA)</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {stats.relevant}
-            </div>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-gray-600">
+                  Tambahan Dinilai
+                </CardTitle>
+                <CardDescription className="text-xs">Sudah Assessed</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-purple-600">
+                  {stats.totalAddedControlAssessed}
+                </div>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              Belum Dievaluasi
-            </CardTitle>
-            <CardDescription className="text-xs">(SOA)</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">
-              {stats.notYetDetermined}
-            </div>
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-gray-600">
+                  Belum Dinilai
+                </CardTitle>
+                <CardDescription className="text-xs">Unassessed</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-orange-600">
+                  {stats.totalUnassessed}
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        ) : (
+          <div className="col-span-5 text-center py-8 text-gray-500">No statistics available</div>
+        )}
       </div>
 
       {/* Overdue Warning */}
@@ -516,110 +648,92 @@ export default function DaftarKontrolPage() {
           <CardTitle>Daftar Kontrol ({filteredControls.length})</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-gray-50">
-                  <TableHead>ID</TableHead>
-                  <TableHead>Nama Kontrol</TableHead>
-                  <TableHead>Treatment</TableHead>
-                  <TableHead>Pemilik</TableHead>
-                  <TableHead>Target Date</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Efektivitas</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredControls.length === 0 ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={8}
-                      className="text-center text-gray-500 py-4"
-                    >
-                      Tidak ada data
-                    </TableCell>
+          {loadingControls ? (
+            <div className="text-center py-8 text-gray-500">Loading controls...</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-gray-50">
+                    <TableHead>Kode</TableHead>
+                    <TableHead>Nama Kontrol</TableHead>
+                    <TableHead>Kategori</TableHead>
+                    <TableHead>Terkait Treatment</TableHead>
+                    <TableHead>Target Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Catatan</TableHead>
                   </TableRow>
-                ) : (
-                  filteredControls.map((control) => (
-                    <TableRow key={control.id}>
-                      <TableCell className="font-semibold">
-                        {control.id}
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{control.name}</div>
-                          {control.description && (
-                            <div className="text-xs text-gray-500 line-clamp-1">
-                              {control.description}
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {getTreatmentName(control.treatmentId)}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {getOwnerName(control.owner)}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {control.targetDate
-                          ? new Date(control.targetDate).toLocaleDateString(
-                              "id-ID"
-                            )
-                          : "-"}
-                      </TableCell>
-                      <TableCell>
-                        <div
-                          className={`inline-flex items-center gap-2 px-2 py-1 rounded-full text-xs font-medium ${
-                            statusColors[
-                              control.relevanceStatus || "BELUM_DITENTUKAN"
-                            ]
-                          }`}
-                        >
-                          {
-                            statusIcons[
-                              control.relevanceStatus || "BELUM_DITENTUKAN"
-                            ]
-                          }
-                          {control.relevanceStatus === "RELEVAN"
-                            ? "Relevan"
-                            : control.relevanceStatus === "TIDAK_RELEVAN"
-                            ? "Tidak Relevan"
-                            : "Belum Ditentukan"}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {control.effectivenessRating
-                          ? `${control.effectivenessRating}/5 ⭐`
-                          : "-"}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(control)}
-                            className="h-8 w-8 p-0"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(control.id)}
-                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
+                </TableHeader>
+                <TableBody>
+                  {filteredControls.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={7}
+                        className="text-center text-gray-500 py-4"
+                      >
+                        Tidak ada data
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                  ) : (
+                    filteredControls.map((control) => {
+                      const relevanceStatus = getRelevanceStatus(control.soa);
+                      return (
+                        <TableRow key={control.id}>
+                          <TableCell className="font-semibold text-sm">
+                            {control.code}
+                          </TableCell>
+                          <TableCell>
+                            <div>
+                              <div className="font-medium text-sm">{truncateText(control.title, 50)}</div>
+                              {control.description && (
+                                <div className="text-xs text-gray-500 mt-1">
+                                  {truncateText(control.description, 80)}
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {control.category || "-"}
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {getTreatmentName(control.countRelatedTreatment)}
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {control.soa?.targetDate
+                              ? new Date(control.soa.targetDate).toLocaleDateString(
+                                  "id-ID"
+                                )
+                              : "-"}
+                          </TableCell>
+                          <TableCell>
+                            <div
+                              className={`inline-flex items-center gap-2 px-2 py-1 rounded-full text-xs font-medium ${
+                                statusColors[relevanceStatus]
+                              }`}
+                            >
+                              {statusIcons[relevanceStatus]}
+                              {relevanceStatus === "RELEVAN"
+                                ? "Relevan"
+                                : relevanceStatus === "TIDAK_RELEVAN"
+                                ? "Tidak Relevan"
+                                : "Belum Ditentukan"}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {control.soa?.notes ? (
+                              <span className="line-clamp-2">{control.soa.notes}</span>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
