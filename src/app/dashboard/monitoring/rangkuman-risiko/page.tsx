@@ -270,23 +270,30 @@ export default function RangkumanRisikoPage() {
           <p className="text-sm text-gray-600">Breakdown risiko by level kritis hingga rendah</p>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-4 gap-4">
-            <div className="p-4 rounded-lg bg-red-50 border border-red-200">
-              <div className="text-2xl font-bold text-red-700">{riskStats.bySeverity.critical}</div>
-              <p className="text-xs text-red-600 mt-1">Kritis (S=5)</p>
-            </div>
-            <div className="p-4 rounded-lg bg-orange-50 border border-orange-200">
-              <div className="text-2xl font-bold text-orange-700">{riskStats.bySeverity.high}</div>
-              <p className="text-xs text-orange-600 mt-1">Tinggi (S=4)</p>
-            </div>
-            <div className="p-4 rounded-lg bg-yellow-50 border border-yellow-200">
-              <div className="text-2xl font-bold text-yellow-700">{riskStats.bySeverity.medium}</div>
-              <p className="text-xs text-yellow-600 mt-1">Sedang (S=3)</p>
-            </div>
-            <div className="p-4 rounded-lg bg-green-50 border border-green-200">
-              <div className="text-2xl font-bold text-green-700">{riskStats.bySeverity.low}</div>
-              <p className="text-xs text-green-600 mt-1">Rendah (S≤2)</p>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            {statistics.severityDistribution.map((dist) => {
+              const severityColor = getSeverityColor(dist.value);
+              const borderColor = dist.value >= 5 ? "border-red-200" : 
+                                 dist.value === 4 ? "border-orange-200" :
+                                 dist.value === 3 ? "border-yellow-200" : "border-green-200";
+              const bgColor = dist.value >= 5 ? "bg-red-50" : 
+                             dist.value === 4 ? "bg-orange-50" :
+                             dist.value === 3 ? "bg-yellow-50" : "bg-green-50";
+              
+              return (
+                <div key={dist.value} className={`p-4 rounded-lg ${bgColor} border ${borderColor}`}>
+                  <div className={`text-2xl font-bold ${severityColor.split(" ")[1]}`}>
+                    {dist.count}
+                  </div>
+                  <p className={`text-xs ${severityColor.split(" ")[1]} mt-1`}>
+                    {dist.label} (S={dist.value})
+                  </p>
+                  <p className="text-xs text-gray-500 mt-2">
+                    {statistics.totalRisks > 0 ? Math.round((dist.count / statistics.totalRisks) * 100) : 0}% dari total
+                  </p>
+                </div>
+              );
+            })}
           </div>
         </CardContent>
       </Card>
