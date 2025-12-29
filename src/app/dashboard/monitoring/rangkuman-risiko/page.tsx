@@ -1,9 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Risk, loadRisks } from "@/lib/risksStore";
-import { Treatment, loadTreatments } from "@/lib/treatmentsStore";
-import { Control, loadControls } from "@/lib/controlsStore";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   AlertCircle,
@@ -17,62 +15,133 @@ import {
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+
+interface ApiStatistics {
+  totalRisks: number;
+  totalTreatmentPlans: number;
+  totalControls: number;
+  totalApprovedRisks: number;
+  approvedRisksPercentage: number;
+  severityDistribution: Array<{
+    label: string;
+    value: number;
+    count: number;
+  }>;
+  riskStatusDistribution: {
+    draft: number;
+    submitted: number;
+    approved: number;
+  };
+  controlImplementationStatus: {
+    implemented: number;
+    inProgress: number;
+    planned: number;
+  };
+  topCriticalRisks: Array<{
+    id: string;
+    customRiskId: string;
+    identifiedRisk: string;
+    threat: string;
+    vulnerability: string;
+    impactSeverity: number;
+    likelihoodOccurence: number;
+    detection: number;
+    status: string;
+    priority: string;
+  }>;
+  priorityAnalysis: {
+    aboveThreshold: number;
+    belowThreshold: number;
+  };
+  treatmentCoverage: {
+    coveredRisks: number;
+    totalRisks: number;
+  };
+  approvedRisksCoverage: {
+    approvedRisks: number;
+    totalRisks: number;
+  };
+}
+
 export default function RangkumanRisikoPage() {
-  const [risks, setRisks] = useState<Risk[]>([]);
-  const [treatments, setTreatments] = useState<Treatment[]>([]);
-  const [controls, setControls] = useState<Control[]>([]);
+  const [statistics, setStatistics] = useState<ApiStatistics | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
-    setRisks(loadRisks());
-    setTreatments(loadTreatments());
-    setControls(loadControls());
+    const storedToken = localStorage.getItem("token");
+    setToken(storedToken);
   }, []);
 
-  // Calculate statistics
+  useEffect(() => {
+    if (!token) return;
+
+    const fetchStatistics = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`${API_BASE_URL}/statistics`, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const result = await response.json();
+        if (result.status && result.data) {
+          setStatistics(result.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch statistics:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStatistics();
+  }, [token]);
+
+  // Calculate statistics from API data
   const riskStats = {
-    total: risks.length,
+    total: statistics?.totalRisks || 0,
     bySeverity: {
-      critical: risks.filter((r) => r.severity >= 5).length,
-      high: risks.filter((r) => r.severity === 4).length,
-      medium: risks.filter((r) => r.severity === 3).length,
-      low: risks.filter((r) => r.severity <= 2).length,
+      critical: statistics?.severityDistribution.find((s) => s.value === 5)?.count || 0,
+      high: statistics?.severityDistribution.find((s) => s.value === 4)?.count || 0,
+      medium: statistics?.severityDistribution.find((s) => s.value === 3)?.count || 0,
+      low: (statistics?.severityDistribution.find((s) => s.value === 1)?.count || 0) +
+           (statistics?.severityDistribution.find((s) => s.value === 2)?.count || 0),
     },
     byStatus: {
-      draft: risks.filter((r) => r.status === "DRAFT").length,
-      submitted: risks.filter((r) => r.status === "SUBMITTED").length,
-      approved: risks.filter((r) => r.status === "APPROVED").length,
+      draft: statistics?.riskStatusDistribution.draft || 0,
+      submitted: statistics?.riskStatusDistribution.submitted || 0,
+      approved: statistics?.riskStatusDistribution.approved || 0,
     },
     byPriority: {
-      high: risks.filter((r) => r.priority === "High").length,
-      medium: risks.filter((r) => r.priority === "Medium").length,
-      low: risks.filter((r) => r.priority === "Low").length,
+      high: statistics?.priorityAnalysis.aboveThreshold || 0,
+      medium: 0,
+      low: statistics?.priorityAnalysis.belowThreshold || 0,
     },
   };
 
   const treatmentStats = {
-    total: treatments.length,
-    byStatus: {
-      notSet: treatments.filter((t) => t.status === "NOT_SET").length,
-      set: treatments.filter((t) => t.status === "SET").length,
-    },
+    total: statistics?.totalTreatmentPlans || 0,
   };
 
   const controlStats = {
-    total: controls.length,
+    total: statistics?.totalControls || 0,
     byImplementation: {
-      implemented: controls.filter((c) => c.implementationStatus === "IMPLEMENTED").length,
-      inProgress: controls.filter((c) => c.implementationStatus === "IN_PROGRESS").length,
-      planned: controls.filter((c) => c.implementationStatus === "PLANNED").length,
-      testing: controls.filter((c) => c.implementationStatus === "TESTING").length,
-      verified: controls.filter((c) => c.implementationStatus === "VERIFIED").length,
+      implemented: statistics?.controlImplementationStatus.implemented || 0,
+      inProgress: statistics?.controlImplementationStatus.inProgress || 0,
+      planned: statistics?.controlImplementationStatus.planned || 0,
+      testing: 0,
+      verified: 0,
     },
   };
 
   // Risk processing progress
   const riskProgress = {
-    total: risks.length,
-    withTreatment: treatments.length,
-    treated: risks.filter((r) => r.status === "APPROVED").length,
+    total: statistics?.totalRisks || 0,
+    withTreatment: statistics?.treatmentCoverage.coveredRisks || 0,
+    treated: statistics?.totalApprovedRisks || 0,
   };
 
   const getSeverityColor = (severity: number) => {
@@ -107,6 +176,22 @@ export default function RangkumanRisikoPage() {
     return "Draft";
   };
 
+  if (loading) {
+    return (
+      <div className="space-y-6 p-6">
+        <div className="text-center py-12 text-gray-500">Loading statistics...</div>
+      </div>
+    );
+  }
+
+  if (!statistics) {
+    return (
+      <div className="space-y-6 p-6">
+        <div className="text-center py-12 text-red-500">Failed to load statistics</div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 p-6">
       {/* Header */}
@@ -125,7 +210,7 @@ export default function RangkumanRisikoPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{riskStats.total}</div>
+            <div className="text-3xl font-bold">{statistics.totalRisks}</div>
             <p className="text-xs text-gray-500 mt-1">
               {riskStats.bySeverity.critical} kritis, {riskStats.bySeverity.high} tinggi
             </p>
@@ -140,9 +225,9 @@ export default function RangkumanRisikoPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{treatmentStats.total}</div>
+            <div className="text-3xl font-bold">{statistics.totalTreatmentPlans}</div>
             <p className="text-xs text-gray-500 mt-1">
-              {treatmentStats.byStatus.set} defined
+              {statistics.treatmentCoverage.coveredRisks} covered
             </p>
           </CardContent>
         </Card>
@@ -155,7 +240,7 @@ export default function RangkumanRisikoPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{controlStats.total}</div>
+            <div className="text-3xl font-bold">{statistics.totalControls}</div>
             <p className="text-xs text-gray-500 mt-1">
               {controlStats.byImplementation.implemented} implemented
             </p>
@@ -170,9 +255,9 @@ export default function RangkumanRisikoPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-600">{riskProgress.treated}</div>
+            <div className="text-3xl font-bold text-green-600">{statistics.totalApprovedRisks}</div>
             <p className="text-xs text-gray-500 mt-1">
-              {riskStats.total > 0 ? Math.round((riskProgress.treated / riskStats.total) * 100) : 0}% processed
+              {statistics.approvedRisksPercentage}% processed
             </p>
           </CardContent>
         </Card>
@@ -303,34 +388,31 @@ export default function RangkumanRisikoPage() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {risks
-              .sort((a, b) => b.severity - a.severity)
-              .slice(0, 5)
-              .map((risk, idx) => (
-                <div key={risk.id} className="flex items-start gap-4 p-4 bg-red-50 rounded-lg border border-red-200">
-                  <div className="flex-shrink-0">
-                    <div className="flex items-center justify-center h-10 w-10 rounded-full bg-red-200 font-bold text-red-700 text-sm">
-                      {idx + 1}
-                    </div>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-sm text-red-900">{risk.identifiedRisk}</h3>
-                    <p className="text-xs text-red-700 mt-1">Threat: {risk.threat}</p>
-                    <p className="text-xs text-red-700">Vulnerability: {risk.vulnerability}</p>
-                    <div className="flex gap-2 mt-2 flex-wrap">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getSeverityColor(risk.severity)}`}>
-                        S{risk.severity} - {getSeverityLabel(risk.severity)}
-                      </span>
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(risk.priority)}`}>
-                        {risk.priority || "Medium"} Priority
-                      </span>
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(risk.status)}`}>
-                        {getStatusLabel(risk.status)}
-                      </span>
-                    </div>
+            {statistics.topCriticalRisks.map((risk, idx) => (
+              <div key={risk.id} className="flex items-start gap-4 p-4 bg-red-50 rounded-lg border border-red-200">
+                <div className="flex-shrink-0">
+                  <div className="flex items-center justify-center h-10 w-10 rounded-full bg-red-200 font-bold text-red-700 text-sm">
+                    {idx + 1}
                   </div>
                 </div>
-              ))}
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-sm text-red-900">{risk.identifiedRisk}</h3>
+                  <p className="text-xs text-red-700 mt-1">Threat: {risk.threat}</p>
+                  <p className="text-xs text-red-700">Vulnerability: {risk.vulnerability}</p>
+                  <div className="flex gap-2 mt-2 flex-wrap">
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getSeverityColor(risk.impactSeverity)}`}>
+                      S{risk.impactSeverity} - {getSeverityLabel(risk.impactSeverity)}
+                    </span>
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getPriorityColor(risk.priority)}`}>
+                      {risk.priority || "Medium Priority"}
+                    </span>
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(risk.status)}`}>
+                      {getStatusLabel(risk.status)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>
@@ -380,19 +462,19 @@ export default function RangkumanRisikoPage() {
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm font-medium">Risiko Tertangani</span>
                 <span className="text-sm font-bold">
-                  {treatmentStats.total}/{riskStats.total}
+                  {statistics.treatmentCoverage.coveredRisks}/{statistics.treatmentCoverage.totalRisks}
                 </span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3">
                 <div
                   className="bg-blue-600 h-3 rounded-full transition-all"
                   style={{
-                    width: `${riskStats.total > 0 ? (treatmentStats.total / riskStats.total) * 100 : 0}%`,
+                    width: `${statistics.treatmentCoverage.totalRisks > 0 ? (statistics.treatmentCoverage.coveredRisks / statistics.treatmentCoverage.totalRisks) * 100 : 0}%`,
                   }}
                 />
               </div>
               <p className="text-xs text-gray-600 mt-1">
-                {riskStats.total > 0 ? Math.round((treatmentStats.total / riskStats.total) * 100) : 0}% coverage
+                {statistics.treatmentCoverage.totalRisks > 0 ? Math.round((statistics.treatmentCoverage.coveredRisks / statistics.treatmentCoverage.totalRisks) * 100) : 0}% coverage
               </p>
             </div>
 
@@ -400,19 +482,19 @@ export default function RangkumanRisikoPage() {
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm font-medium">Approved Risks</span>
                 <span className="text-sm font-bold">
-                  {riskProgress.treated}/{riskStats.total}
+                  {statistics.approvedRisksCoverage.approvedRisks}/{statistics.approvedRisksCoverage.totalRisks}
                 </span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-3">
                 <div
                   className="bg-green-600 h-3 rounded-full transition-all"
                   style={{
-                    width: `${riskStats.total > 0 ? (riskProgress.treated / riskStats.total) * 100 : 0}%`,
+                    width: `${statistics.approvedRisksCoverage.totalRisks > 0 ? (statistics.approvedRisksCoverage.approvedRisks / statistics.approvedRisksCoverage.totalRisks) * 100 : 0}%`,
                   }}
                 />
               </div>
               <p className="text-xs text-gray-600 mt-1">
-                {riskStats.total > 0 ? Math.round((riskProgress.treated / riskStats.total) * 100) : 0}% processed
+                {statistics.approvedRisksPercentage}% processed
               </p>
             </div>
           </div>
