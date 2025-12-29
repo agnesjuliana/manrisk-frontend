@@ -3,14 +3,11 @@
 import React, { useState, useEffect } from "react";
 import {
   Control,
-  ImplementationStatus,
   loadControls,
   saveControls,
   addControl,
   updateControl,
   deleteControl,
-  getImplementationStats,
-  getOverdueControls,
 } from "@/lib/controlsStore";
 import { loadUsers, User } from "@/lib/usersStore";
 import { loadTreatments, Treatment } from "@/lib/treatmentsStore";
@@ -40,10 +37,25 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { AlertCircle, CheckCircle2, Clock, Plus, Trash2, Edit2, AlertTriangle } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  AlertCircle,
+  CheckCircle2,
+  Clock,
+  Plus,
+  Trash2,
+  Edit2,
+  AlertTriangle,
+  X,
+} from "lucide-react";
 
-type Status = ImplementationStatus;
+type RelevanceStatus = "BELUM_DITENTUKAN" | "RELEVAN" | "TIDAK_RELEVAN";
 
 export default function DaftarKontrolPage() {
   const [controls, setControls] = useState<Control[]>([]);
@@ -51,9 +63,7 @@ export default function DaftarKontrolPage() {
   const [treatments, setTreatments] = useState<Treatment[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [filter, setFilter] = useState<Status | "ALL">("ALL");
-  const [stats, setStats] = useState<ReturnType<typeof getImplementationStats> | null>(null);
-  const [overdue, setOverdue] = useState<Control[]>([]);
+  const [filter, setFilter] = useState<RelevanceStatus | "ALL">("ALL");
 
   const [form, setForm] = useState<Partial<Control>>({
     name: "",
@@ -61,19 +71,29 @@ export default function DaftarKontrolPage() {
     treatmentId: undefined,
     owner: undefined,
     targetDate: "",
-    implementationStatus: "PLANNED",
+    relevanceStatus: "BELUM_DITENTUKAN",
     evidence: [],
     effectivenessRating: undefined,
     remarks: "",
+    isAnnexA: true,
   });
 
   useEffect(() => {
     setControls(loadControls());
     setUsers(loadUsers());
     setTreatments(loadTreatments());
-    setStats(getImplementationStats());
-    setOverdue(getOverdueControls());
   }, []);
+
+  // Calculate statistics
+  const stats = {
+    total: controls.length,
+    annexA: controls.filter((c) => c.isAnnexA).length,
+    additional: controls.filter((c) => !c.isAnnexA).length,
+    relevant: controls.filter((c) => c.relevanceStatus === "RELEVAN").length,
+    notYetDetermined: controls.filter(
+      (c) => c.relevanceStatus === "BELUM_DITENTUKAN"
+    ).length,
+  };
 
   const handleSave = () => {
     if (!form.name?.trim()) {
@@ -86,14 +106,14 @@ export default function DaftarKontrolPage() {
       if (updated) {
         const newControls = loadControls();
         setControls(newControls);
-        setStats(getImplementationStats());
       }
     } else {
-      const newControl = addControl(form as Omit<Control, "id" | "createdAt" | "updatedAt">);
+      const newControl = addControl(
+        form as Omit<Control, "id" | "createdAt" | "updatedAt">
+      );
       if (newControl) {
         const newControls = loadControls();
         setControls(newControls);
-        setStats(getImplementationStats());
       }
     }
 
@@ -112,7 +132,6 @@ export default function DaftarKontrolPage() {
       deleteControl(id);
       const newControls = loadControls();
       setControls(newControls);
-      setStats(getImplementationStats());
     }
   };
 
@@ -123,31 +142,30 @@ export default function DaftarKontrolPage() {
       treatmentId: undefined,
       owner: undefined,
       targetDate: "",
-      implementationStatus: "PLANNED",
+      relevanceStatus: "BELUM_DITENTUKAN",
       evidence: [],
       effectivenessRating: undefined,
       remarks: "",
+      isAnnexA: true,
     });
     setEditingId(null);
   };
 
   const filteredControls =
-    filter === "ALL" ? controls : controls.filter((c) => c.implementationStatus === filter);
+    filter === "ALL"
+      ? controls
+      : controls.filter((c) => c.relevanceStatus === filter);
 
-  const statusColors: Record<Status, string> = {
-    PLANNED: "bg-blue-100 text-blue-800",
-    IN_PROGRESS: "bg-yellow-100 text-yellow-800",
-    IMPLEMENTED: "bg-green-100 text-green-800",
-    TESTING: "bg-purple-100 text-purple-800",
-    VERIFIED: "bg-emerald-100 text-emerald-800",
+  const statusColors: Record<RelevanceStatus, string> = {
+    BELUM_DITENTUKAN: "bg-gray-100 text-gray-800",
+    RELEVAN: "bg-green-100 text-green-800",
+    TIDAK_RELEVAN: "bg-red-100 text-red-800",
   };
 
-  const statusIcons: Record<Status, React.ReactNode> = {
-    PLANNED: <Clock className="w-4 h-4" />,
-    IN_PROGRESS: <AlertCircle className="w-4 h-4" />,
-    IMPLEMENTED: <CheckCircle2 className="w-4 h-4" />,
-    TESTING: <AlertTriangle className="w-4 h-4" />,
-    VERIFIED: <CheckCircle2 className="w-4 h-4" />,
+  const statusIcons: Record<RelevanceStatus, React.ReactNode> = {
+    BELUM_DITENTUKAN: <Clock className="w-4 h-4" />,
+    RELEVAN: <CheckCircle2 className="w-4 h-4" />,
+    TIDAK_RELEVAN: <X className="w-4 h-4" />,
   };
 
   const getOwnerName = (userId?: string) => {
@@ -167,8 +185,11 @@ export default function DaftarKontrolPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Daftar Kontrol</h1>
-          <p className="text-gray-600 mt-1">Kelola implementasi kontrol dan tindakan mitigasi risiko</p>
+          <h1 className="text-3xl font-bold">Penetapan Relevansi Kontrol</h1>
+          <p className="text-gray-600 mt-1">
+            Evaluasi dan tentukan relevansi kontrol ISO 27001 Annex A terhadap
+            organisasi
+          </p>
         </div>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
@@ -179,7 +200,9 @@ export default function DaftarKontrolPage() {
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>{editingId ? "Edit Kontrol" : "Tambah Kontrol Baru"}</DialogTitle>
+              <DialogTitle>
+                {editingId ? "Edit Kontrol" : "Tambah Kontrol Baru"}
+              </DialogTitle>
               <DialogDescription>
                 Kelola detail kontrol dan progress implementasi
               </DialogDescription>
@@ -198,22 +221,49 @@ export default function DaftarKontrolPage() {
                 </div>
 
                 <div>
-                  <Label htmlFor="status">Status Implementasi</Label>
+                  <Label htmlFor="status">Status Relevansi</Label>
                   <Select
-                    value={form.implementationStatus || "PLANNED"}
+                    value={form.relevanceStatus || "BELUM_DITENTUKAN"}
                     onValueChange={(value) =>
-                      setForm({ ...form, implementationStatus: value as Status })
+                      setForm({
+                        ...form,
+                        relevanceStatus: value as RelevanceStatus,
+                      })
                     }
                   >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="PLANNED">Direncanakan</SelectItem>
-                      <SelectItem value="IN_PROGRESS">Sedang Berjalan</SelectItem>
-                      <SelectItem value="IMPLEMENTED">Terimplementasi</SelectItem>
-                      <SelectItem value="TESTING">Testing</SelectItem>
-                      <SelectItem value="VERIFIED">Terverifikasi</SelectItem>
+                      <SelectItem value="BELUM_DITENTUKAN">
+                        Belum Ditentukan
+                      </SelectItem>
+                      <SelectItem value="RELEVAN">Relevan</SelectItem>
+                      <SelectItem value="TIDAK_RELEVAN">
+                        Tidak Relevan
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="annexA">Tipe Kontrol</Label>
+                  <Select
+                    value={form.isAnnexA ? "ANNEX_A" : "ADDITIONAL"}
+                    onValueChange={(value) =>
+                      setForm({ ...form, isAnnexA: value === "ANNEX_A" })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ANNEX_A">
+                        Annex A (ISO 27001)
+                      </SelectItem>
+                      <SelectItem value="ADDITIONAL">
+                        Tambahan Organisasi
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -223,7 +273,9 @@ export default function DaftarKontrolPage() {
                   <Input
                     id="description"
                     value={form.description || ""}
-                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, description: e.target.value })
+                    }
                     placeholder="Detail implementasi kontrol"
                     className="h-20 align-top"
                   />
@@ -280,12 +332,16 @@ export default function DaftarKontrolPage() {
                 </div>
 
                 <div>
-                  <Label htmlFor="targetDate">Target Tanggal Implementasi</Label>
+                  <Label htmlFor="targetDate">
+                    Target Tanggal Implementasi
+                  </Label>
                   <Input
                     id="targetDate"
                     type="date"
                     value={form.targetDate || ""}
-                    onChange={(e) => setForm({ ...form, targetDate: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, targetDate: e.target.value })
+                    }
                   />
                 </div>
 
@@ -296,7 +352,8 @@ export default function DaftarKontrolPage() {
                     onValueChange={(value) =>
                       setForm({
                         ...form,
-                        effectivenessRating: value === "NONE" ? undefined : parseInt(value),
+                        effectivenessRating:
+                          value === "NONE" ? undefined : parseInt(value),
                       })
                     }
                   >
@@ -319,21 +376,27 @@ export default function DaftarKontrolPage() {
                   <Input
                     id="remarks"
                     value={form.remarks || ""}
-                    onChange={(e) => setForm({ ...form, remarks: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, remarks: e.target.value })
+                    }
                     placeholder="Catatan tambahan mengenai implementasi"
                     className="h-20 align-top"
                   />
                 </div>
 
                 <div className="col-span-2">
-                  <Label htmlFor="evidence">Evidence / Bukti (comma-separated)</Label>
+                  <Label htmlFor="evidence">
+                    Evidence / Bukti (comma-separated)
+                  </Label>
                   <Input
                     id="evidence"
                     value={(form.evidence || []).join(", ")}
                     onChange={(e) =>
                       setForm({
                         ...form,
-                        evidence: e.target.value.split(",").map((v) => v.trim()),
+                        evidence: e.target.value
+                          .split(",")
+                          .map((v) => v.trim()),
                       })
                     }
                     placeholder="Misal: backup_log.txt, test_restore_20250110.log"
@@ -346,7 +409,9 @@ export default function DaftarKontrolPage() {
               <Button variant="outline" onClick={() => setIsOpen(false)}>
                 Batal
               </Button>
-              <Button onClick={handleSave}>{editingId ? "Update" : "Simpan"}</Button>
+              <Button onClick={handleSave}>
+                {editingId ? "Update" : "Simpan"}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -356,93 +421,91 @@ export default function DaftarKontrolPage() {
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Kontrol</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">
+              Total Kontrol
+            </CardTitle>
+            <CardDescription className="text-xs">Annex + Org</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.total || 0}</div>
+            <div className="text-2xl font-bold">{stats.total}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Progress</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">
+              Kontrol Annex A
+            </CardTitle>
+            <CardDescription className="text-xs">ISO 27001</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{stats?.progressPercentage || 0}%</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Terverifikasi</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats?.verified || 0}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Sedang Berjalan</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">
-              {(stats?.inProgress || 0) + (stats?.testing || 0)}
+            <div className="text-2xl font-bold text-blue-600">
+              {stats.annexA}
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Efektivitas Rata-rata</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">
+              Kontrol Tambahan
+            </CardTitle>
+            <CardDescription className="text-xs">Organisasi</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats?.avgEffectiveness || 0}/5</div>
+            <div className="text-2xl font-bold text-purple-600">
+              {stats.additional}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">
+              Kontrol Relevan
+            </CardTitle>
+            <CardDescription className="text-xs">(SOA)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">
+              {stats.relevant}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">
+              Belum Dievaluasi
+            </CardTitle>
+            <CardDescription className="text-xs">(SOA)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-600">
+              {stats.notYetDetermined}
+            </div>
           </CardContent>
         </Card>
       </div>
 
       {/* Overdue Warning */}
-      {overdue.length > 0 && (
-        <Card className="border-red-200 bg-red-50">
-          <CardHeader>
-            <CardTitle className="text-red-800 flex items-center gap-2">
-              <AlertTriangle className="w-5 h-5" />
-              Kontrol Overdue ({overdue.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {overdue.map((c) => (
-                <div key={c.id} className="text-sm text-red-700">
-                  • <strong>{c.id}</strong> - {c.name} (Target: {c.targetDate})
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Filter */}
       <div className="flex gap-2 flex-wrap">
-        {["ALL", "PLANNED", "IN_PROGRESS", "IMPLEMENTED", "TESTING", "VERIFIED"].map((s) => (
+        {["ALL", "BELUM_DITENTUKAN", "RELEVAN", "TIDAK_RELEVAN"].map((s) => (
           <Button
             key={s}
             variant={filter === s ? "default" : "outline"}
-            onClick={() => setFilter(s as Status | "ALL")}
+            onClick={() => setFilter(s as RelevanceStatus | "ALL")}
             className="text-sm"
           >
             {s === "ALL"
               ? "Semua"
-              : s === "PLANNED"
-                ? "Direncanakan"
-                : s === "IN_PROGRESS"
-                  ? "Berjalan"
-                  : s === "IMPLEMENTED"
-                    ? "Implementasi"
-                    : s === "TESTING"
-                      ? "Testing"
-                      : "Terverifikasi"}
+              : s === "BELUM_DITENTUKAN"
+              ? "Belum Ditentukan"
+              : s === "RELEVAN"
+              ? "Relevan"
+              : "Tidak Relevan"}
           </Button>
         ))}
       </div>
@@ -470,14 +533,19 @@ export default function DaftarKontrolPage() {
               <TableBody>
                 {filteredControls.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center text-gray-500 py-4">
+                    <TableCell
+                      colSpan={8}
+                      className="text-center text-gray-500 py-4"
+                    >
                       Tidak ada data
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredControls.map((control) => (
                     <TableRow key={control.id}>
-                      <TableCell className="font-semibold">{control.id}</TableCell>
+                      <TableCell className="font-semibold">
+                        {control.id}
+                      </TableCell>
                       <TableCell>
                         <div>
                           <div className="font-medium">{control.name}</div>
@@ -488,25 +556,37 @@ export default function DaftarKontrolPage() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-sm">{getTreatmentName(control.treatmentId)}</TableCell>
-                      <TableCell className="text-sm">{getOwnerName(control.owner)}</TableCell>
+                      <TableCell className="text-sm">
+                        {getTreatmentName(control.treatmentId)}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {getOwnerName(control.owner)}
+                      </TableCell>
                       <TableCell className="text-sm">
                         {control.targetDate
-                          ? new Date(control.targetDate).toLocaleDateString("id-ID")
+                          ? new Date(control.targetDate).toLocaleDateString(
+                              "id-ID"
+                            )
                           : "-"}
                       </TableCell>
                       <TableCell>
-                        <div className={`inline-flex items-center gap-2 px-2 py-1 rounded-full text-xs font-medium ${statusColors[control.implementationStatus]}`}>
-                          {statusIcons[control.implementationStatus]}
-                          {control.implementationStatus === "PLANNED"
-                            ? "Direncanakan"
-                            : control.implementationStatus === "IN_PROGRESS"
-                              ? "Berjalan"
-                              : control.implementationStatus === "IMPLEMENTED"
-                                ? "Implementasi"
-                                : control.implementationStatus === "TESTING"
-                                  ? "Testing"
-                                  : "Terverifikasi"}
+                        <div
+                          className={`inline-flex items-center gap-2 px-2 py-1 rounded-full text-xs font-medium ${
+                            statusColors[
+                              control.relevanceStatus || "BELUM_DITENTUKAN"
+                            ]
+                          }`}
+                        >
+                          {
+                            statusIcons[
+                              control.relevanceStatus || "BELUM_DITENTUKAN"
+                            ]
+                          }
+                          {control.relevanceStatus === "RELEVAN"
+                            ? "Relevan"
+                            : control.relevanceStatus === "TIDAK_RELEVAN"
+                            ? "Tidak Relevan"
+                            : "Belum Ditentukan"}
                         </div>
                       </TableCell>
                       <TableCell className="text-sm">

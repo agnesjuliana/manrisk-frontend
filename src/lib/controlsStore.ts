@@ -4,12 +4,8 @@
  * ISO 27005 Phase 8: Control Implementation & SoA
  */
 
-export type ImplementationStatus =
-  | "PLANNED"
-  | "IN_PROGRESS"
-  | "IMPLEMENTED"
-  | "TESTING"
-  | "VERIFIED";
+export type RelevanceStatus = "BELUM_DITENTUKAN" | "RELEVAN" | "TIDAK_RELEVAN";
+export type ImplementationStatus = "PLANNED" | "IN_PROGRESS" | "IMPLEMENTED" | "TESTING" | "VERIFIED";
 
 export type Control = {
   id: string; // C001, C002, etc.
@@ -19,7 +15,9 @@ export type Control = {
   treatmentOption?: string; // MITIGATE, ACCEPT, AVOID, TRANSFER
   owner?: string; // Implementation owner (user ID)
   targetDate?: string; // ISO date string
-  implementationStatus: ImplementationStatus;
+  relevanceStatus: RelevanceStatus; // Control relevance determination
+  implementationStatus: ImplementationStatus; // Implementation status
+  isAnnexA: boolean; // true = ISO 27001 Annex A, false = Additional organizational control
   evidence?: string[]; // Evidence URLs, file names, or references
   effectivenessRating?: number; // 1-5 rating
   remarks?: string;
@@ -39,8 +37,10 @@ const DEFAULT_CONTROLS: Control[] = [
     treatmentId: "T001",
     treatmentOption: "MITIGATE",
     owner: "u-2",
-    targetDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
-    implementationStatus: "IN_PROGRESS",
+    targetDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+    relevanceStatus: "RELEVAN",
+    implementationStatus: "IMPLEMENTED",
+    isAnnexA: true,
     evidence: ["backup_policy_v2.pdf", "test_restore_20250110.log"],
     effectivenessRating: 4,
     remarks: "Fase implementasi server dengan 90% completion",
@@ -55,7 +55,9 @@ const DEFAULT_CONTROLS: Control[] = [
     treatmentOption: "MITIGATE",
     owner: "u-2",
     targetDate: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString(),
+    relevanceStatus: "RELEVAN",
     implementationStatus: "PLANNED",
+    isAnnexA: true,
     evidence: [],
     remarks: "Sedang menunggu approval budget infrastruktur",
     createdAt: new Date().toISOString(),
@@ -69,7 +71,9 @@ const DEFAULT_CONTROLS: Control[] = [
     treatmentOption: "MITIGATE",
     owner: "u-3",
     targetDate: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000).toISOString(),
+    relevanceStatus: "RELEVAN",
     implementationStatus: "TESTING",
+    isAnnexA: true,
     evidence: ["audit_system_v1.yaml", "monitoring_dashboard_screenshot.png"],
     effectivenessRating: 3,
     remarks: "Fase testing dengan 5 sample events, ready untuk UAT",
@@ -84,7 +88,9 @@ const DEFAULT_CONTROLS: Control[] = [
     treatmentOption: "MITIGATE",
     owner: "u-3",
     targetDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
+    relevanceStatus: "BELUM_DITENTUKAN",
     implementationStatus: "PLANNED",
+    isAnnexA: true,
     evidence: [],
     remarks: "Menunggu approval dari Security Lead",
     createdAt: new Date().toISOString(),
@@ -99,7 +105,9 @@ const DEFAULT_CONTROLS: Control[] = [
     treatmentOption: "MITIGATE",
     owner: "u-2",
     targetDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
-    implementationStatus: "PLANNED",
+    relevanceStatus: "RELEVAN",
+    implementationStatus: "VERIFIED",
+    isAnnexA: false,
     evidence: [],
     effectivenessRating: 5,
     remarks: "Comprehensive plan but needs quarterly drills",
