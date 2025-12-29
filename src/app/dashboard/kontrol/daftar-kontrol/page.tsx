@@ -55,6 +55,27 @@ interface ControlResponse {
   soa?: SOA;
 }
 
+interface ControlDetail extends ControlResponse {
+  treatments?: TreatmentInControl[];
+}
+
+interface TreatmentInControl {
+  id: string;
+  treatmentOpt: string;
+  detailedActionPlan: string;
+  startAction: string;
+  endAction: string;
+  isApprovedByTop: boolean;
+  risk?: {
+    id: string;
+    customRiskId: string;
+    identifiedRisk: string;
+    impactSeverity: number;
+    likelihoodOccurence: number;
+    detection: number;
+  };
+}
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -112,6 +133,16 @@ export default function DaftarKontrolPage() {
   const [stats, setStats] = useState<ControlStatistics | null>(null);
   const [loadingStats, setLoadingStats] = useState(false);
   const [loadingControls, setLoadingControls] = useState(false);
+  const [isSoaModalOpen, setIsSoaModalOpen] = useState(false);
+  const [selectedControlForSoA, setSelectedControlForSoA] = useState<ControlDetail | null>(null);
+  const [loadingControlDetail, setLoadingControlDetail] = useState(false);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [soaForm, setSoaForm] = useState({
+    status: "BELUM_DITENTUKAN" as "BELUM_DITENTUKAN" | "RELEVAN" | "TIDAK_RELEVAN",
+    managerId: "",
+    targetDate: "",
+    notes: "",
+  });
 
   const [form, setForm] = useState({
     code: "",
@@ -181,8 +212,31 @@ export default function DaftarKontrolPage() {
     fetchControls();
   }, [token]);
 
+  // Fetch users from API
   useEffect(() => {
-    setUsers(loadUsers());
+    if (!token) return;
+
+    const fetchUsers = async () => {
+      try {
+        setLoadingUsers(true);
+        const response = await fetch(`${API_BASE_URL}/user-management?page=1&per_page=1000`, {
+          headers: getHeaders(),
+        });
+        const result = await response.json();
+        if (result.status && result.data && result.data.data) {
+          setUsers(result.data.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch users:", error);
+      } finally {
+        setLoadingUsers(false);
+      }
+    };
+
+    fetchUsers();
+  }, [token]);
+
+  useEffect(() => {
     setTreatments(loadTreatments());
   }, []);
 
@@ -273,6 +327,85 @@ export default function DaftarKontrolPage() {
       isAnnex: false,
     });
     setEditingId(null);
+  };
+
+  const openSoAModal = async (controlId: string) => {
+    if (!token) return;
+    
+    setLoadingControlDetail(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/controls/${controlId}`, {
+        headers: getHeaders(),
+      });
+      const result = await response.json();
+      if (result.status && result.data) {
+        setSelectedControlForSoA(result.data);
+        setSoaForm({
+          status: "BELUM_DITENTUKAN",
+          managerId: "",
+          targetDate: "",
+          notes: "",
+        });
+        setIsSoaModalOpen(true);
+      } else {
+        alert(result.message || "Gagal mengambil detail kontrol");
+      }
+    } catch (error) {
+      console.error("Failed to fetch control detail:", error);
+      alert("Gagal mengambil detail kontrol");
+    } finally {
+      setLoadingControlDetail(false);
+    }
+  };
+
+  const handleSoASave = async () => {
+    if (!selectedControlForSoA || !token) return;
+    
+    if (!soaForm.managerId) {
+      alert("Manager tidak boleh kosong");
+      return;
+    }
+    if (!soaForm.targetDate) {
+      alert("Target date tidak boleh kosong");
+      return;
+    }
+
+    const payload = {
+      controlId: selectedControlForSoA.id,
+      managerId: soaForm.managerId,
+      status: soaForm.status,
+      targetDate: soaForm.targetDate,
+      notes: soaForm.notes,
+    };
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/soa`, {
+        method: "POST",
+        headers: getHeaders(),
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+      if (result.status) {
+        // Refresh controls list
+        const controlsResponse = await fetch(
+          `${API_BASE_URL}/controls?search=&is_annex=`,
+          { headers: getHeaders() }
+        );
+        const controlsResult = await controlsResponse.json();
+        if (controlsResult.status && controlsResult.data) {
+          setControls(controlsResult.data);
+        }
+
+        setIsSoaModalOpen(false);
+        setSelectedControlForSoA(null);
+      } else {
+        alert(result.message || "Gagal membuat SOA");
+      }
+    } catch (error) {
+      console.error("Failed to create SOA:", error);
+      alert("Gagal membuat SOA");
+    }
   };
 
   const filteredControls = (() => {
@@ -538,7 +671,7 @@ export default function DaftarKontrolPage() {
                     <TableHead>Terkait Treatment</TableHead>
                     <TableHead>Target Date</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Catatan</TableHead>
+                    <TableHead>Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -596,11 +729,18 @@ export default function DaftarKontrolPage() {
                                 : "Belum Ditentukan"}
                             </div>
                           </TableCell>
-                          <TableCell className="text-sm">
-                            {control.soa?.notes ? (
-                              <span className="line-clamp-2">{control.soa.notes}</span>
+                          <TableCell>
+                            {!control.soa ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => openSoAModal(control.id)}
+                                className="text-xs"
+                              >
+                                Buat SoA
+                              </Button>
                             ) : (
-                              <span className="text-gray-400">-</span>
+                              <span className="text-sm text-gray-500">-</span>
                             )}
                           </TableCell>
                         </TableRow>
@@ -613,6 +753,194 @@ export default function DaftarKontrolPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* SOA Modal */}
+      <Dialog open={isSoaModalOpen} onOpenChange={setIsSoaModalOpen}>
+      <DialogContent className="!w-[98vw] !max-w-[1400px] !max-h-[85vh] overflow-hidden flex flex-col p-6">
+        <DialogHeader>
+          <DialogTitle className="text-2xl">Buat Statement of Applicability (SoA)</DialogTitle>
+          <DialogDescription className="text-sm mt-2">
+            Tentukan relevansi kontrol terhadap organisasi
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="overflow-y-auto flex-1">
+        {loadingControlDetail ? (
+          <div className="flex justify-center items-center py-12">
+            <div className="text-gray-500">Loading detail kontrol...</div>
+          </div>
+        ) : selectedControlForSoA ? (
+          <div className="grid grid-cols-5 gap-6">
+            {/* Left: Control Details - 3 columns */}
+            <div className="col-span-3 space-y-6">
+              <div className="border rounded-lg p-6 bg-gray-50">
+                <h3 className="font-semibold text-base mb-6">Detail Kontrol</h3>
+
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-xs text-gray-600 font-medium mb-2 uppercase">Kode</p>
+                    <p className="font-semibold text-lg text-blue-700">{selectedControlForSoA.code}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-gray-600 font-medium mb-2 uppercase">Nama Kontrol</p>
+                    <p className="font-semibold text-base">{selectedControlForSoA.title}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-gray-600 font-medium mb-2 uppercase">Kategori</p>
+                    <p className="text-sm text-gray-700">{selectedControlForSoA.category}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-gray-600 font-medium mb-2 uppercase">Deskripsi</p>
+                    <p className="text-sm text-gray-700 leading-relaxed">{selectedControlForSoA.description}</p>
+                  </div>
+
+                  <div>
+                    <p className="text-xs text-gray-600 font-medium mb-2 uppercase">Tipe</p>
+                    <p className="text-sm text-gray-700">
+                      {selectedControlForSoA.isAnnex ? "Annex A" : "Kontrol Tambahan"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Related Treatments */}
+              <div className="border rounded-lg p-6 bg-gray-50 max-h-[250px] overflow-y-auto">
+                <h3 className="font-semibold text-base mb-4">Treatment Terkait ({selectedControlForSoA.treatments?.length || 0})</h3>
+
+                {selectedControlForSoA.treatments && selectedControlForSoA.treatments.length > 0 ? (
+                  <div className="space-y-3">
+                    {selectedControlForSoA.treatments.map((treatment) => (
+                      <div
+                        key={treatment.id}
+                        className="p-3 bg-white border-l-4 border-l-blue-500 rounded text-xs"
+                      >
+                        <p className="font-semibold text-blue-700 mb-1 text-sm">
+                          {treatment.risk?.customRiskId}: {treatment.risk?.identifiedRisk}
+                        </p>
+                        <p className="text-gray-600 mb-1">
+                          Opsi: <span className="font-medium text-gray-800">{treatment.treatmentOpt}</span>
+                        </p>
+                        <p className="text-gray-600">
+                          Rencana: <span className="text-gray-700">{treatment.detailedActionPlan}</span>
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500">Tidak ada treatment terkait</p>
+                )}
+              </div>
+            </div>
+
+            {/* Right: SOA Form - 2 columns */}
+            <div className="col-span-2">
+              <div className="border rounded-lg p-6 bg-white h-fit">
+                <h3 className="font-semibold text-base mb-6 text-gray-800">Form SoA</h3>
+
+                <div className="space-y-5">
+                  <div>
+                    <Label htmlFor="status" className="text-sm font-medium text-gray-700 block mb-2">Status *</Label>
+                    <Select
+                      value={soaForm.status}
+                      onValueChange={(value) =>
+                        setSoaForm({
+                          ...soaForm,
+                          status: value as "BELUM_DITENTUKAN" | "RELEVAN" | "TIDAK_RELEVAN",
+                        })
+                      }
+                    >
+                      <SelectTrigger id="status" className="w-full h-10 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="BELUM_DITENTUKAN">Belum Ditentukan</SelectItem>
+                        <SelectItem value="RELEVAN">Relevan</SelectItem>
+                        <SelectItem value="TIDAK_RELEVAN">Tidak Relevan</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="managerId" className="text-sm font-medium text-gray-700 block mb-2">Manager/Penanggungjawab *</Label>
+                    <Select
+                      value={soaForm.managerId}
+                      onValueChange={(value) =>
+                        setSoaForm({ ...soaForm, managerId: value })
+                      }
+                      disabled={loadingUsers}
+                    >
+                      <SelectTrigger id="managerId" className="w-full h-10 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+                        <SelectValue placeholder={loadingUsers ? "Loading..." : "Pilih manager"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {users.length > 0 ? (
+                          users.map((user) => (
+                            <SelectItem key={user.id} value={user.id}>
+                              {user.name}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          <SelectItem value="empty" disabled>
+                            {loadingUsers ? "Loading users..." : "No users available"}
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="targetDate" className="text-sm font-medium text-gray-700 block mb-2">Target Date *</Label>
+                    <Input
+                      id="targetDate"
+                      type="date"
+                      value={soaForm.targetDate}
+                      onChange={(e) =>
+                        setSoaForm({ ...soaForm, targetDate: e.target.value })
+                      }
+                      className="w-full h-10 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="notes" className="text-sm font-medium text-gray-700 block mb-2">Catatan</Label>
+                    <textarea
+                      id="notes"
+                      value={soaForm.notes}
+                      onChange={(e) =>
+                        setSoaForm({ ...soaForm, notes: e.target.value })
+                      }
+                      placeholder="Catatan tambahan tentang relevansi kontrol ini..."
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                      rows={4}
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-2 pt-4 border-t">
+                    <Button
+                      onClick={handleSoASave}
+                      className="w-full h-10 text-sm font-medium"
+                    >
+                      Simpan SoA
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsSoaModalOpen(false)}
+                      className="w-full h-10 text-sm font-medium"
+                    >
+                      Batal
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
+        </div>
+      </DialogContent>
+    </Dialog>
     </div>
   );
 }
