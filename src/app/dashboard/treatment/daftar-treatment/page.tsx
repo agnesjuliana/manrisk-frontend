@@ -79,6 +79,13 @@ interface ControlOption {
   title: string
 }
 
+interface UserOption {
+  id: string
+  name: string
+  email: string
+  role?: string
+}
+
 export default function DaftarTreatmentPage() {
   const { isAuthenticated } = useAuth()
   const [token, setToken] = useState<string | null>(null)
@@ -88,12 +95,14 @@ export default function DaftarTreatmentPage() {
   const [selectedRisk, setSelectedRisk] = useState<Risk | null>(null)
   const [riskCriteria, setRiskCriteria] = useState<RiskCriteria | null>(null)
   const [controlOptions, setControlOptions] = useState<ControlOption[]>([])
+  const [users, setUsers] = useState<UserOption[]>([])
   const [searchControl, setSearchControl] = useState("")
   const [selectedControls, setSelectedControls] = useState<RelatedControl[]>([])
   const [searchFocused, setSearchFocused] = useState(false)
 
   const [form, setForm] = useState({
     treatmentOpt: "MITIGATE",
+    picId: "",
     impactSeverityTarget: "",
     likelihoodOccurenceTarget: "",
     detectionTarget: "",
@@ -185,6 +194,27 @@ export default function DaftarTreatmentPage() {
     fetchControlOptions()
   }, [token])
 
+  // Fetch users for PIC selection
+  useEffect(() => {
+    if (!token) return
+
+    const fetchUsers = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/user-management?page=1&per_page=1000`, {
+          headers: getHeaders(),
+        })
+        const result = await response.json()
+        if (result.status && result.data?.data) {
+          setUsers(result.data.data)
+        }
+      } catch (error) {
+        console.error("Failed to fetch users:", error)
+      }
+    }
+
+    fetchUsers()
+  }, [token])
+
   function computeRiskScore(severity: number, likelihood: number) {
     return severity * likelihood
   }
@@ -227,12 +257,23 @@ export default function DaftarTreatmentPage() {
     return { isFMEA }
   }
 
+  function formatRoleLabel(role?: string): string {
+    if (!role) return ""
+    // Remove underscores and capitalize each word
+    return role
+      .replace(/_/g, " ")
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ")
+  }
+
   function openTreatmentForm(risk: Risk, treatment?: TreatmentData) {
     setSelectedRisk(risk)
     setSelectedControls(treatment?.relatedControls ?? [])
     if (treatment) {
       setForm({
         treatmentOpt: treatment.treatmentOpt,
+        picId: treatment.picId ?? "",
         impactSeverityTarget: treatment.impactSeverityTarget?.toString() ?? "",
         likelihoodOccurenceTarget: treatment.likelihoodOccurenceTarget?.toString() ?? "",
         detectionTarget: treatment.detectionTarget?.toString() ?? "",
@@ -245,6 +286,7 @@ export default function DaftarTreatmentPage() {
     } else {
       setForm({
         treatmentOpt: "MITIGATE",
+        picId: "",
         impactSeverityTarget: "",
         likelihoodOccurenceTarget: "",
         detectionTarget: "",
@@ -263,16 +305,17 @@ export default function DaftarTreatmentPage() {
 
     const payload = {
       riskId: selectedRisk.id,
+      picId: form.picId,
       treatmentOpt: form.treatmentOpt,
+      detailedActionPlan: form.detailedActionPlan,
+      startAction: form.startAction,
+      endAction: form.endAction,
+      controlIds: selectedControls.map((c) => c.id),
       impactSeverityTarget: parseInt(form.impactSeverityTarget),
       likelihoodOccurenceTarget: parseInt(form.likelihoodOccurenceTarget),
       detectionTarget: parseInt(form.detectionTarget),
       actionReason: form.actionReason,
-      detailedActionPlan: form.detailedActionPlan,
-      startAction: form.startAction,
-      endAction: form.endAction,
       notes: form.notes,
-      relatedControlIds: selectedControls.map((c) => c.id),
     }
 
     // Send to API
@@ -327,6 +370,7 @@ export default function DaftarTreatmentPage() {
     riskScore: item.score,
     riskLevel: getRiskLevelFromCriteria(item.score).level,
     treatment: item.treatment,
+    picName: item.treatment?.pic?.name ?? "-",
     risk: item.risk,
   }))
 
@@ -408,6 +452,11 @@ export default function DaftarTreatmentPage() {
               header: "Treatment Option",
               key: "treatment",
               render: (value, row: any) => <span className="text-sm">{row.treatment ? String(row.treatment.treatmentOpt) : "-"}</span>,
+            },
+            {
+              header: "Penanggung Jawab",
+              key: "picName",
+              render: (value) => <span className="text-sm">{String(value)}</span>,
             },
             {
               header: riskCriteria?.isFMEA ? "Target Severity" : "Target Impact",
@@ -493,6 +542,30 @@ export default function DaftarTreatmentPage() {
                             <SelectItem value="ACCEPT">Accept</SelectItem>
                             <SelectItem value="AVOID">Avoid</SelectItem>
                             <SelectItem value="TRANSFER">Transfer</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* PIC Selection Section */}
+                      <div className="space-y-3">
+                        <label className="text-sm font-semibold text-gray-900">Penanggung Jawab (PIC)</label>
+                        <Select
+                          value={form.picId}
+                          onValueChange={(v) => setForm((s) => ({ ...s, picId: v }))}
+                          disabled={!!row.treatment}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Pilih Penanggung Jawab" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {users.map((user) => (
+                              <SelectItem key={user.id} value={user.id}>
+                                <div className="flex flex-col">
+                                  <span>{user.name}</span>
+                                  <span className="text-xs text-gray-500">{formatRoleLabel(user.role)}</span>
+                                </div>
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </div>
