@@ -11,6 +11,7 @@ import {
 } from "@/lib/controlsStore";
 import { loadUsers, User } from "@/lib/usersStore";
 import { loadTreatments, Treatment } from "@/lib/treatmentsStore";
+import { useAuth } from "@/hooks/use-auth";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
 
@@ -118,11 +119,13 @@ import {
   Edit2,
   AlertTriangle,
   X,
+  Eye,
 } from "lucide-react";
 
 type RelevanceStatus = "BELUM_DITENTUKAN" | "RELEVAN" | "TIDAK_RELEVAN";
 
 export default function DaftarKontrolPage() {
+  const { user } = useAuth();
   const [controls, setControls] = useState<ControlResponse[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [treatments, setTreatments] = useState<Treatment[]>([]);
@@ -137,6 +140,16 @@ export default function DaftarKontrolPage() {
   const [selectedControlForSoA, setSelectedControlForSoA] = useState<ControlDetail | null>(null);
   const [loadingControlDetail, setLoadingControlDetail] = useState(false);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [isViewDetailModalOpen, setIsViewDetailModalOpen] = useState(false);
+  const [isEditSoaModalOpen, setIsEditSoaModalOpen] = useState(false);
+  const [selectedControlForViewDetail, setSelectedControlForViewDetail] = useState<ControlDetail | null>(null);
+  const [selectedControlForEditSoA, setSelectedControlForEditSoA] = useState<ControlDetail | null>(null);
+  const [editSoaForm, setEditSoaForm] = useState({
+    status: "BELUM_DITENTUKAN" as "BELUM_DITENTUKAN" | "RELEVAN" | "TIDAK_RELEVAN",
+    managerId: "",
+    targetDate: "",
+    notes: "",
+  });
   const [soaForm, setSoaForm] = useState({
     status: "BELUM_DITENTUKAN" as "BELUM_DITENTUKAN" | "RELEVAN" | "TIDAK_RELEVAN",
     managerId: "",
@@ -405,6 +418,110 @@ export default function DaftarKontrolPage() {
     } catch (error) {
       console.error("Failed to create SOA:", error);
       alert("Gagal membuat SOA");
+    }
+  };
+
+  const openViewDetailModal = async (controlId: string) => {
+    if (!token) return;
+    
+    setLoadingControlDetail(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/controls/${controlId}`, {
+        headers: getHeaders(),
+      });
+      const result = await response.json();
+      if (result.status && result.data) {
+        setSelectedControlForViewDetail(result.data);
+        setIsViewDetailModalOpen(true);
+      } else {
+        alert(result.message || "Gagal mengambil detail kontrol");
+      }
+    } catch (error) {
+      console.error("Failed to fetch control detail:", error);
+      alert("Gagal mengambil detail kontrol");
+    } finally {
+      setLoadingControlDetail(false);
+    }
+  };
+
+  const openEditSoAModal = async (controlId: string) => {
+    if (!token) return;
+    
+    setLoadingControlDetail(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/controls/${controlId}`, {
+        headers: getHeaders(),
+      });
+      const result = await response.json();
+      if (result.status && result.data) {
+        setSelectedControlForEditSoA(result.data);
+        // Pre-fill form with existing SOA data
+        if (result.data.soa) {
+          setEditSoaForm({
+            status: result.data.soa.status || "BELUM_DITENTUKAN",
+            managerId: result.data.soa.managerId || "",
+            targetDate: result.data.soa.targetDate ? result.data.soa.targetDate.split('T')[0] : "",
+            notes: result.data.soa.notes || "",
+          });
+        }
+        setIsEditSoaModalOpen(true);
+      } else {
+        alert(result.message || "Gagal mengambil detail kontrol");
+      }
+    } catch (error) {
+      console.error("Failed to fetch control detail:", error);
+      alert("Gagal mengambil detail kontrol");
+    } finally {
+      setLoadingControlDetail(false);
+    }
+  };
+
+  const handleEditSoASave = async () => {
+    if (!selectedControlForEditSoA || !selectedControlForEditSoA.soa || !token) return;
+    
+    if (!editSoaForm.managerId) {
+      alert("Manager tidak boleh kosong");
+      return;
+    }
+    if (!editSoaForm.targetDate) {
+      alert("Target date tidak boleh kosong");
+      return;
+    }
+
+    const payload = {
+      status: editSoaForm.status,
+      managerId: editSoaForm.managerId,
+      targetDate: editSoaForm.targetDate,
+      notes: editSoaForm.notes,
+    };
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/soa/${selectedControlForEditSoA.soa.id}`, {
+        method: "PATCH",
+        headers: getHeaders(),
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+      if (result.status) {
+        // Refresh controls list
+        const controlsResponse = await fetch(
+          `${API_BASE_URL}/controls?search=&is_annex=`,
+          { headers: getHeaders() }
+        );
+        const controlsResult = await controlsResponse.json();
+        if (controlsResult.status && controlsResult.data) {
+          setControls(controlsResult.data);
+        }
+
+        setIsEditSoaModalOpen(false);
+        setSelectedControlForEditSoA(null);
+      } else {
+        alert(result.message || "Gagal mengubah SOA");
+      }
+    } catch (error) {
+      console.error("Failed to update SOA:", error);
+      alert("Gagal mengubah SOA");
     }
   };
 
@@ -739,6 +856,29 @@ export default function DaftarKontrolPage() {
                               >
                                 Buat SoA
                               </Button>
+                            ) : user && (user.role === "RISK_MANAGER" || user.role === "TOP_MANAGEMENT") ? (
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => openViewDetailModal(control.id)}
+                                  className="text-xs gap-1"
+                                  title="Lihat Detail SoA"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                  Detail
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => openEditSoAModal(control.id)}
+                                  className="text-xs gap-1"
+                                  title="Edit SoA"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5" />
+                                  Edit
+                                </Button>
+                              </div>
                             ) : (
                               <span className="text-sm text-gray-500">-</span>
                             )}
@@ -938,6 +1078,356 @@ export default function DaftarKontrolPage() {
             </div>
           </div>
         ) : null}
+        </div>
+      </DialogContent>
+    </Dialog>
+
+    {/* View Detail Modal */}
+    <Dialog open={isViewDetailModalOpen} onOpenChange={setIsViewDetailModalOpen}>
+      <DialogContent className="!w-[98vw] !max-w-[1400px] !max-h-[85vh] overflow-hidden flex flex-col p-6">
+        <DialogHeader>
+          <DialogTitle className="text-2xl">Detail Statement of Applicability (SoA)</DialogTitle>
+          <DialogDescription className="text-sm mt-2">
+            Informasi lengkap tentang relevansi kontrol terhadap organisasi
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="overflow-y-auto flex-1">
+          {loadingControlDetail ? (
+            <div className="flex justify-center items-center py-12">
+              <div className="text-gray-500">Loading detail kontrol...</div>
+            </div>
+          ) : selectedControlForViewDetail ? (
+            <div className="grid grid-cols-5 gap-6">
+              {/* Left: Control Details - 3 columns */}
+              <div className="col-span-3 space-y-6">
+                <div className="border rounded-lg p-6 bg-gray-50">
+                  <h3 className="font-semibold text-base mb-6">Detail Kontrol</h3>
+
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-xs text-gray-600 font-medium mb-2 uppercase">Kode</p>
+                      <p className="font-semibold text-lg text-blue-700">{selectedControlForViewDetail.code}</p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-gray-600 font-medium mb-2 uppercase">Nama Kontrol</p>
+                      <p className="font-semibold text-base">{selectedControlForViewDetail.title}</p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-gray-600 font-medium mb-2 uppercase">Kategori</p>
+                      <p className="text-sm text-gray-700">{selectedControlForViewDetail.category}</p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-gray-600 font-medium mb-2 uppercase">Deskripsi</p>
+                      <p className="text-sm text-gray-700 leading-relaxed">{selectedControlForViewDetail.description}</p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-gray-600 font-medium mb-2 uppercase">Tipe</p>
+                      <p className="text-sm text-gray-700">
+                        {selectedControlForViewDetail.isAnnex ? "Annex A" : "Kontrol Tambahan"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Related Treatments */}
+                <div className="border rounded-lg p-6 bg-gray-50 max-h-[250px] overflow-y-auto">
+                  <h3 className="font-semibold text-base mb-4">Treatment Terkait ({selectedControlForViewDetail.treatments?.length || 0})</h3>
+
+                  {selectedControlForViewDetail.treatments && selectedControlForViewDetail.treatments.length > 0 ? (
+                    <div className="space-y-3">
+                      {selectedControlForViewDetail.treatments.map((treatment) => (
+                        <div
+                          key={treatment.id}
+                          className="p-3 bg-white border-l-4 border-l-blue-500 rounded text-xs"
+                        >
+                          <p className="font-semibold text-blue-700 mb-1 text-sm">
+                            {treatment.risk?.customRiskId}: {treatment.risk?.identifiedRisk}
+                          </p>
+                          <p className="text-gray-600 mb-1">
+                            Opsi: <span className="font-medium text-gray-800">{treatment.treatmentOpt}</span>
+                          </p>
+                          <p className="text-gray-600">
+                            Rencana: <span className="text-gray-700">{treatment.detailedActionPlan}</span>
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">Tidak ada treatment terkait</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Right: SoA Details - 2 columns (Read-only) */}
+              <div className="col-span-2">
+                <div className="border rounded-lg p-6 bg-gray-50 h-fit">
+                  <h3 className="font-semibold text-base mb-6 text-gray-800">Detail SoA</h3>
+
+                  <div className="space-y-5">
+                    <div>
+                      <p className="text-xs text-gray-600 font-medium mb-2 uppercase">Status</p>
+                      <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium ${
+                        statusColors[getRelevanceStatus(selectedControlForViewDetail.soa)]
+                      }`}>
+                        {statusIcons[getRelevanceStatus(selectedControlForViewDetail.soa)]}
+                        {getRelevanceStatus(selectedControlForViewDetail.soa) === "RELEVAN"
+                          ? "Relevan"
+                          : getRelevanceStatus(selectedControlForViewDetail.soa) === "TIDAK_RELEVAN"
+                          ? "Tidak Relevan"
+                          : "Belum Ditentukan"}
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-gray-600 font-medium mb-2 uppercase">Manager/Penanggungjawab</p>
+                      <p className="text-sm text-gray-700 font-medium">
+                        {selectedControlForViewDetail.soa?.manager?.name || "-"}
+                      </p>
+                      <p className="text-xs text-gray-600 mt-1">{selectedControlForViewDetail.soa?.manager?.email}</p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-gray-600 font-medium mb-2 uppercase">Target Date</p>
+                      <p className="text-sm text-gray-700 font-medium">
+                        {selectedControlForViewDetail.soa?.targetDate
+                          ? new Date(selectedControlForViewDetail.soa.targetDate).toLocaleDateString("id-ID", {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                            })
+                          : "-"}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-gray-600 font-medium mb-2 uppercase">Catatan</p>
+                      <p className="text-sm text-gray-700 leading-relaxed">
+                        {selectedControlForViewDetail.soa?.notes || "Tidak ada catatan"}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-gray-600 font-medium mb-2 uppercase">Dibuat</p>
+                      <p className="text-xs text-gray-600">
+                        {selectedControlForViewDetail.soa?.createdAt
+                          ? new Date(selectedControlForViewDetail.soa.createdAt).toLocaleDateString("id-ID", {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
+                          : "-"}
+                      </p>
+                    </div>
+
+                    <div className="flex gap-2 pt-4 border-t">
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsViewDetailModalOpen(false)}
+                        className="w-full h-10 text-sm font-medium"
+                      >
+                        Tutup
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </DialogContent>
+    </Dialog>
+
+    {/* Edit SoA Modal */}
+    <Dialog open={isEditSoaModalOpen} onOpenChange={setIsEditSoaModalOpen}>
+      <DialogContent className="!w-[98vw] !max-w-[1400px] !max-h-[85vh] overflow-hidden flex flex-col p-6">
+        <DialogHeader>
+          <DialogTitle className="text-2xl">Edit Statement of Applicability (SoA)</DialogTitle>
+          <DialogDescription className="text-sm mt-2">
+            Ubah penilaian relevansi kontrol terhadap organisasi
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="overflow-y-auto flex-1">
+          {loadingControlDetail ? (
+            <div className="flex justify-center items-center py-12">
+              <div className="text-gray-500">Loading detail kontrol...</div>
+            </div>
+          ) : selectedControlForEditSoA ? (
+            <div className="grid grid-cols-5 gap-6">
+              {/* Left: Control Details - 3 columns */}
+              <div className="col-span-3 space-y-6">
+                <div className="border rounded-lg p-6 bg-gray-50">
+                  <h3 className="font-semibold text-base mb-6">Detail Kontrol</h3>
+
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-xs text-gray-600 font-medium mb-2 uppercase">Kode</p>
+                      <p className="font-semibold text-lg text-blue-700">{selectedControlForEditSoA.code}</p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-gray-600 font-medium mb-2 uppercase">Nama Kontrol</p>
+                      <p className="font-semibold text-base">{selectedControlForEditSoA.title}</p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-gray-600 font-medium mb-2 uppercase">Kategori</p>
+                      <p className="text-sm text-gray-700">{selectedControlForEditSoA.category}</p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-gray-600 font-medium mb-2 uppercase">Deskripsi</p>
+                      <p className="text-sm text-gray-700 leading-relaxed">{selectedControlForEditSoA.description}</p>
+                    </div>
+
+                    <div>
+                      <p className="text-xs text-gray-600 font-medium mb-2 uppercase">Tipe</p>
+                      <p className="text-sm text-gray-700">
+                        {selectedControlForEditSoA.isAnnex ? "Annex A" : "Kontrol Tambahan"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Related Treatments */}
+                <div className="border rounded-lg p-6 bg-gray-50 max-h-[250px] overflow-y-auto">
+                  <h3 className="font-semibold text-base mb-4">Treatment Terkait ({selectedControlForEditSoA.treatments?.length || 0})</h3>
+
+                  {selectedControlForEditSoA.treatments && selectedControlForEditSoA.treatments.length > 0 ? (
+                    <div className="space-y-3">
+                      {selectedControlForEditSoA.treatments.map((treatment) => (
+                        <div
+                          key={treatment.id}
+                          className="p-3 bg-white border-l-4 border-l-blue-500 rounded text-xs"
+                        >
+                          <p className="font-semibold text-blue-700 mb-1 text-sm">
+                            {treatment.risk?.customRiskId}: {treatment.risk?.identifiedRisk}
+                          </p>
+                          <p className="text-gray-600 mb-1">
+                            Opsi: <span className="font-medium text-gray-800">{treatment.treatmentOpt}</span>
+                          </p>
+                          <p className="text-gray-600">
+                            Rencana: <span className="text-gray-700">{treatment.detailedActionPlan}</span>
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500">Tidak ada treatment terkait</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Right: Edit Form - 2 columns */}
+              <div className="col-span-2">
+                <div className="border rounded-lg p-6 bg-white h-fit">
+                  <h3 className="font-semibold text-base mb-6 text-gray-800">Edit Form SoA</h3>
+
+                  <div className="space-y-5">
+                    <div>
+                      <Label htmlFor="edit-status" className="text-sm font-medium text-gray-700 block mb-2">Status *</Label>
+                      <Select
+                        value={editSoaForm.status}
+                        onValueChange={(value) =>
+                          setEditSoaForm({
+                            ...editSoaForm,
+                            status: value as "BELUM_DITENTUKAN" | "RELEVAN" | "TIDAK_RELEVAN",
+                          })
+                        }
+                      >
+                        <SelectTrigger id="edit-status" className="w-full h-10 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="BELUM_DITENTUKAN">Belum Ditentukan</SelectItem>
+                          <SelectItem value="RELEVAN">Relevan</SelectItem>
+                          <SelectItem value="TIDAK_RELEVAN">Tidak Relevan</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="edit-managerId" className="text-sm font-medium text-gray-700 block mb-2">Manager/Penanggungjawab *</Label>
+                      <Select
+                        value={editSoaForm.managerId}
+                        onValueChange={(value) =>
+                          setEditSoaForm({ ...editSoaForm, managerId: value })
+                        }
+                        disabled={loadingUsers}
+                      >
+                        <SelectTrigger id="edit-managerId" className="w-full h-10 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+                          <SelectValue placeholder={loadingUsers ? "Loading..." : "Pilih manager"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {users.length > 0 ? (
+                            users.map((u) => (
+                              <SelectItem key={u.id} value={u.id}>
+                                {u.name}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="empty" disabled>
+                              {loadingUsers ? "Loading users..." : "No users available"}
+                            </SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <Label htmlFor="edit-targetDate" className="text-sm font-medium text-gray-700 block mb-2">Target Date *</Label>
+                      <Input
+                        id="edit-targetDate"
+                        type="date"
+                        value={editSoaForm.targetDate}
+                        onChange={(e) =>
+                          setEditSoaForm({ ...editSoaForm, targetDate: e.target.value })
+                        }
+                        className="w-full h-10 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                      />
+                    </div>
+
+                    <div>
+                      <Label htmlFor="edit-notes" className="text-sm font-medium text-gray-700 block mb-2">Catatan</Label>
+                      <textarea
+                        id="edit-notes"
+                        value={editSoaForm.notes}
+                        onChange={(e) =>
+                          setEditSoaForm({ ...editSoaForm, notes: e.target.value })
+                        }
+                        placeholder="Catatan tambahan tentang relevansi kontrol ini..."
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                        rows={4}
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-2 pt-4 border-t">
+                      <Button
+                        onClick={handleEditSoASave}
+                        className="w-full h-10 text-sm font-medium"
+                      >
+                        Simpan Perubahan
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsEditSoaModalOpen(false)}
+                        className="w-full h-10 text-sm font-medium"
+                      >
+                        Batal
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
       </DialogContent>
     </Dialog>
