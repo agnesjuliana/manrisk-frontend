@@ -5,7 +5,7 @@
  */
 
 export type RelevanceStatus = "BELUM_DITENTUKAN" | "RELEVAN" | "TIDAK_RELEVAN";
-export type ImplementationStatus = "PLANNED" | "IN_PROGRESS" | "IMPLEMENTED" | "TESTING" | "VERIFIED";
+export type ImplementationStatus = "DIRENCANAKAN" | "DALAM_IMPLEMENTASI" | "DIIMPLEMENTASIKAN" | "DIHENTIKAN";
 
 export type Control = {
   id: string; // C001, C002, etc.
@@ -39,7 +39,7 @@ const DEFAULT_CONTROLS: Control[] = [
     owner: "u-2",
     targetDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
     relevanceStatus: "RELEVAN",
-    implementationStatus: "IMPLEMENTED",
+    implementationStatus: "DIIMPLEMENTASIKAN",
     isAnnexA: true,
     evidence: ["backup_policy_v2.pdf", "test_restore_20250110.log"],
     effectivenessRating: 4,
@@ -56,7 +56,7 @@ const DEFAULT_CONTROLS: Control[] = [
     owner: "u-2",
     targetDate: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000).toISOString(),
     relevanceStatus: "RELEVAN",
-    implementationStatus: "PLANNED",
+    implementationStatus: "DIRENCANAKAN",
     isAnnexA: true,
     evidence: [],
     remarks: "Sedang menunggu approval budget infrastruktur",
@@ -72,7 +72,7 @@ const DEFAULT_CONTROLS: Control[] = [
     owner: "u-3",
     targetDate: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000).toISOString(),
     relevanceStatus: "RELEVAN",
-    implementationStatus: "TESTING",
+    implementationStatus: "DALAM_IMPLEMENTASI",
     isAnnexA: true,
     evidence: ["audit_system_v1.yaml", "monitoring_dashboard_screenshot.png"],
     effectivenessRating: 3,
@@ -89,7 +89,7 @@ const DEFAULT_CONTROLS: Control[] = [
     owner: "u-3",
     targetDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(),
     relevanceStatus: "BELUM_DITENTUKAN",
-    implementationStatus: "PLANNED",
+    implementationStatus: "DIRENCANAKAN",
     isAnnexA: true,
     evidence: [],
     remarks: "Menunggu approval dari Security Lead",
@@ -106,7 +106,7 @@ const DEFAULT_CONTROLS: Control[] = [
     owner: "u-2",
     targetDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
     relevanceStatus: "RELEVAN",
-    implementationStatus: "VERIFIED",
+    implementationStatus: "DIIMPLEMENTASIKAN",
     isAnnexA: false,
     evidence: [],
     effectivenessRating: 5,
@@ -244,16 +244,15 @@ export function getImplementationStats() {
   const controls = loadControls();
 
   const total = controls.length;
-  const planned = controls.filter((c) => c.implementationStatus === "PLANNED").length;
-  const inProgress = controls.filter((c) => c.implementationStatus === "IN_PROGRESS").length;
-  const implemented = controls.filter((c) => c.implementationStatus === "IMPLEMENTED").length;
-  const testing = controls.filter((c) => c.implementationStatus === "TESTING").length;
-  const verified = controls.filter((c) => c.implementationStatus === "VERIFIED").length;
+  const planned = controls.filter((c) => c.implementationStatus === "DIRENCANAKAN").length;
+  const inProgress = controls.filter((c) => c.implementationStatus === "DALAM_IMPLEMENTASI").length;
+  const implemented = controls.filter((c) => c.implementationStatus === "DIIMPLEMENTASIKAN").length;
+  const stopped = controls.filter((c) => c.implementationStatus === "DIHENTIKAN").length;
 
   const progressPercentage =
     total > 0
       ? Math.round(
-          ((implemented + testing + verified + inProgress * 0.5) / total) * 100
+          ((implemented) / total) * 100
         )
       : 0;
 
@@ -271,22 +270,21 @@ export function getImplementationStats() {
     planned,
     inProgress,
     implemented,
-    testing,
-    verified,
+    stopped,
     progressPercentage,
     avgEffectiveness,
   };
 }
 
 /**
- * Get overdue controls (past target date, not yet verified)
+ * Get overdue controls (past target date, not yet implemented)
  */
 export function getOverdueControls(): Control[] {
   const controls = loadControls();
   const now = new Date();
 
   return controls.filter((c) => {
-    if (!c.targetDate || c.implementationStatus === "VERIFIED") return false;
+    if (!c.targetDate || c.implementationStatus === "DIIMPLEMENTASIKAN") return false;
     return new Date(c.targetDate) < now;
   });
 }

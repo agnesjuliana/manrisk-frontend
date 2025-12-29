@@ -65,7 +65,10 @@ export default function SoaPage() {
   }, []);
 
   const getSoaData = () => {
-    const soaItems = controls.map((control) => {
+    // Filter hanya kontrol yang relevan
+    const relevantControls = controls.filter(c => c.relevanceStatus === "RELEVAN");
+    
+    const soaItems = relevantControls.map((control) => {
       const treatment = treatments.find((t) => t.id === control.treatmentId);
       const risk = risks.find((r) => r.id === treatment?.riskId);
 
@@ -76,16 +79,13 @@ export default function SoaPage() {
         riskId: treatment?.riskId || "-",
         riskTitle: risk?.identifiedRisk || "-",
         treatmentOption: control.treatmentOption || "-",
-        implementationStatus: control.implementationStatus,
+        implementationStatus: control.implementationStatus || "DIRENCANAKAN",
         effectivenessRating: control.effectivenessRating || 0,
         targetDate: control.targetDate,
         owner: control.owner,
-        isImplemented: [
-          "IMPLEMENTED",
-          "TESTING",
-          "VERIFIED",
-        ].includes(control.implementationStatus),
-        isVerified: control.implementationStatus === "VERIFIED",
+        isImplemented: control.implementationStatus === "DIIMPLEMENTASIKAN",
+        isVerified: control.implementationStatus === "DIIMPLEMENTASIKAN",
+        relevanceStatus: control.relevanceStatus,
       };
     });
 
@@ -96,22 +96,15 @@ export default function SoaPage() {
 
   const implementationStats = {
     total: soaData.length,
-    implemented: soaData.filter((s) => s.isImplemented).length,
-    verified: soaData.filter((s) => s.isVerified).length,
-    pending: soaData.filter((s) => !s.isImplemented).length,
+    planned: soaData.filter((s) => s.implementationStatus === "DIRENCANAKAN").length,
+    inProgress: soaData.filter((s) => s.implementationStatus === "DALAM_IMPLEMENTASI").length,
+    implemented: soaData.filter((s) => s.implementationStatus === "DIIMPLEMENTASIKAN").length,
   };
 
   const implementationRate =
     implementationStats.total > 0
       ? Math.round(
           (implementationStats.implemented / implementationStats.total) * 100
-        )
-      : 0;
-
-  const verificationRate =
-    implementationStats.total > 0
-      ? Math.round(
-          (implementationStats.verified / implementationStats.total) * 100
         )
       : 0;
 
@@ -128,22 +121,19 @@ export default function SoaPage() {
   const chartData = [
     {
       name: "Direncanakan",
-      value: soaData.filter((s) => s.implementationStatus === "PLANNED").length,
+      value: soaData.filter((s) => s.implementationStatus === "DIRENCANAKAN").length,
     },
     {
-      name: "Berjalan",
-      value:
-        soaData.filter((s) => s.implementationStatus === "IN_PROGRESS").length +
-        soaData.filter((s) => s.implementationStatus === "TESTING").length,
+      name: "Dalam Implementasi",
+      value: soaData.filter((s) => s.implementationStatus === "DALAM_IMPLEMENTASI").length,
     },
     {
-      name: "Terimplementasi",
-      value: soaData.filter((s) => s.implementationStatus === "IMPLEMENTED")
-        .length,
+      name: "Sudah Diimplementasikan",
+      value: soaData.filter((s) => s.implementationStatus === "DIIMPLEMENTASIKAN").length,
     },
     {
-      name: "Terverifikasi",
-      value: soaData.filter((s) => s.implementationStatus === "VERIFIED").length,
+      name: "Dihentikan",
+      value: soaData.filter((s) => s.implementationStatus === "DIHENTIKAN").length,
     },
   ];
 
@@ -172,15 +162,15 @@ export default function SoaPage() {
 
   const handleExportPDF = () => {
     const content = `
-STATEMENT OF APPLICABILITY (SoA)
+IMPLEMENTASI KONTROL KEAMANAN
 Generated: ${new Date().toLocaleDateString("id-ID")}
 
 OVERVIEW
 ========
-Total Controls: ${soaData.length}
-Implemented: ${implementationStats.implemented} (${implementationRate}%)
-Verified: ${implementationStats.verified} (${verificationRate}%)
-Pending: ${implementationStats.pending}
+Total Kontrol Relevan: ${soaData.filter(s => s.relevanceStatus === "RELEVAN").length}
+Belum Diimplementasikan: ${soaData.filter(s => s.implementationStatus === "DIRENCANAKAN").length}
+Dalam Implementasi: ${soaData.filter(s => s.implementationStatus === "DALAM_IMPLEMENTASI").length}
+Sudah Diimplementasikan: ${soaData.filter(s => s.implementationStatus === "DIIMPLEMENTASIKAN").length}
 Avg Effectiveness: ${avgEffectiveness}/5
 
 CONTROL LIST
@@ -262,9 +252,9 @@ END OF DOCUMENT
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Statement of Applicability (SoA)</h1>
+          <h1 className="text-3xl font-bold">Implementasi Kontrol Keamanan</h1>
           <p className="text-gray-600 mt-1">
-            Dokumentasi kontrol yang applicable dan status implementasinya
+            Kelola pelaksanaan kontrol yang telah dinyatakan relevan untuk organisasi
           </p>
         </div>
         <div className="flex gap-2">
@@ -280,65 +270,44 @@ END OF DOCUMENT
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              Total Kontrol
-            </CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">Total Kontrol Relevan</CardTitle>
+            <CardDescription className="text-xs">Harus diimplementasikan</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{soaData.length}</div>
+            <div className="text-2xl font-bold">{soaData.filter(s => s.relevanceStatus === "RELEVAN").length}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              Implementation Rate
-            </CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">Belum Diimplementasikan</CardTitle>
+            <CardDescription className="text-xs">Status: Direncanakan</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {implementationRate}%
-            </div>
+            <div className="text-2xl font-bold text-gray-600">{soaData.filter(s => s.implementationStatus === "DIRENCANAKAN").length}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              Terverifikasi
-            </CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">Dalam Implementasi</CardTitle>
+            <CardDescription className="text-xs">Status: Proses</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {implementationStats.verified}
-            </div>
+            <div className="text-2xl font-bold text-blue-600">{soaData.filter(s => s.implementationStatus === "DALAM_IMPLEMENTASI").length}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              Masih Pending
-            </CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">Sudah Diimplementasikan</CardTitle>
+            <CardDescription className="text-xs">Status: Selesai</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">
-              {implementationStats.pending}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              Avg Effectiveness
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{avgEffectiveness}/5 ⭐</div>
+            <div className="text-2xl font-bold text-green-600">{soaData.filter(s => s.implementationStatus === "DIIMPLEMENTASIKAN").length}</div>
           </CardContent>
         </Card>
       </div>
@@ -379,7 +348,6 @@ END OF DOCUMENT
                     <TableHead>Risk Code</TableHead>
                     <TableHead>Treatment</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Efektivitas</TableHead>
                     <TableHead>Target Date</TableHead>
                     <TableHead>Verifikasi</TableHead>
                   </TableRow>
@@ -387,7 +355,7 @@ END OF DOCUMENT
                 <TableBody>
                   {soaData.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-4">
+                      <TableCell colSpan={7} className="text-center py-4">
                         Tidak ada data kontrol
                       </TableCell>
                     </TableRow>
@@ -407,36 +375,23 @@ END OF DOCUMENT
                         <TableCell>
                           <span
                             className={`inline-block px-2 py-1 rounded text-xs font-medium ${
-                              item.implementationStatus === "VERIFIED"
+                              item.implementationStatus === "DIIMPLEMENTASIKAN"
                                 ? "bg-green-100 text-green-800"
-                                : item.implementationStatus ===
-                                    "IMPLEMENTED"
+                                : item.implementationStatus === "DALAM_IMPLEMENTASI"
                                   ? "bg-blue-100 text-blue-800"
-                                  : item.implementationStatus ===
-                                      "TESTING"
-                                    ? "bg-purple-100 text-purple-800"
-                                    : item.implementationStatus ===
-                                        "IN_PROGRESS"
-                                      ? "bg-yellow-100 text-yellow-800"
-                                      : "bg-gray-100 text-gray-800"
+                                  : item.implementationStatus === "DIHENTIKAN"
+                                    ? "bg-red-100 text-red-800"
+                                    : "bg-gray-100 text-gray-800"
                             }`}
                           >
-                            {item.implementationStatus === "VERIFIED"
-                              ? "Terverifikasi"
-                              : item.implementationStatus === "IMPLEMENTED"
-                                ? "Terimplementasi"
-                                : item.implementationStatus === "TESTING"
-                                  ? "Testing"
-                                  : item.implementationStatus ===
-                                      "IN_PROGRESS"
-                                    ? "Berjalan"
-                                    : "Direncanakan"}
+                            {item.implementationStatus === "DIIMPLEMENTASIKAN"
+                              ? "Sudah Diimplementasikan"
+                              : item.implementationStatus === "DALAM_IMPLEMENTASI"
+                                ? "Dalam Implementasi"
+                                : item.implementationStatus === "DIHENTIKAN"
+                                  ? "Dihentikan"
+                                  : "Belum Diimplementasikan"}
                           </span>
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          {item.effectivenessRating > 0
-                            ? `${item.effectivenessRating}/5`
-                            : "-"}
                         </TableCell>
                         <TableCell className="text-xs">
                           {item.targetDate
@@ -446,7 +401,7 @@ END OF DOCUMENT
                             : "-"}
                         </TableCell>
                         <TableCell>
-                          {item.isVerified ? (
+                          {item.implementationStatus === "DIIMPLEMENTASIKAN" ? (
                             <CheckCircle2 className="w-4 h-4 text-green-600" />
                           ) : (
                             <AlertCircle className="w-4 h-4 text-yellow-600" />
@@ -489,26 +444,6 @@ END OF DOCUMENT
                     />
                   </div>
                 </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium">
-                      Verification Rate
-                    </span>
-                    <span className="text-sm font-bold">
-                      {implementationStats.verified}/
-                      {implementationStats.total} ({verificationRate}%)
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-3">
-                    <div
-                      className="bg-green-500 h-3 rounded-full"
-                      style={{
-                        width: `${verificationRate}%`,
-                      }}
-                    />
-                  </div>
-                </div>
               </div>
             </CardContent>
           </Card>
@@ -519,28 +454,22 @@ END OF DOCUMENT
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <p className="text-sm text-gray-600">Belum Diimplementasikan</p>
+                  <p className="text-2xl font-bold text-gray-600">
+                    {implementationStats.planned}
+                  </p>
+                </div>
                 <div className="p-4 bg-blue-50 rounded-lg">
-                  <p className="text-sm text-gray-600">Implementation Rate</p>
+                  <p className="text-sm text-gray-600">Dalam Implementasi</p>
                   <p className="text-2xl font-bold text-blue-600">
-                    {implementationRate}%
+                    {implementationStats.inProgress}
                   </p>
                 </div>
                 <div className="p-4 bg-green-50 rounded-lg">
-                  <p className="text-sm text-gray-600">Verification Rate</p>
+                  <p className="text-sm text-gray-600">Sudah Diimplementasikan</p>
                   <p className="text-2xl font-bold text-green-600">
-                    {verificationRate}%
-                  </p>
-                </div>
-                <div className="p-4 bg-purple-50 rounded-lg">
-                  <p className="text-sm text-gray-600">Avg Effectiveness</p>
-                  <p className="text-2xl font-bold text-purple-600">
-                    {avgEffectiveness}/5
-                  </p>
-                </div>
-                <div className="p-4 bg-yellow-50 rounded-lg">
-                  <p className="text-sm text-gray-600">Pending Controls</p>
-                  <p className="text-2xl font-bold text-yellow-600">
-                    {implementationStats.pending}
+                    {implementationStats.implemented}
                   </p>
                 </div>
               </div>

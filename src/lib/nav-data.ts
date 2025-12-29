@@ -128,7 +128,7 @@ export const navMain = [
         isViewOnly: ["RISK_OWNER", "TOP_MANAGEMENT"],
       },
       {
-        title: "SoA",
+        title: "Implementasi Kontrol",
         url: "/dashboard/kontrol/soa",
         accessRole: ["RISK_MANAGER", "RISK_OWNER", "TOP_MANAGEMENT"],
         isViewOnly: ["RISK_OWNER", "TOP_MANAGEMENT"],
