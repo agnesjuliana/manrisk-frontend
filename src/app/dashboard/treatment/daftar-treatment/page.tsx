@@ -8,7 +8,7 @@ import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { PaginatedTable } from "@/components/paginated-table"
-import { Eye, X } from "lucide-react"
+import { Eye, X, Edit, CheckCircle, CheckCircle2, XCircle } from "lucide-react"
 import { toast } from "sonner"
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api"
@@ -87,11 +87,12 @@ interface UserOption {
 }
 
 export default function DaftarTreatmentPage() {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, user } = useAuth()
   const [token, setToken] = useState<string | null>(null)
   const [data, setData] = useState<TreatmentItem[]>([])
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
+  const [isEditMode, setIsEditMode] = useState(false)
   const [selectedRisk, setSelectedRisk] = useState<Risk | null>(null)
   const [riskCriteria, setRiskCriteria] = useState<RiskCriteria | null>(null)
   const [controlOptions, setControlOptions] = useState<ControlOption[]>([])
@@ -270,6 +271,12 @@ export default function DaftarTreatmentPage() {
   function openTreatmentForm(risk: Risk, treatment?: TreatmentData) {
     setSelectedRisk(risk)
     setSelectedControls(treatment?.relatedControls ?? [])
+    // Check if user can edit: treatment exists, isApprovedByTop is not true, and user role is RISK_MANAGER or TOP_MANAGEMENT
+    const canEdit = treatment && 
+      treatment.isApprovedByTop !== true && 
+      (user?.role === "RISK_MANAGER" || user?.role === "TOP_MANAGEMENT")
+    setIsEditMode(!!canEdit)
+    
     if (treatment) {
       setForm({
         treatmentOpt: treatment.treatmentOpt,
@@ -330,6 +337,7 @@ export default function DaftarTreatmentPage() {
         if (result.status) {
           toast.success("Treatment berhasil disimpan")
           setOpen(false)
+          setIsEditMode(false)
           // Refresh data
           const treatmentsResponse = await fetch(`${API_BASE_URL}/treatments`, {
             headers: getHeaders(),
@@ -348,6 +356,135 @@ export default function DaftarTreatmentPage() {
     }
 
     sendTreatment()
+  }
+
+  function updateTreatment() {
+    if (!selectedRisk || !token) return
+
+    const treatment = data.find((t) => t.risk.id === selectedRisk.id)?.treatment
+    if (!treatment) return
+
+    const payload = {
+      riskId: selectedRisk.id,
+      picId: form.picId,
+      treatmentOpt: form.treatmentOpt,
+      detailedActionPlan: form.detailedActionPlan,
+      startAction: form.startAction,
+      endAction: form.endAction,
+      controlIds: selectedControls.map((c) => c.id),
+      impactSeverityTarget: parseInt(form.impactSeverityTarget),
+      likelihoodOccurenceTarget: parseInt(form.likelihoodOccurenceTarget),
+      detectionTarget: parseInt(form.detectionTarget),
+      actionReason: form.actionReason,
+      notes: form.notes,
+    }
+
+    const sendUpdate = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/treatments/${treatment.id}`, {
+          method: "PATCH",
+          headers: getHeaders(),
+          body: JSON.stringify(payload),
+        })
+        const result = await response.json()
+        if (result.status) {
+          toast.success("Treatment berhasil diperbarui")
+          setOpen(false)
+          setIsEditMode(false)
+          // Refresh data
+          const treatmentsResponse = await fetch(`${API_BASE_URL}/treatments`, {
+            headers: getHeaders(),
+          })
+          const treatmentsResult = await treatmentsResponse.json()
+          if (treatmentsResult.status && treatmentsResult.data?.data) {
+            setData(treatmentsResult.data.data)
+          }
+        } else {
+          toast.error(result.message || "Gagal memperbarui treatment")
+        }
+      } catch (error) {
+        console.error("Failed to update treatment:", error)
+        toast.error("Gagal memperbarui treatment")
+      }
+    }
+
+    sendUpdate()
+  }
+
+  function approveTreatment() {
+    if (!selectedRisk || !token) return
+
+    const treatment = data.find((t) => t.risk.id === selectedRisk.id)?.treatment
+    if (!treatment) return
+
+    const sendApproval = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/treatments/${treatment.id}`, {
+          method: "PATCH",
+          headers: getHeaders(),
+          body: JSON.stringify({ isApprovedByTop: true }),
+        })
+        const result = await response.json()
+        if (result.status) {
+          toast.success("Treatment berhasil disetujui")
+          setOpen(false)
+          setIsEditMode(false)
+          // Refresh data
+          const treatmentsResponse = await fetch(`${API_BASE_URL}/treatments`, {
+            headers: getHeaders(),
+          })
+          const treatmentsResult = await treatmentsResponse.json()
+          if (treatmentsResult.status && treatmentsResult.data?.data) {
+            setData(treatmentsResult.data.data)
+          }
+        } else {
+          toast.error(result.message || "Gagal menyetujui treatment")
+        }
+      } catch (error) {
+        console.error("Failed to approve treatment:", error)
+        toast.error("Gagal menyetujui treatment")
+      }
+    }
+
+    sendApproval()
+  }
+
+  function rejectTreatment() {
+    if (!selectedRisk || !token) return
+
+    const treatment = data.find((t) => t.risk.id === selectedRisk.id)?.treatment
+    if (!treatment) return
+
+    const sendRejection = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/treatments/${treatment.id}`, {
+          method: "PATCH",
+          headers: getHeaders(),
+          body: JSON.stringify({ isApprovedByTop: false }),
+        })
+        const result = await response.json()
+        if (result.status) {
+          toast.success("Treatment berhasil ditolak")
+          setOpen(false)
+          setIsEditMode(false)
+          // Refresh data
+          const treatmentsResponse = await fetch(`${API_BASE_URL}/treatments`, {
+            headers: getHeaders(),
+          })
+          const treatmentsResult = await treatmentsResponse.json()
+          if (treatmentsResult.status && treatmentsResult.data?.data) {
+            setData(treatmentsResult.data.data)
+          }
+        } else {
+          toast.error(result.message || "Gagal menolak treatment")
+        }
+      } catch (error) {
+        console.error("Failed to reject treatment:", error)
+        toast.error("Gagal menolak treatment")
+      }
+    }
+
+    sendRejection()
   }
 
   const filteredControls = useMemo(() => {
@@ -373,6 +510,7 @@ export default function DaftarTreatmentPage() {
     picName: item.treatment?.pic?.name ?? "-",
     approvalStatus: item.treatment?.isApprovedByTop,
     risk: item.risk,
+    userRole: user?.role,
   }))
 
   return (
@@ -508,7 +646,19 @@ export default function DaftarTreatmentPage() {
             {
               header: "Aksi",
               key: "id",
-              render: (value, row) => (
+              render: (value, row) => {
+                // Only RISK_MANAGER can edit
+                const canEdit = row.treatment && 
+                  row.treatment.isApprovedByTop !== true && 
+                  row.userRole === "RISK_MANAGER"
+                
+                // TOP_MANAGEMENT approval/rejection pending
+                const isPending = row.treatment && 
+                  row.treatment.isApprovedByTop === null && 
+                  row.userRole === "TOP_MANAGEMENT"
+                
+                return (
+                <div className="flex items-center gap-2">
                 <Dialog open={open && selectedRisk?.id === row.id} onOpenChange={setOpen}>
                   <DialogTrigger asChild>
                     <Button
@@ -516,17 +666,102 @@ export default function DaftarTreatmentPage() {
                       variant={row.treatment ? "ghost" : "outline"}
                       onClick={() => openTreatmentForm(row.risk, row.treatment ?? undefined)}
                     >
-                      {row.treatment ? <Eye className="w-4 h-4" /> : "Pilih Treatment"}
+                      {!row.treatment && "Pilih Treatment"}
+                      {row.treatment && canEdit && <Edit className="w-4 h-4" />}
+                      {row.treatment && !canEdit && <Eye className="w-4 h-4" />}
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                       <DialogTitle>
-                        {row.treatment ? "Lihat Treatment" : "Penetapan Treatment Risiko"}
+                        {isEditMode ? "Edit Treatment" : row.treatment ? "Lihat Treatment" : "Penetapan Treatment Risiko"}
                       </DialogTitle>
                     </DialogHeader>
 
-                    <div className="space-y-6">
+                    {/* TOP_MANAGEMENT View - Read-only display */}
+                    {row.treatment && row.userRole === "TOP_MANAGEMENT" ? (
+                      <div className="space-y-6">
+                        {/* Risk Information */}
+                        <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                          <p className="text-xs font-semibold text-blue-900 mb-3 uppercase tracking-wide">Informasi Risiko</p>
+                          <div className="space-y-3">
+                            <div>
+                              <p className="text-xs text-blue-900 font-medium mb-1">Kode Risiko</p>
+                              <p className="font-semibold text-lg text-blue-900">{row.risk.customRiskId}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-blue-900 font-medium mb-1">Risiko Teridentifikasi</p>
+                              <p className="font-semibold text-gray-900">{row.risk.identifiedRisk}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-blue-900 font-medium mb-1">Kerentanan</p>
+                              <p className="text-sm text-gray-600">{row.risk.vulnerability}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Treatment Details */}
+                        <div className="space-y-4">
+                          <div>
+                            <label className="text-xs font-medium text-gray-700 mb-1 block">Opsi Perlakuan</label>
+                            <p className="text-sm font-medium text-gray-900">{row.treatment?.treatmentOpt}</p>
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-gray-700 mb-1 block">Penanggung Jawab (PIC)</label>
+                            <p className="text-sm font-medium text-gray-900">{row.treatment?.pic?.name}</p>
+                          </div>
+                          <div className="grid grid-cols-3 gap-3">
+                            <div>
+                              <label className="text-xs font-medium text-gray-700 mb-1 block">{riskCriteria?.isFMEA ? "Target Severity" : "Target Impact"}</label>
+                              <p className="text-sm font-medium text-gray-900">{row.treatment?.impactSeverityTarget}</p>
+                            </div>
+                            <div>
+                              <label className="text-xs font-medium text-gray-700 mb-1 block">{riskCriteria?.isFMEA ? "Target Occurrence" : "Target Likelihood"}</label>
+                              <p className="text-sm font-medium text-gray-900">{row.treatment?.likelihoodOccurenceTarget}</p>
+                            </div>
+                            <div>
+                              <label className="text-xs font-medium text-gray-700 mb-1 block">Target Detection</label>
+                              <p className="text-sm font-medium text-gray-900">{row.treatment?.detectionTarget}</p>
+                            </div>
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-gray-700 mb-1 block">Alasan Pemilihan Opsi</label>
+                            <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded">{row.treatment?.actionReason}</p>
+                          </div>
+                          <div>
+                            <label className="text-xs font-medium text-gray-700 mb-1 block">Rencana Aksi Detail</label>
+                            <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded">{row.treatment?.detailedActionPlan}</p>
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="text-xs font-medium text-gray-700 mb-1 block">Start Action</label>
+                              <p className="text-sm font-medium text-gray-900">{row.treatment?.startAction?.split("T")[0]}</p>
+                            </div>
+                            <div>
+                              <label className="text-xs font-medium text-gray-700 mb-1 block">End Action</label>
+                              <p className="text-sm font-medium text-gray-900">{row.treatment?.endAction?.split("T")[0]}</p>
+                            </div>
+                          </div>
+                          {row.treatment?.relatedControls && row.treatment.relatedControls.length > 0 && (
+                            <div>
+                              <label className="text-xs font-medium text-gray-700 mb-2 block">Kontrol Terkait (Annex A)</label>
+                              <div className="flex flex-wrap gap-2">
+                                {row.treatment.relatedControls.map((control) => (
+                                  <span key={control.id} className="inline-block bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-xs font-medium">
+                                    {control.code} - {control.title}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          <div>
+                            <label className="text-xs font-medium text-gray-700 mb-1 block">Catatan Tambahan</label>
+                            <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded">{row.treatment?.notes}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-6">
                       {/* Risk Information Section */}
                       <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
                         <p className="text-xs font-semibold text-blue-900 mb-3 uppercase tracking-wide">Informasi Risiko</p>
@@ -552,7 +787,7 @@ export default function DaftarTreatmentPage() {
                         <Select
                           value={form.treatmentOpt}
                           onValueChange={(v) => setForm((s) => ({ ...s, treatmentOpt: v }))}
-                          disabled={!!row.treatment}
+                          disabled={!isEditMode && !!row.treatment}
                         >
                           <SelectTrigger className="w-full">
                             <SelectValue />
@@ -572,7 +807,7 @@ export default function DaftarTreatmentPage() {
                         <Select
                           value={form.picId}
                           onValueChange={(v) => setForm((s) => ({ ...s, picId: v }))}
-                          disabled={!!row.treatment}
+                          disabled={!isEditMode && !!row.treatment}
                         >
                           <SelectTrigger className="w-full">
                             <SelectValue placeholder="Pilih Penanggung Jawab" />
@@ -603,7 +838,7 @@ export default function DaftarTreatmentPage() {
                               onValueChange={(v) =>
                                 setForm((s) => ({ ...s, impactSeverityTarget: v }))
                               }
-                              disabled={!!row.treatment}
+                              disabled={!isEditMode && !!row.treatment}
                             >
                               <SelectTrigger className="w-full">
                                 <SelectValue />
@@ -626,7 +861,7 @@ export default function DaftarTreatmentPage() {
                               onValueChange={(v) =>
                                 setForm((s) => ({ ...s, likelihoodOccurenceTarget: v }))
                               }
-                              disabled={!!row.treatment}
+                              disabled={!isEditMode && !!row.treatment}
                             >
                               <SelectTrigger className="w-full">
                                 <SelectValue />
@@ -647,7 +882,7 @@ export default function DaftarTreatmentPage() {
                               onValueChange={(v) =>
                                 setForm((s) => ({ ...s, detectionTarget: v }))
                               }
-                              disabled={!!row.treatment}
+                              disabled={!isEditMode && !!row.treatment}
                             >
                               <SelectTrigger className="w-full">
                                 <SelectValue />
@@ -673,7 +908,7 @@ export default function DaftarTreatmentPage() {
                             <Textarea
                               value={form.actionReason}
                               onChange={(e) => setForm((s) => ({ ...s, actionReason: e.target.value }))}
-                              disabled={!!row.treatment}
+                              disabled={!isEditMode && !!row.treatment}
                               placeholder="Jelaskan alasan pemilihan opsi perlakuan"
                               className="text-sm"
                             />
@@ -685,7 +920,7 @@ export default function DaftarTreatmentPage() {
                               onChange={(e) =>
                                 setForm((s) => ({ ...s, detailedActionPlan: e.target.value }))
                               }
-                              disabled={!!row.treatment}
+                              disabled={!isEditMode && !!row.treatment}
                               placeholder="Deskripsi rencana aksi yang detail"
                               className="text-sm"
                             />
@@ -703,7 +938,7 @@ export default function DaftarTreatmentPage() {
                               type="date"
                               value={form.startAction}
                               onChange={(e) => setForm((s) => ({ ...s, startAction: e.target.value }))}
-                              disabled={!!row.treatment}
+                              disabled={!isEditMode && !!row.treatment}
                             />
                           </div>
                           <div>
@@ -712,7 +947,7 @@ export default function DaftarTreatmentPage() {
                               type="date"
                               value={form.endAction}
                               onChange={(e) => setForm((s) => ({ ...s, endAction: e.target.value }))}
-                              disabled={!!row.treatment}
+                              disabled={!isEditMode && !!row.treatment}
                             />
                           </div>
                         </div>
@@ -731,7 +966,7 @@ export default function DaftarTreatmentPage() {
                                 className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 px-3 py-2 rounded-full text-xs font-medium whitespace-nowrap"
                               >
                                 <span className="truncate">{(control.code || "").trim()} - {control.title}</span>
-                                {!row.treatment && (
+                                {(!row.treatment || isEditMode) && (
                                   <button
                                     onClick={() =>
                                       setSelectedControls((prev) =>
@@ -750,7 +985,7 @@ export default function DaftarTreatmentPage() {
                         )}
 
                         {/* Search Input */}
-                        {!row.treatment && (
+                        {!row.treatment || isEditMode ? (
                           <>
                             <Input
                               placeholder="Cari kontrol by code atau title..."
@@ -758,7 +993,7 @@ export default function DaftarTreatmentPage() {
                               onChange={(e) => setSearchControl(e.target.value)}
                               onFocus={() => setSearchFocused(true)}
                               onBlur={() => setSearchFocused(false)}
-                              disabled={!!row.treatment}
+                              disabled={!isEditMode && !!row.treatment}
                               className="mb-2"
                             />
 
@@ -817,7 +1052,7 @@ export default function DaftarTreatmentPage() {
                               </div>
                             )}
                           </>
-                        )}
+                        ) : null}
 
                         {/* View-only mode */}
                         {row.treatment && selectedControls.length === 0 && (
@@ -831,12 +1066,13 @@ export default function DaftarTreatmentPage() {
                         <Textarea
                           value={form.notes}
                           onChange={(e) => setForm((s) => ({ ...s, notes: e.target.value }))}
-                          disabled={!!row.treatment}
+                          disabled={!isEditMode && !!row.treatment}
                           placeholder="Catatan tambahan"
                           className="text-sm"
                         />
                       </div>
-                    </div>
+                      </div>
+                    )}
 
                     <DialogFooter>
                       <Button
@@ -845,15 +1081,58 @@ export default function DaftarTreatmentPage() {
                           setOpen(false)
                           setSelectedRisk(null)
                           setSelectedControls([])
+                          setIsEditMode(false)
                         }}
                       >
                         {row.treatment ? "Tutup" : "Batal"}
                       </Button>
                       {!row.treatment && <Button onClick={saveTreatment}>Simpan</Button>}
+                      {isEditMode && row.userRole === "RISK_MANAGER" && <Button onClick={updateTreatment}>Update</Button>}
+                      {row.treatment && row.userRole === "TOP_MANAGEMENT" && row.treatment.isApprovedByTop === null && (
+                        <>
+                          <Button 
+                            variant="destructive" 
+                            onClick={rejectTreatment}
+                            className="gap-2"
+                          >
+                            <XCircle className="w-4 h-4" />
+                            Tolak
+                          </Button>
+                          <Button 
+                            onClick={approveTreatment}
+                            className="gap-2 bg-emerald-600 hover:bg-emerald-700"
+                          >
+                            <CheckCircle2 className="w-4 h-4" />
+                            Terima
+                          </Button>
+                        </>
+                      )}
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
-              ),
+                {isPending && (
+                  <>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={rejectTreatment}
+                      className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={approveTreatment}
+                      className="text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700"
+                    >
+                      <CheckCircle className="w-4 h-4" />
+                    </Button>
+                  </>
+                )}
+                </div>
+                )
+              },
               searchable: false,
             },
           ]}
