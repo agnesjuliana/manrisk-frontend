@@ -156,6 +156,14 @@ export default function DaftarKontrolPage() {
     targetDate: "",
     notes: "",
   });
+  const [isEditCustomControlModalOpen, setIsEditCustomControlModalOpen] = useState(false);
+  const [selectedCustomControlForEdit, setSelectedCustomControlForEdit] = useState<ControlResponse | null>(null);
+  const [editCustomControlForm, setEditCustomControlForm] = useState({
+    code: "",
+    category: "",
+    title: "",
+    description: "",
+  });
 
   const [form, setForm] = useState({
     code: "",
@@ -525,6 +533,112 @@ export default function DaftarKontrolPage() {
     }
   };
 
+  const openEditCustomControlModal = (control: ControlResponse) => {
+    setSelectedCustomControlForEdit(control);
+    setEditCustomControlForm({
+      code: control.code,
+      category: control.category,
+      title: control.title,
+      description: control.description,
+    });
+    setIsEditCustomControlModalOpen(true);
+  };
+
+  const handleEditCustomControlSave = async () => {
+    if (!selectedCustomControlForEdit || !token) return;
+    
+    if (!editCustomControlForm.code?.trim()) {
+      alert("Kode kontrol tidak boleh kosong");
+      return;
+    }
+    if (!editCustomControlForm.title?.trim()) {
+      alert("Nama kontrol tidak boleh kosong");
+      return;
+    }
+
+    const payload = {
+      code: editCustomControlForm.code,
+      category: editCustomControlForm.category,
+      title: editCustomControlForm.title,
+      description: editCustomControlForm.description,
+    };
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/controls/${selectedCustomControlForEdit.id}`,
+        {
+          method: "PATCH",
+          headers: getHeaders(),
+          body: JSON.stringify(payload),
+        }
+      );
+
+      const result = await response.json();
+      if (result.status) {
+        // Refresh controls list
+        const controlsResponse = await fetch(
+          `${API_BASE_URL}/controls?search=&is_annex=`,
+          { headers: getHeaders() }
+        );
+        const controlsResult = await controlsResponse.json();
+        if (controlsResult.status && controlsResult.data) {
+          setControls(controlsResult.data);
+        }
+
+        setIsEditCustomControlModalOpen(false);
+        setSelectedCustomControlForEdit(null);
+        alert("Kontrol berhasil diperbarui");
+      } else {
+        alert(result.message || "Gagal mengubah kontrol");
+      }
+    } catch (error) {
+      console.error("Failed to update custom control:", error);
+      alert("Gagal mengubah kontrol");
+    }
+  };
+
+  const handleDeleteCustomControl = async () => {
+    if (!selectedCustomControlForEdit || !token) {
+      return;
+    }
+
+    if (!confirm("Yakin ingin menghapus kontrol ini? Tindakan ini tidak dapat dibatalkan.")) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/controls/${selectedCustomControlForEdit.id}`,
+        {
+          method: "DELETE",
+          headers: getHeaders(),
+        }
+      );
+
+      const result = await response.json();
+      if (result.status) {
+        // Refresh controls list
+        const controlsResponse = await fetch(
+          `${API_BASE_URL}/controls?search=&is_annex=`,
+          { headers: getHeaders() }
+        );
+        const controlsResult = await controlsResponse.json();
+        if (controlsResult.status && controlsResult.data) {
+          setControls(controlsResult.data);
+        }
+
+        setIsEditCustomControlModalOpen(false);
+        setSelectedCustomControlForEdit(null);
+        alert("Kontrol berhasil dihapus");
+      } else {
+        alert(result.message || "Gagal menghapus kontrol");
+      }
+    } catch (error) {
+      console.error("Failed to delete custom control:", error);
+      alert("Gagal menghapus kontrol");
+    }
+  };
+
   const filteredControls = (() => {
     if (filter === "ALL") {
       return controls;
@@ -810,12 +924,23 @@ export default function DaftarKontrolPage() {
                             {control.code}
                           </TableCell>
                           <TableCell>
-                            <div>
-                              <div className="font-medium text-sm">{truncateText(control.title, 50)}</div>
-                              {control.description && (
-                                <div className="text-xs text-gray-500 mt-1">
-                                  {truncateText(control.description, 80)}
-                                </div>
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1">
+                                <div className="font-medium text-sm">{truncateText(control.title, 50)}</div>
+                                {control.description && (
+                                  <div className="text-xs text-gray-500 mt-1">
+                                    {truncateText(control.description, 80)}
+                                  </div>
+                                )}
+                              </div>
+                              {control.organizationId && (
+                                <button
+                                  onClick={() => openEditCustomControlModal(control)}
+                                  className="flex-shrink-0 p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                  title="Edit kontrol custom"
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
                               )}
                             </div>
                           </TableCell>
@@ -1428,6 +1553,106 @@ export default function DaftarKontrolPage() {
               </div>
             </div>
           ) : null}
+        </div>
+      </DialogContent>
+    </Dialog>
+
+    {/* Edit Custom Control Modal */}
+    <Dialog open={isEditCustomControlModalOpen} onOpenChange={setIsEditCustomControlModalOpen}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Edit Kontrol Custom</DialogTitle>
+          <DialogDescription>
+            Ubah detail kontrol yang telah ditambahkan oleh organisasi
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="edit-code">Kode Kontrol *</Label>
+              <Input
+                id="edit-code"
+                value={editCustomControlForm.code || ""}
+                onChange={(e) =>
+                  setEditCustomControlForm({
+                    ...editCustomControlForm,
+                    code: e.target.value,
+                  })
+                }
+                placeholder="Misal: 8.17, A1"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="edit-category">Kategori *</Label>
+              <Input
+                id="edit-category"
+                value={editCustomControlForm.category || ""}
+                onChange={(e) =>
+                  setEditCustomControlForm({
+                    ...editCustomControlForm,
+                    category: e.target.value,
+                  })
+                }
+                placeholder="Misal: Technological Controls"
+              />
+            </div>
+
+            <div className="col-span-2">
+              <Label htmlFor="edit-title">Nama Kontrol *</Label>
+              <Input
+                id="edit-title"
+                value={editCustomControlForm.title || ""}
+                onChange={(e) =>
+                  setEditCustomControlForm({
+                    ...editCustomControlForm,
+                    title: e.target.value,
+                  })
+                }
+                placeholder="Misal: Clock synchronization"
+              />
+            </div>
+
+            <div className="col-span-2">
+              <Label htmlFor="edit-description">Deskripsi</Label>
+              <textarea
+                id="edit-description"
+                value={editCustomControlForm.description || ""}
+                onChange={(e) =>
+                  setEditCustomControlForm({
+                    ...editCustomControlForm,
+                    description: e.target.value,
+                  })
+                }
+                placeholder="Detail deskripsi kontrol..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                rows={4}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-2 justify-between">
+          <Button
+            variant="destructive"
+            onClick={handleDeleteCustomControl}
+            className="gap-2"
+          >
+            <Trash2 className="w-4 h-4" />
+            Hapus
+          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsEditCustomControlModalOpen(false)}
+            >
+              Batal
+            </Button>
+            <Button onClick={handleEditCustomControlSave}>
+              Simpan Perubahan
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
