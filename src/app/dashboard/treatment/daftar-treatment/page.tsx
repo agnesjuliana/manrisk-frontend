@@ -371,6 +371,7 @@ export default function DaftarTreatmentPage() {
     riskLevel: getRiskLevelFromCriteria(item.score).level,
     treatment: item.treatment,
     picName: item.treatment?.pic?.name ?? "-",
+    approvalStatus: item.treatment?.isApprovedByTop,
     risk: item.risk,
   }))
 
@@ -482,6 +483,25 @@ export default function DaftarTreatmentPage() {
               render: (value, row: any) => {
                 if (!row.treatment) return <span className="text-sm text-gray-600">-</span>
                 return <span className="text-sm font-medium">{row.treatment.detectionTarget}</span>
+              },
+              searchable: false,
+            },
+            {
+              header: "Status",
+              key: "approvalStatus",
+              render: (value, row) => {
+                // If treatment hasn't been assigned yet
+                if (!row.treatment) {
+                  return <span className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-gray-200 text-gray-800">Draft</span>
+                }
+                // If treatment exists, check approval status
+                if (value === null) {
+                  return <span className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">Menunggu Persetujuan</span>
+                } else if (value === true) {
+                  return <span className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">DISETUJUI</span>
+                } else {
+                  return <span className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">DITOLAK</span>
+                }
               },
               searchable: false,
             },

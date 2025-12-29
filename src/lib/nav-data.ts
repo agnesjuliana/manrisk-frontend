@@ -104,11 +104,6 @@ export const navMain = [
         accessRole: ["RISK_MANAGER", "RISK_OWNER", "TOP_MANAGEMENT"],
       },
       {
-        title: "Persetujuan Treatment",
-        url: "/dashboard/treatment/persetujuan-treatment",
-        accessRole: ["RISK_MANAGER", "TOP_MANAGEMENT"],
-      },
-      {
         title: "Residu Risiko",
         url: "/dashboard/treatment/residu-risiko",
         accessRole: ["RISK_MANAGER", "TOP_MANAGEMENT"],
