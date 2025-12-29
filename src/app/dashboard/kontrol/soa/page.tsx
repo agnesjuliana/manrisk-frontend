@@ -20,14 +20,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-// Charts akan ditambahkan nanti dengan recharts
 import {
-  CheckCircle2,
-  AlertCircle,
-  TrendingUp,
-  Download,
-} from "lucide-react";
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+// Charts akan ditambahkan nanti dengan recharts
+import { CheckCircle2, AlertCircle, TrendingUp, Download } from "lucide-react";
 
 interface Control {
   id: string;
@@ -48,7 +49,12 @@ interface SoaItem {
   controlId: string;
   managerId: string;
   status: string;
-  implementationStatus: "DIRENCANAKAN" | "DALAM_IMPLEMENTASI" | "DIIMPLEMENTASIKAN" | "DIHENTIKAN" | null;
+  implementationStatus:
+    | "DIRENCANAKAN"
+    | "DALAM_IMPLEMENTASI"
+    | "DIIMPLEMENTASIKAN"
+    | "DIHENTIKAN"
+    | null;
   notes: string;
   targetDate: string;
   createdAt: string;
@@ -64,6 +70,10 @@ export default function SoaPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"table" | "analytics">("table");
+  const [selectedSoa, setSelectedSoa] = useState<SoaItem | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [tempImplementationStatus, setTempImplementationStatus] = useState<string | null>(null);
 
   useEffect(() => {
     fetchSoaData();
@@ -74,8 +84,8 @@ export default function SoaPage() {
       setLoading(true);
       const response = await apiClient.get("/soa", {
         params: {
-          status: "RELEVAN"
-        }
+          status: "RELEVAN",
+        },
       });
       setSoaData(response.data.data || []);
       setError(null);
@@ -142,11 +152,62 @@ export default function SoaPage() {
     }
   };
 
+  const handleOpenDetail = (item: SoaItem) => {
+    setSelectedSoa(item);
+    setTempImplementationStatus(null); // Reset temp status when opening modal
+    setShowDetailModal(true);
+  };
+  const handleStatusChange = (newStatus: string) => {
+    // Just update the temporary state, don't call API yet
+    setTempImplementationStatus(newStatus || null);
+  };
+
+  const handleSaveStatus = async () => {
+    if (!selectedSoa) return;
+
+    try {
+      setUpdatingStatus(true);
+      await apiClient.patch(`/soa/${selectedSoa.id}`, {
+        implementationStatus: tempImplementationStatus || null,
+      });
+
+      // Update local state
+      setSoaData(
+        soaData.map((item) =>
+          item.id === selectedSoa.id
+            ? { ...item, implementationStatus: (tempImplementationStatus || null) as any }
+            : item
+        )
+      );
+
+      // Update selected item
+      setSelectedSoa({
+        ...selectedSoa,
+        implementationStatus: (tempImplementationStatus || null) as any,
+      });
+
+      alert("Status berhasil diperbarui");
+      setShowDetailModal(false); // Close modal after successful save
+    } catch (err) {
+      console.error("Error updating status:", err);
+      alert("Gagal memperbarui status");
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
   const implementationStats = {
     total: soaData.length,
-    planned: soaData.filter((s) => !s.implementationStatus || s.implementationStatus === "DIRENCANAKAN").length,
-    inProgress: soaData.filter((s) => s.implementationStatus === "DALAM_IMPLEMENTASI").length,
-    implemented: soaData.filter((s) => s.implementationStatus === "DIIMPLEMENTASIKAN").length,
+    planned: soaData.filter(
+      (s) =>
+        !s.implementationStatus || s.implementationStatus === "DIRENCANAKAN"
+    ).length,
+    inProgress: soaData.filter(
+      (s) => s.implementationStatus === "DALAM_IMPLEMENTASI"
+    ).length,
+    implemented: soaData.filter(
+      (s) => s.implementationStatus === "DIIMPLEMENTASIKAN"
+    ).length,
   };
 
   const implementationRate =
@@ -164,9 +225,20 @@ Generated: ${new Date().toLocaleDateString("id-ID")}
 OVERVIEW
 ========
 Total Kontrol Relevan: ${soaData.length}
-Belum Diimplementasikan: ${soaData.filter(s => !s.implementationStatus || s.implementationStatus === "DIRENCANAKAN").length}
-Dalam Implementasi: ${soaData.filter(s => s.implementationStatus === "DALAM_IMPLEMENTASI").length}
-Sudah Diimplementasikan: ${soaData.filter(s => s.implementationStatus === "DIIMPLEMENTASIKAN").length}
+Belum Diimplementasikan: ${
+      soaData.filter(
+        (s) =>
+          !s.implementationStatus || s.implementationStatus === "DIRENCANAKAN"
+      ).length
+    }
+Dalam Implementasi: ${
+      soaData.filter((s) => s.implementationStatus === "DALAM_IMPLEMENTASI")
+        .length
+    }
+Sudah Diimplementasikan: ${
+      soaData.filter((s) => s.implementationStatus === "DIIMPLEMENTASIKAN")
+        .length
+    }
 
 CONTROL LIST
 ============
@@ -177,7 +249,11 @@ ${idx + 1}. ${item.control.code} - ${item.control.title}
    Category: ${item.control.category}
    Manager: ${item.manager.name} (${item.manager.email})
    Status: ${getImplementationStatusLabel(item.implementationStatus)}
-   Target Date: ${item.targetDate ? new Date(item.targetDate).toLocaleDateString("id-ID") : "N/A"}
+   Target Date: ${
+     item.targetDate
+       ? new Date(item.targetDate).toLocaleDateString("id-ID")
+       : "N/A"
+   }
    Notes: ${item.notes || "N/A"}
 `
   )
@@ -214,7 +290,9 @@ END OF DOCUMENT
       item.manager.name,
       item.manager.email,
       getImplementationStatusLabel(item.implementationStatus),
-      item.targetDate ? new Date(item.targetDate).toLocaleDateString("id-ID") : "-",
+      item.targetDate
+        ? new Date(item.targetDate).toLocaleDateString("id-ID")
+        : "-",
       item.notes || "-",
       item.statusTarget,
     ]);
@@ -224,9 +302,7 @@ END OF DOCUMENT
       ...rows.map((row) =>
         row
           .map((cell) =>
-            typeof cell === "string" && cell.includes(",")
-              ? `"${cell}"`
-              : cell
+            typeof cell === "string" && cell.includes(",") ? `"${cell}"` : cell
           )
           .join(",")
       ),
@@ -247,7 +323,8 @@ END OF DOCUMENT
         <div>
           <h1 className="text-3xl font-bold">Implementasi Kontrol Keamanan</h1>
           <p className="text-gray-600 mt-1">
-            Kelola pelaksanaan kontrol yang telah dinyatakan relevan untuk organisasi
+            Kelola pelaksanaan kontrol yang telah dinyatakan relevan untuk
+            organisasi
           </p>
         </div>
         <div className="flex gap-2">
@@ -266,8 +343,12 @@ END OF DOCUMENT
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Kontrol Relevan</CardTitle>
-            <CardDescription className="text-xs">Harus diimplementasikan</CardDescription>
+            <CardTitle className="text-sm font-medium text-gray-600">
+              Total Kontrol Relevan
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Harus diimplementasikan
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{soaData.length}</div>
@@ -276,41 +357,74 @@ END OF DOCUMENT
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Draft</CardTitle>
-            <CardDescription className="text-xs">Belum ada rencana</CardDescription>
+            <CardTitle className="text-sm font-medium text-gray-600">
+              Draft
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Belum ada rencana
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-600">{soaData.filter(s => !s.implementationStatus).length}</div>
+            <div className="text-2xl font-bold text-gray-600">
+              {soaData.filter((s) => !s.implementationStatus).length}
+            </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Direncanakan</CardTitle>
-            <CardDescription className="text-xs">Dalam perencanaan</CardDescription>
+            <CardTitle className="text-sm font-medium text-gray-600">
+              Direncanakan
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Dalam perencanaan
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{soaData.filter(s => s.implementationStatus === "DIRENCANAKAN").length}</div>
+            <div className="text-2xl font-bold text-yellow-600">
+              {
+                soaData.filter((s) => s.implementationStatus === "DIRENCANAKAN")
+                  .length
+              }
+            </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Dalam Implementasi</CardTitle>
-            <CardDescription className="text-xs">Sedang berjalan</CardDescription>
+            <CardTitle className="text-sm font-medium text-gray-600">
+              Dalam Implementasi
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Sedang berjalan
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{soaData.filter(s => s.implementationStatus === "DALAM_IMPLEMENTASI").length}</div>
+            <div className="text-2xl font-bold text-blue-600">
+              {
+                soaData.filter(
+                  (s) => s.implementationStatus === "DALAM_IMPLEMENTASI"
+                ).length
+              }
+            </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Diimplementasikan</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">
+              Diimplementasikan
+            </CardTitle>
             <CardDescription className="text-xs">Selesai</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{soaData.filter(s => s.implementationStatus === "DIIMPLEMENTASIKAN").length}</div>
+            <div className="text-2xl font-bold text-green-600">
+              {
+                soaData.filter(
+                  (s) => s.implementationStatus === "DIIMPLEMENTASIKAN"
+                ).length
+              }
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -335,14 +449,19 @@ END OF DOCUMENT
         // Table View
         <Card>
           <CardHeader>
-            <CardTitle>Implementasi Kontrol Relevan ({soaData.length})</CardTitle>
+            <CardTitle>
+              Implementasi Kontrol Relevan ({soaData.length})
+            </CardTitle>
             <CardDescription>
-              Daftar lengkap controls yang telah dinyatakan relevan beserta status implementasinya
+              Daftar lengkap controls yang telah dinyatakan relevan beserta
+              status implementasinya
             </CardDescription>
           </CardHeader>
           <CardContent>
             {loading ? (
-              <div className="text-center py-8 text-gray-500">Memuat data...</div>
+              <div className="text-center py-8 text-gray-500">
+                Memuat data...
+              </div>
             ) : error ? (
               <div className="text-center py-8 text-red-500">{error}</div>
             ) : (
@@ -357,6 +476,7 @@ END OF DOCUMENT
                       <TableHead>Implementation Status</TableHead>
                       <TableHead>Target Date</TableHead>
                       <TableHead>Status Target</TableHead>
+                      <TableHead>Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -373,18 +493,25 @@ END OF DOCUMENT
                             {item.control.code}
                           </TableCell>
                           <TableCell>
-                            <div className="font-medium">{item.control.title}</div>
+                            <div className="font-medium">
+                              {item.control.title}
+                            </div>
                           </TableCell>
-                          <TableCell className="text-xs">{item.control.category}</TableCell>
+                          <TableCell className="text-xs">
+                            {item.control.category}
+                          </TableCell>
                           <TableCell className="text-xs">
                             <div>{item.manager.name}</div>
-                            <div className="text-gray-500">{item.manager.email}</div>
                           </TableCell>
                           <TableCell>
                             <span
-                              className={`inline-block px-2 py-1 rounded text-xs font-medium ${getImplementationStatusColor(item.implementationStatus)}`}
+                              className={`inline-block px-2 py-1 rounded text-xs font-medium ${getImplementationStatusColor(
+                                item.implementationStatus
+                              )}`}
                             >
-                              {getImplementationStatusLabel(item.implementationStatus)}
+                              {getImplementationStatusLabel(
+                                item.implementationStatus
+                              )}
                             </span>
                           </TableCell>
                           <TableCell className="text-xs">
@@ -396,10 +523,21 @@ END OF DOCUMENT
                           </TableCell>
                           <TableCell>
                             <span
-                              className={`inline-block px-2 py-1 rounded text-xs font-medium ${getStatusTargetColor(item.statusTarget)}`}
+                              className={`inline-block px-2 py-1 rounded text-xs font-medium ${getStatusTargetColor(
+                                item.statusTarget
+                              )}`}
                             >
                               {getStatusTargetLabel(item.statusTarget)}
                             </span>
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleOpenDetail(item)}
+                            >
+                              Detail
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))
@@ -413,7 +551,6 @@ END OF DOCUMENT
       ) : (
         // Analytics View - Simplified without charts
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
           <Card className="lg:col-span-2">
             <CardHeader>
               <CardTitle>Implementation Progress</CardTitle>
@@ -450,7 +587,9 @@ END OF DOCUMENT
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="p-4 bg-gray-50 rounded-lg">
-                  <p className="text-sm text-gray-600">Draft / Belum Direncanakan</p>
+                  <p className="text-sm text-gray-600">
+                    Draft / Belum Direncanakan
+                  </p>
                   <p className="text-2xl font-bold text-gray-600">
                     {implementationStats.planned}
                   </p>
@@ -462,7 +601,9 @@ END OF DOCUMENT
                   </p>
                 </div>
                 <div className="p-4 bg-green-50 rounded-lg">
-                  <p className="text-sm text-gray-600">Sudah Diimplementasikan</p>
+                  <p className="text-sm text-gray-600">
+                    Sudah Diimplementasikan
+                  </p>
                   <p className="text-2xl font-bold text-green-600">
                     {implementationStats.implemented}
                   </p>
@@ -470,7 +611,11 @@ END OF DOCUMENT
                 <div className="p-4 bg-red-50 rounded-lg">
                   <p className="text-sm text-gray-600">Dihentikan</p>
                   <p className="text-2xl font-bold text-red-600">
-                    {soaData.filter(s => s.implementationStatus === "DIHENTIKAN").length}
+                    {
+                      soaData.filter(
+                        (s) => s.implementationStatus === "DIHENTIKAN"
+                      ).length
+                    }
                   </p>
                 </div>
               </div>
@@ -485,20 +630,32 @@ END OF DOCUMENT
               <div className="space-y-2">
                 {Array.from(
                   new Map(
-                    soaData.map(item => [item.statusTarget, item])
+                    soaData.map((item) => [item.statusTarget, item])
                   ).keys()
                 ).map((statusTarget) => {
-                  const count = soaData.filter(s => s.statusTarget === statusTarget).length;
-                  const percentage = ((count / soaData.length) * 100).toFixed(1);
+                  const count = soaData.filter(
+                    (s) => s.statusTarget === statusTarget
+                  ).length;
+                  const percentage = ((count / soaData.length) * 100).toFixed(
+                    1
+                  );
                   return (
                     <div key={statusTarget}>
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium">{getStatusTargetLabel(statusTarget)}</span>
-                        <span className="text-sm text-gray-600">{count} ({percentage}%)</span>
+                        <span className="text-sm font-medium">
+                          {getStatusTargetLabel(statusTarget)}
+                        </span>
+                        <span className="text-sm text-gray-600">
+                          {count} ({percentage}%)
+                        </span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
                         <div
-                          className={statusTarget === "ON_TRACK" ? "bg-green-500 h-2 rounded-full" : "bg-red-500 h-2 rounded-full"}
+                          className={
+                            statusTarget === "ON_TRACK"
+                              ? "bg-green-500 h-2 rounded-full"
+                              : "bg-red-500 h-2 rounded-full"
+                          }
                           style={{ width: `${percentage}%` }}
                         />
                       </div>
@@ -510,6 +667,128 @@ END OF DOCUMENT
           </Card>
         </div>
       )}
+
+      {/* Detail Modal */}
+      <Dialog open={showDetailModal} onOpenChange={(open) => {
+        setShowDetailModal(open);
+        if (!open) {
+          setTempImplementationStatus(null); // Reset temp status when closing modal
+        }
+      }}>
+        <DialogContent className="!w-[98vw] !max-w-[1400px] !max-h-[85vh] overflow-hidden flex flex-col p-6">
+          <DialogHeader>
+            <DialogTitle>Detail Statement of Applicability (SoA)</DialogTitle>
+            <DialogDescription>
+              Informasi lengkap tentang relevansi kontrol terhadap organisasi
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="overflow-y-auto flex-1">
+          {selectedSoa && (
+            <div className="space-y-6">
+              {/* Two Column Layout */}
+              <div className="grid grid-cols-2 gap-6">
+                {/* Left Column - Control Details */}
+                <div className="space-y-4 bg-gray-50 p-6 rounded-lg">
+                  <h3 className="font-semibold text-lg">Detail Kontrol</h3>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Kode</p>
+                    <p className="text-2xl font-bold text-blue-600 mt-1">{selectedSoa.control.code}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Nama Kontrol</p>
+                    <p className="text-sm font-medium text-gray-900 mt-1">{selectedSoa.control.title}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Kategori</p>
+                    <p className="text-sm font-medium text-gray-900 mt-1">{selectedSoa.control.category}</p>
+                  </div>
+                </div>
+                {/* Right Column - SoA Details */}
+                <div className="space-y-4 bg-gray-50 p-6 rounded-lg">
+                  <h3 className="font-semibold text-lg">Detail SoA</h3>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Status</p>
+                    <div className="mt-2">
+                      <span className="inline-block px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                        ✓ Relevan
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Manager / Penanggung Jawab</p>
+                    <p className="text-sm font-medium text-gray-900 mt-1">{selectedSoa.manager.name}</p>
+                    <p className="text-xs text-gray-600 mt-1">{selectedSoa.manager.email}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Target Date</p>
+                    <p className="text-sm font-medium text-gray-900 mt-1">
+                      {selectedSoa.targetDate ? new Date(selectedSoa.targetDate).toLocaleDateString("id-ID", { year: "numeric", month: "long", day: "numeric" }) : "-"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Catatan</p>
+                    <p className="text-sm text-gray-700 mt-1">{selectedSoa.notes || "-"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Dibuat</p>
+                    <p className="text-sm text-gray-700 mt-1">
+                      {new Date(selectedSoa.createdAt).toLocaleDateString("id-ID", { year: "numeric", month: "short", day: "numeric" })} {new Date(selectedSoa.createdAt).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              {/* Status Target Section */}
+              <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700">Status Target Implementasi</p>
+                  </div>
+                  <span className={`inline-block px-4 py-2 rounded-full text-sm font-medium ${getStatusTargetColor(selectedSoa.statusTarget)}`}>
+                    {getStatusTargetLabel(selectedSoa.statusTarget)}
+                  </span>
+                </div>
+              </div>
+              {/* Implementation Status Update */}
+              <div className="bg-white border border-gray-200 p-6 rounded-lg space-y-4">
+                <h3 className="font-semibold text-base text-gray-900">Update Status Implementasi</h3>
+                <div>
+                  <Label htmlFor="impl-status" className="text-sm font-semibold text-gray-700">
+                    Pilih Status Implementasi
+                  </Label>
+                  <select
+                    id="impl-status"
+                    value={tempImplementationStatus !== null ? tempImplementationStatus : (selectedSoa.implementationStatus || "")}
+                    onChange={(e) => handleStatusChange(e.target.value)}
+                    disabled={updatingStatus}
+                    className="w-full mt-3 px-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  >
+                    <option value="">Draft</option>
+                    <option value="DIRENCANAKAN">Direncanakan</option>
+                    <option value="DALAM_IMPLEMENTASI">Dalam Implementasi</option>
+                    <option value="DIIMPLEMENTASIKAN">Diimplementasikan</option>
+                    <option value="DIHENTIKAN">Dihentikan</option>
+                  </select>
+                  <div className="mt-3 inline-block px-3 py-1 rounded text-xs font-medium bg-gray-100 text-gray-700">
+                    Status saat ini: {getImplementationStatusLabel(selectedSoa.implementationStatus)}
+                  </div>
+                  {updatingStatus && <p className="text-sm text-blue-600 mt-2 animate-pulse">Menyimpan status...</p>}
+                </div>
+              </div>
+              {/* Buttons */}
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <Button variant="outline" onClick={() => setShowDetailModal(false)} className="px-6">
+                  Tutup
+                </Button>
+                <Button onClick={handleSaveStatus} disabled={updatingStatus} className="px-6 bg-blue-600 hover:bg-blue-700 text-white">
+                  {updatingStatus ? "Menyimpan..." : "Simpan"}
+                </Button>
+              </div>
+            </div>
+          )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
