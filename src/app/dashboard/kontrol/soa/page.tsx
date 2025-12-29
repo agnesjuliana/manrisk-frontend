@@ -1,13 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import {
-  Control,
-  loadControls,
-  getImplementationStats,
-} from "@/lib/controlsStore";
-import { loadTreatments, Treatment } from "@/lib/treatmentsStore";
-import { loadRisks, Risk } from "@/lib/risksStore";
+import apiClient from "@/lib/api/config";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,68 +29,122 @@ import {
   Download,
 } from "lucide-react";
 
+interface Control {
+  id: string;
+  code: string;
+  title: string;
+  category: string;
+}
+
+interface Manager {
+  id: string;
+  name: string;
+  email: string;
+}
+
+interface SoaItem {
+  id: string;
+  organizationId: string;
+  controlId: string;
+  managerId: string;
+  status: string;
+  implementationStatus: "DIRENCANAKAN" | "DALAM_IMPLEMENTASI" | "DIIMPLEMENTASIKAN" | "DIHENTIKAN" | null;
+  notes: string;
+  targetDate: string;
+  createdAt: string;
+  updatedAt: string | null;
+  deletedAt: string | null;
+  control: Control;
+  manager: Manager;
+  statusTarget: string;
+}
+
 export default function SoaPage() {
-  const [controls, setControls] = useState<Control[]>([]);
-  const [treatments, setTreatments] = useState<Treatment[]>([]);
-  const [risks, setRisks] = useState<Risk[]>([]);
-  const [stats, setStats] = useState<ReturnType<typeof getImplementationStats> | null>(null);
-  const [selectedControls, setSelectedControls] = useState<Set<string>>(new Set());
+  const [soaData, setSoaData] = useState<SoaItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"table" | "analytics">("table");
-  const [soaDetails, setSoaDetails] = useState<{
-    controlId: string;
-    controlName: string;
-    treatmentId: string | undefined;
-    riskId: string;
-    riskTitle: string;
-    treatmentOption: string;
-    implementationStatus: string;
-    effectivenessRating: number;
-    targetDate: string | undefined;
-    owner: string | undefined;
-    isImplemented: boolean;
-    isVerified: boolean;
-  } | null>(null);
 
   useEffect(() => {
-    setControls(loadControls());
-    setTreatments(loadTreatments());
-    setRisks(loadRisks());
-    setStats(getImplementationStats());
+    fetchSoaData();
   }, []);
 
-  const getSoaData = () => {
-    // Filter hanya kontrol yang relevan
-    const relevantControls = controls.filter(c => c.relevanceStatus === "RELEVAN");
-    
-    const soaItems = relevantControls.map((control) => {
-      const treatment = treatments.find((t) => t.id === control.treatmentId);
-      const risk = risks.find((r) => r.id === treatment?.riskId);
-
-      return {
-        controlId: control.id,
-        controlName: control.name,
-        treatmentId: treatment?.id,
-        riskId: treatment?.riskId || "-",
-        riskTitle: risk?.identifiedRisk || "-",
-        treatmentOption: control.treatmentOption || "-",
-        implementationStatus: control.implementationStatus || "DIRENCANAKAN",
-        effectivenessRating: control.effectivenessRating || 0,
-        targetDate: control.targetDate,
-        owner: control.owner,
-        isImplemented: control.implementationStatus === "DIIMPLEMENTASIKAN",
-        isVerified: control.implementationStatus === "DIIMPLEMENTASIKAN",
-        relevanceStatus: control.relevanceStatus,
-      };
-    });
-
-    return soaItems;
+  const fetchSoaData = async () => {
+    try {
+      setLoading(true);
+      const response = await apiClient.get("/soa", {
+        params: {
+          status: "RELEVAN"
+        }
+      });
+      setSoaData(response.data.data || []);
+      setError(null);
+    } catch (err) {
+      console.error("Error fetching SOA data:", err);
+      setError("Gagal memuat data SOA");
+      setSoaData([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const soaData = getSoaData();
+  const getImplementationStatusLabel = (status: string | null): string => {
+    if (!status) return "Draft";
+    switch (status) {
+      case "DIRENCANAKAN":
+        return "Belum Diimplementasikan";
+      case "DALAM_IMPLEMENTASI":
+        return "Dalam Implementasi";
+      case "DIIMPLEMENTASIKAN":
+        return "Sudah Diimplementasikan";
+      case "DIHENTIKAN":
+        return "Dihentikan";
+      default:
+        return "Draft";
+    }
+  };
+
+  const getImplementationStatusColor = (status: string | null): string => {
+    if (!status) return "bg-gray-100 text-gray-800";
+    switch (status) {
+      case "DIRENCANAKAN":
+        return "bg-gray-100 text-gray-800";
+      case "DALAM_IMPLEMENTASI":
+        return "bg-blue-100 text-blue-800";
+      case "DIIMPLEMENTASIKAN":
+        return "bg-green-100 text-green-800";
+      case "DIHENTIKAN":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const getStatusTargetLabel = (status: string): string => {
+    switch (status) {
+      case "ON_TRACK":
+        return "Sesuai Rencana";
+      case "OVERDUE":
+        return "Terlambat";
+      default:
+        return status;
+    }
+  };
+
+  const getStatusTargetColor = (status: string): string => {
+    switch (status) {
+      case "ON_TRACK":
+        return "bg-green-100 text-green-800";
+      case "OVERDUE":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
 
   const implementationStats = {
     total: soaData.length,
-    planned: soaData.filter((s) => s.implementationStatus === "DIRENCANAKAN").length,
+    planned: soaData.filter((s) => !s.implementationStatus || s.implementationStatus === "DIRENCANAKAN").length,
     inProgress: soaData.filter((s) => s.implementationStatus === "DALAM_IMPLEMENTASI").length,
     implemented: soaData.filter((s) => s.implementationStatus === "DIIMPLEMENTASIKAN").length,
   };
@@ -108,58 +156,6 @@ export default function SoaPage() {
         )
       : 0;
 
-  const avgEffectiveness =
-    soaData.filter((s) => s.effectivenessRating > 0).length > 0
-      ? (
-          soaData
-            .filter((s) => s.effectivenessRating > 0)
-            .reduce((sum, s) => sum + s.effectivenessRating, 0) /
-          soaData.filter((s) => s.effectivenessRating > 0).length
-        ).toFixed(1)
-      : 0;
-
-  const chartData = [
-    {
-      name: "Direncanakan",
-      value: soaData.filter((s) => s.implementationStatus === "DIRENCANAKAN").length,
-    },
-    {
-      name: "Dalam Implementasi",
-      value: soaData.filter((s) => s.implementationStatus === "DALAM_IMPLEMENTASI").length,
-    },
-    {
-      name: "Sudah Diimplementasikan",
-      value: soaData.filter((s) => s.implementationStatus === "DIIMPLEMENTASIKAN").length,
-    },
-    {
-      name: "Dihentikan",
-      value: soaData.filter((s) => s.implementationStatus === "DIHENTIKAN").length,
-    },
-  ];
-
-  const effectivenessData = [
-    {
-      rating: "Lemah (1-2)",
-      count: soaData.filter(
-        (s) => s.effectivenessRating > 0 && s.effectivenessRating <= 2
-      ).length,
-    },
-    {
-      rating: "Cukup (3)",
-      count: soaData.filter((s) => s.effectivenessRating === 3).length,
-    },
-    {
-      rating: "Baik (4)",
-      count: soaData.filter((s) => s.effectivenessRating === 4).length,
-    },
-    {
-      rating: "Sangat Baik (5)",
-      count: soaData.filter((s) => s.effectivenessRating === 5).length,
-    },
-  ];
-
-  const COLORS = ["#ef4444", "#f97316", "#eab308", "#22c55e"];
-
   const handleExportPDF = () => {
     const content = `
 IMPLEMENTASI KONTROL KEAMANAN
@@ -167,23 +163,22 @@ Generated: ${new Date().toLocaleDateString("id-ID")}
 
 OVERVIEW
 ========
-Total Kontrol Relevan: ${soaData.filter(s => s.relevanceStatus === "RELEVAN").length}
-Belum Diimplementasikan: ${soaData.filter(s => s.implementationStatus === "DIRENCANAKAN").length}
+Total Kontrol Relevan: ${soaData.length}
+Belum Diimplementasikan: ${soaData.filter(s => !s.implementationStatus || s.implementationStatus === "DIRENCANAKAN").length}
 Dalam Implementasi: ${soaData.filter(s => s.implementationStatus === "DALAM_IMPLEMENTASI").length}
 Sudah Diimplementasikan: ${soaData.filter(s => s.implementationStatus === "DIIMPLEMENTASIKAN").length}
-Avg Effectiveness: ${avgEffectiveness}/5
 
 CONTROL LIST
 ============
 ${soaData
   .map(
     (item, idx) => `
-${idx + 1}. ${item.controlId} - ${item.controlName}
-   Treatment: ${item.treatmentId}
-   Risk: ${item.riskId}
-   Status: ${item.implementationStatus}
-   Effectiveness: ${item.effectivenessRating}/5
-   Target Date: ${item.targetDate || "N/A"}
+${idx + 1}. ${item.control.code} - ${item.control.title}
+   Category: ${item.control.category}
+   Manager: ${item.manager.name} (${item.manager.email})
+   Status: ${getImplementationStatusLabel(item.implementationStatus)}
+   Target Date: ${item.targetDate ? new Date(item.targetDate).toLocaleDateString("id-ID") : "N/A"}
+   Notes: ${item.notes || "N/A"}
 `
   )
   .join("\n")}
@@ -201,29 +196,27 @@ END OF DOCUMENT
 
   const handleExportCSV = () => {
     const headers = [
-      "Control ID",
-      "Control Name",
-      "Treatment ID",
-      "Risk Code",
-      "Risk Title",
-      "Treatment Option",
+      "Control Code",
+      "Control Title",
+      "Category",
+      "Manager Name",
+      "Manager Email",
       "Implementation Status",
-      "Effectiveness",
       "Target Date",
-      "Owner",
+      "Notes",
+      "Status Target",
     ];
 
     const rows = soaData.map((item) => [
-      item.controlId,
-      item.controlName,
-      item.treatmentId || "-",
-      item.riskId,
-      item.riskTitle,
-      item.treatmentOption,
-      item.implementationStatus,
-      item.effectivenessRating,
-      item.targetDate || "-",
-      item.owner || "-",
+      item.control.code,
+      item.control.title,
+      item.control.category,
+      item.manager.name,
+      item.manager.email,
+      getImplementationStatusLabel(item.implementationStatus),
+      item.targetDate ? new Date(item.targetDate).toLocaleDateString("id-ID") : "-",
+      item.notes || "-",
+      item.statusTarget,
     ]);
 
     const csvContent = [
@@ -270,31 +263,41 @@ END OF DOCUMENT
       </div>
 
       {/* Statistics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">Total Kontrol Relevan</CardTitle>
             <CardDescription className="text-xs">Harus diimplementasikan</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{soaData.filter(s => s.relevanceStatus === "RELEVAN").length}</div>
+            <div className="text-2xl font-bold">{soaData.length}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Belum Diimplementasikan</CardTitle>
-            <CardDescription className="text-xs">Status: Direncanakan</CardDescription>
+            <CardTitle className="text-sm font-medium text-gray-600">Draft</CardTitle>
+            <CardDescription className="text-xs">Belum ada rencana</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-gray-600">{soaData.filter(s => s.implementationStatus === "DIRENCANAKAN").length}</div>
+            <div className="text-2xl font-bold text-gray-600">{soaData.filter(s => !s.implementationStatus).length}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">Direncanakan</CardTitle>
+            <CardDescription className="text-xs">Dalam perencanaan</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-yellow-600">{soaData.filter(s => s.implementationStatus === "DIRENCANAKAN").length}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">Dalam Implementasi</CardTitle>
-            <CardDescription className="text-xs">Status: Proses</CardDescription>
+            <CardDescription className="text-xs">Sedang berjalan</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">{soaData.filter(s => s.implementationStatus === "DALAM_IMPLEMENTASI").length}</div>
@@ -303,8 +306,8 @@ END OF DOCUMENT
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Sudah Diimplementasikan</CardTitle>
-            <CardDescription className="text-xs">Status: Selesai</CardDescription>
+            <CardTitle className="text-sm font-medium text-gray-600">Diimplementasikan</CardTitle>
+            <CardDescription className="text-xs">Selesai</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{soaData.filter(s => s.implementationStatus === "DIIMPLEMENTASIKAN").length}</div>
@@ -332,87 +335,79 @@ END OF DOCUMENT
         // Table View
         <Card>
           <CardHeader>
-            <CardTitle>SoA Control List ({soaData.length})</CardTitle>
+            <CardTitle>Implementasi Kontrol Relevan ({soaData.length})</CardTitle>
             <CardDescription>
-              Daftar lengkap controls, status implementasi, dan keterkaitan dengan
-              risiko dan treatment
+              Daftar lengkap controls yang telah dinyatakan relevan beserta status implementasinya
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <Table className="text-sm">
-                <TableHeader>
-                  <TableRow className="bg-gray-50">
-                    <TableHead>ID</TableHead>
-                    <TableHead>Nama Kontrol</TableHead>
-                    <TableHead>Risk Code</TableHead>
-                    <TableHead>Treatment</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Target Date</TableHead>
-                    <TableHead>Verifikasi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {soaData.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center py-4">
-                        Tidak ada data kontrol
-                      </TableCell>
+            {loading ? (
+              <div className="text-center py-8 text-gray-500">Memuat data...</div>
+            ) : error ? (
+              <div className="text-center py-8 text-red-500">{error}</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table className="text-sm">
+                  <TableHeader>
+                    <TableRow className="bg-gray-50">
+                      <TableHead>Control Code</TableHead>
+                      <TableHead>Control Title</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Manager</TableHead>
+                      <TableHead>Implementation Status</TableHead>
+                      <TableHead>Target Date</TableHead>
+                      <TableHead>Status Target</TableHead>
                     </TableRow>
-                  ) : (
-                    soaData.map((item) => (
-                      <TableRow key={item.controlId}>
-                        <TableCell className="font-semibold">
-                          {item.controlId}
-                        </TableCell>
-                        <TableCell>
-                          <div className="font-medium">{item.controlName}</div>
-                        </TableCell>
-                        <TableCell className="text-xs">{item.riskId}</TableCell>
-                        <TableCell className="text-xs">
-                          {item.treatmentId || "-"}
-                        </TableCell>
-                        <TableCell>
-                          <span
-                            className={`inline-block px-2 py-1 rounded text-xs font-medium ${
-                              item.implementationStatus === "DIIMPLEMENTASIKAN"
-                                ? "bg-green-100 text-green-800"
-                                : item.implementationStatus === "DALAM_IMPLEMENTASI"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : item.implementationStatus === "DIHENTIKAN"
-                                    ? "bg-red-100 text-red-800"
-                                    : "bg-gray-100 text-gray-800"
-                            }`}
-                          >
-                            {item.implementationStatus === "DIIMPLEMENTASIKAN"
-                              ? "Sudah Diimplementasikan"
-                              : item.implementationStatus === "DALAM_IMPLEMENTASI"
-                                ? "Dalam Implementasi"
-                                : item.implementationStatus === "DIHENTIKAN"
-                                  ? "Dihentikan"
-                                  : "Belum Diimplementasikan"}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          {item.targetDate
-                            ? new Date(item.targetDate).toLocaleDateString(
-                                "id-ID"
-                              )
-                            : "-"}
-                        </TableCell>
-                        <TableCell>
-                          {item.implementationStatus === "DIIMPLEMENTASIKAN" ? (
-                            <CheckCircle2 className="w-4 h-4 text-green-600" />
-                          ) : (
-                            <AlertCircle className="w-4 h-4 text-yellow-600" />
-                          )}
+                  </TableHeader>
+                  <TableBody>
+                    {soaData.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-4">
+                          Tidak ada data kontrol
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                    ) : (
+                      soaData.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell className="font-semibold">
+                            {item.control.code}
+                          </TableCell>
+                          <TableCell>
+                            <div className="font-medium">{item.control.title}</div>
+                          </TableCell>
+                          <TableCell className="text-xs">{item.control.category}</TableCell>
+                          <TableCell className="text-xs">
+                            <div>{item.manager.name}</div>
+                            <div className="text-gray-500">{item.manager.email}</div>
+                          </TableCell>
+                          <TableCell>
+                            <span
+                              className={`inline-block px-2 py-1 rounded text-xs font-medium ${getImplementationStatusColor(item.implementationStatus)}`}
+                            >
+                              {getImplementationStatusLabel(item.implementationStatus)}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-xs">
+                            {item.targetDate
+                              ? new Date(item.targetDate).toLocaleDateString(
+                                  "id-ID"
+                                )
+                              : "-"}
+                          </TableCell>
+                          <TableCell>
+                            <span
+                              className={`inline-block px-2 py-1 rounded text-xs font-medium ${getStatusTargetColor(item.statusTarget)}`}
+                            >
+                              {getStatusTargetLabel(item.statusTarget)}
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </CardContent>
         </Card>
       ) : (
@@ -421,7 +416,7 @@ END OF DOCUMENT
 
           <Card className="lg:col-span-2">
             <CardHeader>
-              <CardTitle>Implementation & Verification Progress</CardTitle>
+              <CardTitle>Implementation Progress</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -437,7 +432,7 @@ END OF DOCUMENT
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-3">
                     <div
-                      className="bg-blue-500 h-3 rounded-full"
+                      className="bg-green-500 h-3 rounded-full"
                       style={{
                         width: `${implementationRate}%`,
                       }}
@@ -455,7 +450,7 @@ END OF DOCUMENT
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="p-4 bg-gray-50 rounded-lg">
-                  <p className="text-sm text-gray-600">Belum Diimplementasikan</p>
+                  <p className="text-sm text-gray-600">Draft / Belum Direncanakan</p>
                   <p className="text-2xl font-bold text-gray-600">
                     {implementationStats.planned}
                   </p>
@@ -472,6 +467,44 @@ END OF DOCUMENT
                     {implementationStats.implemented}
                   </p>
                 </div>
+                <div className="p-4 bg-red-50 rounded-lg">
+                  <p className="text-sm text-gray-600">Dihentikan</p>
+                  <p className="text-2xl font-bold text-red-600">
+                    {soaData.filter(s => s.implementationStatus === "DIHENTIKAN").length}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle>Control Status Target Distribution</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {Array.from(
+                  new Map(
+                    soaData.map(item => [item.statusTarget, item])
+                  ).keys()
+                ).map((statusTarget) => {
+                  const count = soaData.filter(s => s.statusTarget === statusTarget).length;
+                  const percentage = ((count / soaData.length) * 100).toFixed(1);
+                  return (
+                    <div key={statusTarget}>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-medium">{getStatusTargetLabel(statusTarget)}</span>
+                        <span className="text-sm text-gray-600">{count} ({percentage}%)</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className={statusTarget === "ON_TRACK" ? "bg-green-500 h-2 rounded-full" : "bg-red-500 h-2 rounded-full"}
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
