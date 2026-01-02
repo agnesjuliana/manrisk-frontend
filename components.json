@@ -1,12 +1,12 @@
 {
   "$schema": "https://ui.shadcn.com/schema.json",
-  "style": "new-york",
+  "style": "base-maia",
   "rsc": true,
   "tsx": true,
   "tailwind": {
     "config": "",
     "css": "src/app/globals.css",
-    "baseColor": "stone",
+    "baseColor": "gray",
     "cssVariables": true,
     "prefix": ""
   },
@@ -18,5 +18,8 @@
     "lib": "@/lib",
     "hooks": "@/hooks"
   },
-  "registries": {}
+  "registries": {},
+  "runtimeConfig": {
+    "fonts": ["font-roboto"]
+  }
 }
