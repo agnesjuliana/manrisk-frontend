@@ -829,14 +829,14 @@ export default function KonteksOrganisasiPage() {
       </div>
 
       {/* Profile Card Section */}
-      <Card className="border border-gray-200 shadow-sm">
-        <CardHeader className="border-b border-gray-200 bg-white pb-4">
+      <Card className="border border-sky-100 shadow-md bg-white">
+        <CardHeader className="border-b border-sky-100 bg-gradient-to-r from-sky-50/50 to-white pb-4">
           <div className="flex items-start justify-between">
             <div>
               <CardTitle className="text-xl text-gray-900">
                 {authLoading ? <Skeleton className="h-6 w-48" /> : profile.name}
               </CardTitle>
-              <CardDescription className="text-gray-500 mt-1">
+              <CardDescription className="text-gray-600 mt-1">
                 Informasi dasar instansi yang terdaftar
               </CardDescription>
             </div>
@@ -876,24 +876,24 @@ export default function KonteksOrganisasiPage() {
             </div>
           ) : (
             <div className="grid gap-6 md:grid-cols-3">
-              <div className="p-4 rounded-lg bg-white border border-gray-200 hover:border-gray-300 transition-colors">
-                <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+              <div className="p-4 rounded-lg bg-gradient-to-br from-sky-50/30 to-white border border-sky-100 hover:border-sky-200 hover:shadow-md transition-all">
+                <div className="text-xs font-semibold text-sky-700 uppercase tracking-wide">
                   Alamat
                 </div>
                 <div className="font-medium text-gray-900 mt-2">
                   {profile.address}
                 </div>
               </div>
-              <div className="p-4 rounded-lg bg-white border border-gray-200 hover:border-gray-300 transition-colors">
-                <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+              <div className="p-4 rounded-lg bg-gradient-to-br from-sky-50/30 to-white border border-sky-100 hover:border-sky-200 hover:shadow-md transition-all">
+                <div className="text-xs font-semibold text-sky-700 uppercase tracking-wide">
                   Email
                 </div>
                 <div className="font-medium text-gray-900 mt-2">
                   {profile.email}
                 </div>
               </div>
-              <div className="p-4 rounded-lg bg-white border border-gray-200 hover:border-gray-300 transition-colors">
-                <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+              <div className="p-4 rounded-lg bg-gradient-to-br from-sky-50/30 to-white border border-sky-100 hover:border-sky-200 hover:shadow-md transition-all">
+                <div className="text-xs font-semibold text-sky-700 uppercase tracking-wide">
                   Telepon
                 </div>
                 <div className="font-medium text-gray-900 mt-2">

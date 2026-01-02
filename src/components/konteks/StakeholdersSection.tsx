@@ -33,35 +33,35 @@ export default function StakeholdersSection({
   isReadOnly?: boolean;
 }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Stakeholders</CardTitle>
-        <CardDescription>
+    <Card className="border border-sky-100 shadow-md bg-white">
+      <CardHeader className="border-b border-sky-100 bg-gradient-to-r from-sky-50/50 to-white pb-4">
+        <CardTitle className="text-gray-900">Stakeholders</CardTitle>
+        <CardDescription className="text-gray-600">
           Daftar pemangku kepentingan internal dan eksternal.
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-6">
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium">Internal</h3>
+            <h3 className="text-sm font-medium text-gray-900">Internal</h3>
           </div>
 
           <Table>
             <TableHeader>
-              <TableRow className="bg-gray-50">
-                <TableHead>No</TableHead>
-                <TableHead>Nama</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Divisi</TableHead>
+              <TableRow className="bg-sky-50 border-b border-sky-100">
+                <TableHead className="text-gray-700 font-semibold">No</TableHead>
+                <TableHead className="text-gray-700 font-semibold">Nama</TableHead>
+                <TableHead className="text-gray-700 font-semibold">Role</TableHead>
+                <TableHead className="text-gray-700 font-semibold">Divisi</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {users.map((u, i) => (
-                <TableRow key={u.id ?? i}>
-                  <TableCell className="w-8">{i + 1}</TableCell>
-                  <TableCell>{u.name}</TableCell>
-                  <TableCell>{u.role}</TableCell>
-                  <TableCell>{u.division}</TableCell>
+                <TableRow key={u.id ?? i} className="border-b border-sky-50 hover:bg-sky-50/30 transition-colors">
+                  <TableCell className="w-8 text-gray-600">{i + 1}</TableCell>
+                  <TableCell className="text-gray-900">{u.name}</TableCell>
+                  <TableCell className="text-gray-700">{u.role}</TableCell>
+                  <TableCell className="text-gray-700">{u.division}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -70,11 +70,11 @@ export default function StakeholdersSection({
 
         <div>
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium">External</h3>
+            <h3 className="text-sm font-medium text-gray-900">External</h3>
             {!isReadOnly && (
               <Button
                 size="sm"
-                variant="outline"
+                className="bg-sky-600 hover:bg-sky-700 text-white"
                 onClick={() => openAddModal("stakeholders.external")}
               >
                 Tambah
@@ -84,11 +84,11 @@ export default function StakeholdersSection({
 
           <Table>
             <TableHeader>
-              <TableRow className="bg-gray-50">
-                <TableHead>No</TableHead>
-                <TableHead>Nama</TableHead>
-                <TableHead>Interest</TableHead>
-                {!isReadOnly && <TableHead>Aksi</TableHead>}
+              <TableRow className="bg-sky-50 border-b border-sky-100">
+                <TableHead className="text-gray-700 font-semibold">No</TableHead>
+                <TableHead className="text-gray-700 font-semibold">Nama</TableHead>
+                <TableHead className="text-gray-700 font-semibold">Interest</TableHead>
+                {!isReadOnly && <TableHead className="text-gray-700 font-semibold">Aksi</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
