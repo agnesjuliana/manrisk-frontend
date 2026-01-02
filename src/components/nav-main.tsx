@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { ChevronRight, type LucideIcon } from "lucide-react"
 import { useAuth } from "@/hooks/use-auth"
+import { usePathname } from "next/navigation"
 
 import {
   Collapsible,
@@ -38,6 +39,7 @@ export function NavMain({
   }[]
 }) {
   const { role, isLoading } = useAuth()
+  const pathname = usePathname()
 
   if (isLoading) {
     return null
@@ -74,20 +76,23 @@ export function NavMain({
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <SidebarMenuSub>
-                  {item.items?.map((subItem) => (
-                    <SidebarMenuSubItem key={subItem.title}>
-                      <SidebarMenuSubButton asChild>
-                        <Link href={subItem.url}>
-                          <span>
-                            {subItem.title}
-                            {subItem.isViewOnly?.includes(role || "") && (
-                              <span className="ml-2 text-xs text-gray-500">(View Only)</span>
-                            )}
-                          </span>
-                        </Link>
-                      </SidebarMenuSubButton>
-                    </SidebarMenuSubItem>
-                  ))}
+                  {item.items?.map((subItem) => {
+                    const isActive = pathname === subItem.url || pathname.startsWith(subItem.url + "/")
+                    return (
+                      <SidebarMenuSubItem key={subItem.title}>
+                        <SidebarMenuSubButton asChild isActive={isActive}>
+                          <Link href={subItem.url}>
+                            <span>
+                              {subItem.title}
+                              {subItem.isViewOnly?.includes(role || "") && (
+                                <span className="ml-2 text-xs text-gray-500">(View Only)</span>
+                              )}
+                            </span>
+                          </Link>
+                        </SidebarMenuSubButton>
+                      </SidebarMenuSubItem>
+                    )
+                  })}
                 </SidebarMenuSub>
               </CollapsibleContent>
             </SidebarMenuItem>
