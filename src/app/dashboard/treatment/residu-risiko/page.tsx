@@ -282,10 +282,10 @@ export default function ResiduRisikoPage() {
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-semibold">Penilaian Ulang Risiko</h2>
-                <p className="text-sm text-muted-foreground mt-1">Risiko yang perlu dinilai ulang setelah treatment diterapkan</p>
+                <h2 className="text-xl font-semibold text-gray-900">Penilaian Ulang Risiko</h2>
+                <p className="text-sm text-gray-600 mt-1">Risiko yang perlu dinilai ulang setelah treatment diterapkan</p>
               </div>
-              <span className="text-sm font-medium bg-blue-100 text-blue-700 px-3 py-1 rounded-full">
+              <span className="text-sm font-medium bg-sky-100 text-sky-700 px-3 py-1 rounded-full">
                 {risksNeedingReassessment.length} yang menunggu
               </span>
             </div>
@@ -363,8 +363,8 @@ export default function ResiduRisikoPage() {
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-semibold">Hasil Penilaian Ulang</h2>
-                <p className="text-sm text-muted-foreground mt-1">Risiko yang sudah dinilai ulang dengan hasil terbaru</p>
+                <h2 className="text-xl font-semibold text-gray-900">Hasil Penilaian Ulang</h2>
+                <p className="text-sm text-gray-600 mt-1">Risiko yang sudah dinilai ulang dengan hasil terbaru</p>
               </div>
               <span className="text-sm font-medium bg-green-100 text-green-700 px-3 py-1 rounded-full">
                 {risksAlreadyReassessed.length} sudah dinilai
@@ -436,75 +436,73 @@ export default function ResiduRisikoPage() {
 
           {/* Dialog for Reassessment */}
           <Dialog open={editingRiskId !== null} onOpenChange={(open) => !open && setEditingRiskId(null)}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Penilaian Ulang Risiko</DialogTitle>
+            <DialogContent className="max-h-[90vh] overflow-y-auto !max-w-2xl w-full">
+              <DialogHeader className="border-b border-sky-100 pb-4">
+                <DialogTitle className="text-2xl text-gray-900">Penilaian Ulang Risiko</DialogTitle>
               </DialogHeader>
 
               {selectedRisk && (
                 <div className="space-y-4">
-                  <div className="rounded bg-gray-50 p-3">
-                    <p className="text-sm"><strong>Risk ID:</strong> {selectedRisk.customRiskId}</p>
-                    <p className="text-sm"><strong>Risk:</strong> {selectedRisk.identifiedRisk}</p>
-                    <p className="text-sm"><strong>Treatment:</strong> {selectedRisk.treatmentOption}</p>
+                  <div className="bg-sky-50 border border-sky-200 p-4 rounded-lg">
+                    <p className="text-xs text-sky-900 font-semibold uppercase tracking-wide mb-3">Risk Information</p>
+                    <div className="space-y-2">
+                      <p className="text-sm"><span className="font-medium text-sky-900">Risk ID:</span> <span className="text-gray-700">{selectedRisk.customRiskId}</span></p>
+                      <p className="text-sm"><span className="font-medium text-sky-900">Risk:</span> <span className="text-gray-700">{selectedRisk.identifiedRisk}</span></p>
+                      <p className="text-sm"><span className="font-medium text-sky-900">Treatment:</span> <span className="text-gray-700">{selectedRisk.treatmentOption}</span></p>
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 rounded bg-blue-50 p-3">
-                    <div>
-                      <p className="text-xs font-semibold text-muted-foreground">ORIGINAL RISK</p>
-                      <p className="mt-2 text-sm">
-                        <strong>Severity:</strong> {selectedRisk.originalSeverity}
-                      </p>
-                      <p className="text-sm">
-                        <strong>Likelihood:</strong> {selectedRisk.originalLikelihood}
-                      </p>
-                      <p className="text-sm">
-                        <strong>Score:</strong> {selectedRisk.originalScore}
-                      </p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-gray-50 border border-gray-200 p-4 rounded-lg">
+                      <p className="text-xs font-semibold text-gray-900 uppercase tracking-wide mb-3">Original Risk</p>
+                      <div className="space-y-2">
+                        <p className="text-sm"><span className="font-medium text-gray-700">Severity:</span> <span className="font-semibold text-gray-900">{selectedRisk.originalSeverity}</span></p>
+                        <p className="text-sm"><span className="font-medium text-gray-700">Likelihood:</span> <span className="font-semibold text-gray-900">{selectedRisk.originalLikelihood}</span></p>
+                        <p className="text-sm"><span className="font-medium text-gray-700">Score:</span> <span className="font-semibold text-gray-900">{selectedRisk.originalScore}</span></p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs font-semibold text-muted-foreground">RESIDUAL RISK</p>
-                      <p className="mt-2 text-sm">
-                        <strong>Severity:</strong> {selectedRisk.residualSeverity}
-                      </p>
-                      <p className="text-sm">
-                        <strong>Likelihood:</strong> {selectedRisk.residualLikelihood}
-                      </p>
-                      <p className="text-sm">
-                        <strong>Score:</strong> {selectedRisk.residualScore}
-                      </p>
+                    <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg">
+                      <p className="text-xs font-semibold text-amber-900 uppercase tracking-wide mb-3">Residual Risk</p>
+                      <div className="space-y-2">
+                        <p className="text-sm"><span className="font-medium text-amber-700">Severity:</span> <span className="font-semibold text-amber-900">{selectedRisk.residualSeverity}</span></p>
+                        <p className="text-sm"><span className="font-medium text-amber-700">Likelihood:</span> <span className="font-semibold text-amber-900">{selectedRisk.residualLikelihood}</span></p>
+                        <p className="text-sm"><span className="font-medium text-amber-700">Score:</span> <span className="font-semibold text-amber-900">{selectedRisk.residualScore}</span></p>
+                      </div>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <Label>Severity (1-5) *</Label>
+                      <label className="text-xs font-semibold text-sky-900 uppercase tracking-widest mb-2 block">Severity (1-5) *</label>
                       <Input
                         type="number"
                         min="1"
                         max="5"
                         value={editForm.reassessedSeverity}
                         onChange={(e) => setEditForm((s) => ({ ...s, reassessedSeverity: e.target.value }))}
+                        className="border-sky-200 focus:border-sky-400 focus:ring-sky-100"
                       />
                     </div>
                     <div>
-                      <Label>Likelihood (1-5) *</Label>
+                      <label className="text-xs font-semibold text-sky-900 uppercase tracking-widest mb-2 block">Likelihood (1-5) *</label>
                       <Input
                         type="number"
                         min="1"
                         max="5"
                         value={editForm.reassessedLikelihood}
                         onChange={(e) => setEditForm((s) => ({ ...s, reassessedLikelihood: e.target.value }))}
+                        className="border-sky-200 focus:border-sky-400 focus:ring-sky-100"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <Label>Catatan Penilaian</Label>
+                    <label className="text-xs font-semibold text-sky-900 uppercase tracking-widest mb-2 block">Catatan Penilaian</label>
                     <Input
                       placeholder="Masukkan catatan tentang penilaian ulang ini"
                       value={editForm.notes}
                       onChange={(e) => setEditForm((s) => ({ ...s, notes: e.target.value }))}
+                      className="border-sky-200 focus:border-sky-400 focus:ring-sky-100"
                     />
                   </div>
                 </div>
