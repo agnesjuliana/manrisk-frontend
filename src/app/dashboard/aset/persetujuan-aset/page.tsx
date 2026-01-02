@@ -165,17 +165,24 @@ export default function AssetApprovalPage() {
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">
-          {isRiskManager
-            ? "Pengajuan ke Top Management"
-            : "Persetujuan Pengajuan Aset"}
-        </h1>
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">
+            {isRiskManager
+              ? "Pengajuan ke Top Management"
+              : "Persetujuan Pengajuan Aset"}
+          </h1>
+          <p className="text-sm text-gray-600 mt-1">
+            {isRiskManager
+              ? "Kelola pengajuan aset untuk persetujuan top level management"
+              : "Tinjau dan setujui pengajuan aset dari risk manager"}
+          </p>
+        </div>
         {isRiskManager && (
           <Button
             onClick={() =>
               router.push("/dashboard/aset/persetujuan-aset/buat-ajuan")
             }
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
+            className="flex items-center gap-2 bg-sky-600 hover:bg-sky-700 text-white"
           >
             <Plus size={18} />
             Buat Pengajuan Baru
@@ -319,6 +326,7 @@ export default function AssetApprovalPage() {
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
+              className="border-sky-200 text-sky-700 hover:bg-sky-50"
               onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1 || isLoading}
             >
@@ -329,6 +337,7 @@ export default function AssetApprovalPage() {
                 <Button
                   key={i + 1}
                   variant={currentPage === i + 1 ? "default" : "outline"}
+                  className={currentPage === i + 1 ? "bg-sky-600 hover:bg-sky-700 text-white" : "border-sky-200 text-sky-700 hover:bg-sky-50"}
                   size="sm"
                   onClick={() => setCurrentPage(i + 1)}
                   disabled={isLoading}
@@ -339,6 +348,7 @@ export default function AssetApprovalPage() {
             </div>
             <Button
               variant="outline"
+              className="border-sky-200 text-sky-700 hover:bg-sky-50"
               onClick={() =>
                 setCurrentPage(Math.min(totalPages, currentPage + 1))
               }

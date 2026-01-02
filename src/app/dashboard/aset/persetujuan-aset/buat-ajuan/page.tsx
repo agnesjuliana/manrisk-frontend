@@ -161,14 +161,18 @@ export default function BuatAjuanPage() {
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-semibold">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-900">
             Buat Pengajuan Persetujuan Final Aset
           </h1>
+          <p className="text-sm text-gray-600 mt-1">
+            Pilih aset yang telah disetujui Risk Manager untuk diajukan ke Top Level Management
+          </p>
         </div>
         <Button
           onClick={handleAjukanClick}
           disabled={selected.size === 0}
+          className="bg-sky-600 hover:bg-sky-700 text-white disabled:bg-sky-400"
         >
           Ajukan ({selected.size} aset)
         </Button>
@@ -276,6 +280,7 @@ export default function BuatAjuanPage() {
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
+              className="border-sky-200 text-sky-700 hover:bg-sky-50"
               onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1 || isLoading}
             >
@@ -286,6 +291,7 @@ export default function BuatAjuanPage() {
                 <Button
                   key={i + 1}
                   variant={currentPage === i + 1 ? "default" : "outline"}
+                  className={currentPage === i + 1 ? "bg-sky-600 hover:bg-sky-700 text-white" : "border-sky-200 text-sky-700 hover:bg-sky-50"}
                   size="sm"
                   onClick={() => setCurrentPage(i + 1)}
                   disabled={isLoading}
@@ -296,6 +302,7 @@ export default function BuatAjuanPage() {
             </div>
             <Button
               variant="outline"
+              className="border-sky-200 text-sky-700 hover:bg-sky-50"
               onClick={() =>
                 setCurrentPage(Math.min(totalPages, currentPage + 1))
               }
@@ -310,16 +317,16 @@ export default function BuatAjuanPage() {
       {/* Approval Message Modal */}
       <Dialog open={showModal} onOpenChange={setShowModal}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Ajukan Persetujuan Final Aset</DialogTitle>
-            <DialogDescription>
+          <DialogHeader className="border-b border-sky-100 pb-4">
+            <DialogTitle className="text-2xl text-gray-900">Ajukan Persetujuan Final Aset</DialogTitle>
+            <DialogDescription className="text-gray-600 mt-2">
               Masukkan pesan untuk persetujuan {selected.size} aset ke top level
               management
             </DialogDescription>
           </DialogHeader>
 
           <Field>
-            <FieldLabel>Pesan Persetujuan</FieldLabel>
+            <FieldLabel className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Pesan Persetujuan</FieldLabel>
             <Textarea
               placeholder="Contoh: Persetujuan untuk aset-aset berikut ke top level management"
               value={message}
@@ -327,13 +334,15 @@ export default function BuatAjuanPage() {
                 setMessage(e.target.value)
               }
               rows={4}
+              className="border-sky-200 focus:border-sky-400 focus:ring-sky-100"
             />
           </Field>
 
-          <DialogFooter>
+          <DialogFooter className="border-t border-sky-100 pt-4 mt-6">
             <div className="flex justify-end w-full gap-2">
               <Button
                 variant="outline"
+                className="border-sky-200 text-sky-700 hover:bg-sky-50"
                 onClick={() => {
                   setShowModal(false);
                   setMessage("");
@@ -343,6 +352,7 @@ export default function BuatAjuanPage() {
                 Batal
               </Button>
               <Button
+                className="bg-sky-600 hover:bg-sky-700 text-white disabled:bg-sky-400"
                 onClick={handleSubmitApproval}
                 disabled={isSending || !message.trim()}
               >
