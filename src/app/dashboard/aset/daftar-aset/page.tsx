@@ -21,6 +21,7 @@ import {
   DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { DeleteConfirmationDialog } from "@/components/delete-confirmation-dialog";
 import { Plus, Trash, Edit, SendHorizontal, ArchiveX, ArchiveRestore, X, CheckCircle } from "lucide-react";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import {
@@ -71,6 +72,8 @@ export default function DaftarAsetPage() {
   const [showTypeSuggestions, setShowTypeSuggestions] = React.useState(false);
   const [showClassificationSuggestions, setShowClassificationSuggestions] =
     React.useState(false);
+  const [deletingAssetId, setDeletingAssetId] = React.useState<string | null>(null);
+  const [deletingAssetName, setDeletingAssetName] = React.useState<string>("");
 
   const filteredAssetTypes = React.useMemo(() => {
     if (!form.type.trim()) return assetTypes;
@@ -260,8 +263,6 @@ export default function DaftarAsetPage() {
   }
 
   async function handleDeleteAsset(id: string) {
-    if (!confirm("Apakah Anda yakin ingin menghapus aset ini?")) return;
-
     try {
       const response = await assetsApi.delete(id);
       if (response.status) {
@@ -277,6 +278,9 @@ export default function DaftarAsetPage() {
           ? err.message
           : "Terjadi kesalahan saat menghapus aset"
       );
+    } finally {
+      setDeletingAssetId(null);
+      setDeletingAssetName("");
     }
   }
 
@@ -626,16 +630,16 @@ export default function DaftarAsetPage() {
           <div className="flex items-center gap-2">
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
-                <Button className="flex items-center gap-2">
+                <Button className="bg-sky-600 hover:bg-sky-700 text-white flex items-center gap-2">
                   <Plus size={16} /> Tambah Aset
                 </Button>
               </DialogTrigger>
             <DialogContent>
-              <DialogHeader>
-                <DialogTitle>
+              <DialogHeader className="border-b border-sky-100 pb-4">
+                <DialogTitle className="text-2xl text-gray-900">
                   {editingAssetId ? "Edit Aset" : "Tambah Aset"}
                 </DialogTitle>
-                <DialogDescription>
+                <DialogDescription className="text-gray-600 mt-2">
                   {editingAssetId
                     ? "Ubah data aset di formulir berikut."
                     : "Isi data aset baru di formulir berikut."}
@@ -644,17 +648,18 @@ export default function DaftarAsetPage() {
 
               <FieldGroup>
                 <Field>
-                  <FieldLabel>Nama Aset</FieldLabel>
+                  <FieldLabel className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Nama Aset</FieldLabel>
                   <Input
                     value={form.name}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                       setForm((p) => ({ ...p, name: e.target.value }))
                     }
+                    className="border-sky-200 focus:border-sky-400 focus:ring-sky-100"
                   />
                 </Field>
 
                 <Field>
-                  <FieldLabel>Tipe Aset</FieldLabel>
+                  <FieldLabel className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Tipe Aset</FieldLabel>
                   <div className="relative" suppressHydrationWarning>
                     <Input
                       placeholder="Cari atau ketik tipe aset baru"
@@ -668,7 +673,9 @@ export default function DaftarAsetPage() {
                         setShowTypeSuggestions(true);
                       }}
                       onFocus={() => setShowTypeSuggestions(true)}
+                      onBlur={() => setTimeout(() => setShowTypeSuggestions(false), 100)}
                       disabled={isLoading}
+                      className="border-sky-200 focus:border-sky-400 focus:ring-sky-100"
                     />
                     {showTypeSuggestions && filteredAssetTypes.length > 0 && (
                       <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
@@ -695,7 +702,7 @@ export default function DaftarAsetPage() {
                 </Field>
 
                 <Field>
-                  <FieldLabel>Klasifikasi Aset</FieldLabel>
+                  <FieldLabel className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Klasifikasi Aset</FieldLabel>
                   <div className="relative" suppressHydrationWarning>
                     <Input
                       placeholder="Cari atau ketik klasifikasi aset baru"
@@ -709,7 +716,9 @@ export default function DaftarAsetPage() {
                         setShowClassificationSuggestions(true);
                       }}
                       onFocus={() => setShowClassificationSuggestions(true)}
+                      onBlur={() => setTimeout(() => setShowClassificationSuggestions(false), 100)}
                       disabled={isLoading}
+                      className="border-sky-200 focus:border-sky-400 focus:ring-sky-100"
                     />
                     {showClassificationSuggestions &&
                       filteredClassifications.length > 0 && (
@@ -737,7 +746,7 @@ export default function DaftarAsetPage() {
                 </Field>
 
                 <Field>
-                  <FieldLabel>Lokasi Aset</FieldLabel>
+                  <FieldLabel className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Lokasi Aset</FieldLabel>
                   <Input
                     value={form.location}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -746,14 +755,16 @@ export default function DaftarAsetPage() {
                         location: e.target.value,
                       }))
                     }
+                    className="border-sky-200 focus:border-sky-400 focus:ring-sky-100"
                   />
                 </Field>
               </FieldGroup>
 
-              <DialogFooter>
+              <DialogFooter className="border-t border-sky-100 pt-4 mt-6">
                 <div className="flex justify-end w-full gap-2">
                   <Button
                     variant="outline"
+                    className="border-sky-200 text-sky-700 hover:bg-sky-50"
                     onClick={() => {
                       setOpen(false);
                       setEditingAssetId(null);
@@ -771,6 +782,7 @@ export default function DaftarAsetPage() {
                     Batal
                   </Button>
                   <Button
+                    className="bg-sky-600 hover:bg-sky-700 text-white"
                     onClick={editingAssetId ? handleSaveEdit : handleAdd}
                     disabled={isSaving}
                   >
@@ -923,7 +935,10 @@ export default function DaftarAsetPage() {
                               <TooltipTrigger asChild>
                                 <button
                                   className="p-2 hover:bg-gray-100 rounded transition-colors"
-                                  onClick={() => handleDeleteAsset(row.id)}
+                                  onClick={() => {
+                                    setDeletingAssetId(row.id);
+                                    setDeletingAssetName(row.name);
+                                  }}
                                 >
                                   <Trash size={18} className="text-gray-600" />
                                 </button>
@@ -997,7 +1012,10 @@ export default function DaftarAsetPage() {
                             <TooltipTrigger asChild>
                               <button
                                 className="p-2 hover:bg-gray-100 rounded transition-colors"
-                                onClick={() => handleDeleteAsset(row.id)}
+                                onClick={() => {
+                                  setDeletingAssetId(row.id);
+                                  setDeletingAssetName(row.name);
+                                }}
                               >
                                 <Trash size={18} className="text-gray-600" />
                               </button>
@@ -1040,7 +1058,10 @@ export default function DaftarAsetPage() {
                               <TooltipTrigger asChild>
                                 <button
                                   className="p-2 hover:bg-gray-100 rounded transition-colors"
-                                  onClick={() => handleDeleteAsset(row.id)}
+                                  onClick={() => {
+                                    setDeletingAssetId(row.id);
+                                    setDeletingAssetName(row.name);
+                                  }}
                                 >
                                   <Trash size={18} className="text-gray-600" />
                                 </button>
@@ -1168,6 +1189,20 @@ export default function DaftarAsetPage() {
           </div>
         </div>
       )}
+
+      <DeleteConfirmationDialog
+        open={!!deletingAssetId}
+        itemName={deletingAssetName}
+        title="Hapus Aset"
+        description="Aset yang dihapus tidak dapat dipulihkan"
+        confirmLabel="Hapus"
+        cancelLabel="Batal"
+        onConfirm={() => deletingAssetId && handleDeleteAsset(deletingAssetId)}
+        onCancel={() => {
+          setDeletingAssetId(null);
+          setDeletingAssetName("");
+        }}
+      />
     </div>
   );
 }
