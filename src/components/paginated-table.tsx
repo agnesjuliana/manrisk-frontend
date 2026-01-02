@@ -177,38 +177,38 @@ export function PaginatedTable<T extends { id: string; status?: string }>({
       {/* Search and Filter Bar */}
       <div className="flex items-center gap-3 flex-shrink-0">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-sky-400" size={18} />
           <Input
             placeholder="Telusuri disini"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 pr-8 bg-gray-50 border-gray-200"
+            className="pl-10 pr-8 bg-white border-sky-200 focus:border-sky-400 focus:ring-sky-100"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery("")}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-sky-400 hover:text-sky-600"
             >
               <X size={18} />
             </button>
           )}
         </div>
 
-        <button className="p-2 hover:bg-gray-100 rounded-lg border border-gray-200 flex-shrink-0">
-          <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <button className="p-2 hover:bg-sky-50 rounded-lg border border-sky-200 flex-shrink-0 text-sky-600">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
           </svg>
         </button>
       </div>
 
       {/* Table */}
-      <div className="border border-gray-200 rounded-lg overflow-hidden bg-white w-full min-w-0">
+      <div className="border border-sky-100 rounded-lg overflow-hidden bg-white w-full min-w-0">
         <div className="overflow-x-auto">
           <Table className="min-w-full">
             <TableHeader>
-              <TableRow className="bg-gray-50 border-b border-gray-200 hover:bg-gray-50">
+              <TableRow className="bg-sky-100 border-b border-sky-200 hover:bg-sky-100">
                 {columns.map((column, idx) => (
-                  <TableHead key={idx} className="px-6 py-4 text-left text-sm font-semibold text-gray-700 bg-gray-50 whitespace-nowrap">
+                  <TableHead key={idx} className="px-6 py-4 text-left text-sm font-semibold text-sky-900 bg-sky-100 whitespace-nowrap">
                     {column.header}
                   </TableHead>
                 ))}
