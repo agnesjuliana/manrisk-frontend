@@ -2,9 +2,17 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from "@/components/ui/select";
 import { PaginatedTable } from "@/components/paginated-table";
 import apiClient from "@/lib/api/config";
 
@@ -49,6 +57,17 @@ interface Control {
   isAnnex: boolean;
 }
 
+interface RiskCriteria {
+  id: string;
+  organizationId: string;
+  isFMEA: boolean;
+  scale: number;
+  threshold: number;
+  scaleStatuses: Array<{ id: string; level: number; title: string }>;
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface TreatmentRecord {
   id: string;
   riskId: string;
@@ -90,11 +109,14 @@ export default function ResiduRisikoPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedRiskId, setSelectedRiskId] = useState<string | null>(null);
+  const [riskCriteria, setRiskCriteria] = useState<RiskCriteria | null>(null);
   const [editingRiskId, setEditingRiskId] = useState<string | null>(null);
   const [savingReassessment, setSavingReassessment] = useState(false);
+  const [saveConfirmationOpen, setSaveConfirmationOpen] = useState(false);
   const [editForm, setEditForm] = useState({
     reassessedLikelihood: "",
     reassessedSeverity: "",
+    reassessedDetection: "",
     notes: "",
   });
 
@@ -120,6 +142,23 @@ export default function ResiduRisikoPage() {
     fetchData();
   }, []);
 
+  // Fetch risk criteria
+  useEffect(() => {
+    const fetchRiskCriteria = async () => {
+      try {
+        const response = await apiClient.get("/risk-criteria");
+        if (response.data?.data) {
+          setRiskCriteria(response.data.data);
+        }
+      } catch (err) {
+        console.error("Error fetching risk criteria:", err);
+        setRiskCriteria(null);
+      }
+    };
+
+    fetchRiskCriteria();
+  }, []);
+
   // Separate risks: those without revisionLog (need reassessment) vs with revisionLog (already reassessed)
   const risksNeedingReassessment = useMemo(() => {
     return treatments
@@ -133,6 +172,12 @@ export default function ResiduRisikoPage() {
           riskId: t.risk.id,
           customRiskId: t.risk.customRiskId,
           identifiedRisk: t.risk.identifiedRisk,
+          vulnerability: t.risk.vulnerability,
+          threat: t.risk.threat,
+          detail: t.risk.detail,
+          isConfidentiality: t.risk.isConfidentiality,
+          isIntegrity: t.risk.isIntegrity,
+          isAvailability: t.risk.isAvailability,
           treatmentOption: t.treatmentOpt,
           originalSeverity: t.risk.impactSeverity,
           originalLikelihood: t.risk.likelihoodOccurence,
@@ -162,6 +207,7 @@ export default function ResiduRisikoPage() {
         const revisionLog = t.risk.revisionLog!;
         const reassessedScore = computeScore(revisionLog.impactSeverity, revisionLog.likelihoodOccurence);
         const reassessedLevel = computeRiskLevel(reassessedScore);
+        const scoreDifference = originalScore - reassessedScore;
 
         return {
           id: t.risk.id,
@@ -175,6 +221,7 @@ export default function ResiduRisikoPage() {
           residualLevel,
           reassessedScore,
           reassessedLevel,
+          scoreDifference,
           reassessedLikelihood: revisionLog.likelihoodOccurence,
           reassessedSeverity: revisionLog.impactSeverity,
           notes: "",
@@ -202,6 +249,7 @@ export default function ResiduRisikoPage() {
       setEditForm({
         reassessedLikelihood: risk.residualLikelihood.toString(),
         reassessedSeverity: risk.residualSeverity.toString(),
+        reassessedDetection: "",
         notes: "",
       });
       setSelectedRiskId(riskId);
@@ -309,31 +357,31 @@ export default function ResiduRisikoPage() {
                     render: (value) => <span className="font-medium">{String(value)}</span>,
                   },
                   {
-                    header: "Identified Risk",
+                    header: "Risiko",
                     key: "identifiedRisk",
                   },
                   {
-                    header: "Treatment",
+                    header: "Perlakuan",
                     key: "treatmentOption",
                   },
                   {
-                    header: "Original Score",
+                    header: "Skor Awal",
                     key: "originalScore",
                     render: (value) => (
                       <span className="inline-block rounded px-2 py-1 font-semibold text-xs bg-gray-100 text-gray-700">{String(value)}</span>
                     ),
                     searchable: false,
                   },
-                  {
-                    header: "Original Level",
-                    key: "originalLevel",
-                    render: (value: any) => (
-                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${(value as any).color}`}>
-                        {(value as any).label}
-                      </span>
-                    ),
-                    searchable: false,
-                  },
+                  // {
+                  //   header: "Original Level",
+                  //   key: "originalLevel",
+                  //   render: (value: any) => (
+                  //     <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${(value as any).color}`}>
+                  //       {(value as any).label}
+                  //     </span>
+                  //   ),
+                  //   searchable: false,
+                  // },
                   {
                     header: "Aksi",
                     key: "riskId",
@@ -390,15 +438,15 @@ export default function ResiduRisikoPage() {
                     render: (value) => <span className="font-medium">{String(value)}</span>,
                   },
                   {
-                    header: "Identified Risk",
+                    header: "Risiko",
                     key: "identifiedRisk" as any,
                   },
                   {
-                    header: "Treatment",
+                    header: "Perlakuan",
                     key: "treatmentOption" as any,
                   },
                   {
-                    header: "Original Score",
+                    header: "Skor Awal",
                     key: "originalScore" as any,
                     render: (value) => (
                       <span className="inline-block rounded px-2 py-1 font-semibold text-xs bg-gray-100 text-gray-700">{String(value)}</span>
@@ -406,7 +454,7 @@ export default function ResiduRisikoPage() {
                     searchable: false,
                   },
                   {
-                    header: "Reassessed Score",
+                    header: "Penilaian Ulang",
                     key: "reassessedScore" as any,
                     render: (value) => (
                       <span className="inline-block rounded px-2 py-1 font-semibold text-xs bg-blue-100 text-blue-700">{String(value)}</span>
@@ -414,15 +462,42 @@ export default function ResiduRisikoPage() {
                     searchable: false,
                   },
                   {
-                    header: "Reassessed Level",
-                    key: "reassessedLevel" as any,
-                    render: (value: any) => (
-                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${(value as any).color}`}>
-                        {(value as any).label}
-                      </span>
-                    ),
+                    header: "Hasil",
+                    key: "scoreDifference" as any,
+                    render: (value: any, row: any) => {
+                      const diff = row.scoreDifference as number;
+                      if (diff > 0) {
+                        return (
+                          <span className="inline-block rounded px-3 py-1 font-bold text-sm bg-green-100 text-green-700">
+                            - {Math.abs(diff)}
+                          </span>
+                        );
+                      } else if (diff < 0) {
+                        return (
+                          <span className="inline-block rounded px-3 py-1 font-bold text-sm bg-red-100 text-red-700">
+                            + {Math.abs(diff)}
+                          </span>
+                        );
+                      } else {
+                        return (
+                          <span className="inline-block rounded px-3 py-1 font-bold text-sm bg-gray-100 text-gray-700">
+                            = 0
+                          </span>
+                        );
+                      }
+                    },
                     searchable: false,
                   },
+                  // {
+                  //   header: "Reassessed Level",
+                  //   key: "reassessedLevel" as any,
+                  //   render: (value: any) => (
+                  //     <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${(value as any).color}`}>
+                  //       {(value as any).label}
+                  //     </span>
+                  //   ),
+                  //   searchable: false,
+                  // },
                 ]}
                 pageSize={10}
                 emptyMessage="Belum ada risiko yang dinilai ulang"
@@ -443,67 +518,155 @@ export default function ResiduRisikoPage() {
 
               {selectedRisk && (
                 <div className="space-y-4">
-                  <div className="bg-sky-50 border border-sky-200 p-4 rounded-lg">
-                    <p className="text-xs text-sky-900 font-semibold uppercase tracking-wide mb-3">Risk Information</p>
-                    <div className="space-y-2">
-                      <p className="text-sm"><span className="font-medium text-sky-900">Risk ID:</span> <span className="text-gray-700">{selectedRisk.customRiskId}</span></p>
-                      <p className="text-sm"><span className="font-medium text-sky-900">Risk:</span> <span className="text-gray-700">{selectedRisk.identifiedRisk}</span></p>
-                      <p className="text-sm"><span className="font-medium text-sky-900">Treatment:</span> <span className="text-gray-700">{selectedRisk.treatmentOption}</span></p>
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Left: Risk Information */}
+                    <div className="bg-sky-50 border border-sky-200 p-4 rounded-lg h-fit">
+                      <p className="text-xs text-sky-900 font-semibold uppercase tracking-wide mb-3">Risk Information</p>
+                      <div className="space-y-2">
+                        <div>
+                          <p className="text-xs font-medium text-sky-900">Risk ID</p>
+                          <p className="text-sm text-gray-700">{selectedRisk.customRiskId}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-sky-900">Risiko</p>
+                          <p className="text-sm text-gray-700">{selectedRisk.identifiedRisk}</p>
+                        </div>
+                        {selectedRisk.vulnerability && (
+                          <div>
+                            <p className="text-xs font-medium text-sky-900">Vulnerability</p>
+                            <p className="text-sm text-gray-700">{selectedRisk.vulnerability}</p>
+                          </div>
+                        )}
+                        {selectedRisk.threat && (
+                          <div>
+                            <p className="text-xs font-medium text-sky-900">Threat</p>
+                            <p className="text-sm text-gray-700">{selectedRisk.threat}</p>
+                          </div>
+                        )}
+                        {selectedRisk.detail && (
+                          <div>
+                            <p className="text-xs font-medium text-sky-900">Detail</p>
+                            <p className="text-sm text-gray-700">{selectedRisk.detail}</p>
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-xs font-medium text-sky-900">Treatment</p>
+                          <p className="text-sm text-gray-700">{selectedRisk.treatmentOption}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right: Original Risk & Residual Risk */}
+                    <div className="space-y-4">
+                      <div className="bg-gray-50 border border-gray-200 p-4 rounded-lg">
+                        <p className="text-xs font-semibold text-gray-900 uppercase tracking-wide mb-3">Original Risk</p>
+                        <div className="space-y-2">
+                          <p className="text-sm"><span className="font-medium text-gray-700">Severity:</span> <span className="font-semibold text-gray-900">{riskCriteria?.scaleStatuses?.find(s => s.level === selectedRisk.originalSeverity)?.title || selectedRisk.originalSeverity}</span></p>
+                          <p className="text-sm"><span className="font-medium text-gray-700">Likelihood:</span> <span className="font-semibold text-gray-900">{riskCriteria?.scaleStatuses?.find(s => s.level === selectedRisk.originalLikelihood)?.title || selectedRisk.originalLikelihood}</span></p>
+                          <p className="text-sm"><span className="font-medium text-gray-700">Score:</span> <span className="font-semibold text-gray-900">{selectedRisk.originalScore}</span></p>
+                        </div>
+                      </div>
+                      <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg">
+                        <p className="text-xs font-semibold text-amber-900 uppercase tracking-wide mb-3">Residual Risk</p>
+                        <div className="space-y-2">
+                          <p className="text-sm"><span className="font-medium text-amber-700">Severity:</span> <span className="font-semibold text-amber-900">{riskCriteria?.scaleStatuses?.find(s => s.level === selectedRisk.residualSeverity)?.title || selectedRisk.residualSeverity}</span></p>
+                          <p className="text-sm"><span className="font-medium text-amber-700">Likelihood:</span> <span className="font-semibold text-amber-900">{riskCriteria?.scaleStatuses?.find(s => s.level === selectedRisk.residualLikelihood)?.title || selectedRisk.residualLikelihood}</span></p>
+                          <p className="text-sm"><span className="font-medium text-amber-700">Score:</span> <span className="font-semibold text-amber-900">{selectedRisk.residualScore}</span></p>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-gray-50 border border-gray-200 p-4 rounded-lg">
-                      <p className="text-xs font-semibold text-gray-900 uppercase tracking-wide mb-3">Original Risk</p>
-                      <div className="space-y-2">
-                        <p className="text-sm"><span className="font-medium text-gray-700">Severity:</span> <span className="font-semibold text-gray-900">{selectedRisk.originalSeverity}</span></p>
-                        <p className="text-sm"><span className="font-medium text-gray-700">Likelihood:</span> <span className="font-semibold text-gray-900">{selectedRisk.originalLikelihood}</span></p>
-                        <p className="text-sm"><span className="font-medium text-gray-700">Score:</span> <span className="font-semibold text-gray-900">{selectedRisk.originalScore}</span></p>
-                      </div>
-                    </div>
-                    <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg">
-                      <p className="text-xs font-semibold text-amber-900 uppercase tracking-wide mb-3">Residual Risk</p>
-                      <div className="space-y-2">
-                        <p className="text-sm"><span className="font-medium text-amber-700">Severity:</span> <span className="font-semibold text-amber-900">{selectedRisk.residualSeverity}</span></p>
-                        <p className="text-sm"><span className="font-medium text-amber-700">Likelihood:</span> <span className="font-semibold text-amber-900">{selectedRisk.residualLikelihood}</span></p>
-                        <p className="text-sm"><span className="font-medium text-amber-700">Score:</span> <span className="font-semibold text-amber-900">{selectedRisk.residualScore}</span></p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
+                  {/* Input Fields - Full Width */}
+                  <div className="space-y-4">
                     <div>
-                      <label className="text-xs font-semibold text-sky-900 uppercase tracking-widest mb-2 block">Severity (1-5) *</label>
-                      <Input
-                        type="number"
-                        min="1"
-                        max="5"
+                      <label className="text-xs font-semibold text-sky-900 uppercase tracking-widest mb-2 block">Severity *</label>
+                      <Select
                         value={editForm.reassessedSeverity}
-                        onChange={(e) => setEditForm((s) => ({ ...s, reassessedSeverity: e.target.value }))}
-                        className="border-sky-200 focus:border-sky-400 focus:ring-sky-100"
-                      />
+                        onValueChange={(value) => setEditForm((s) => ({ ...s, reassessedSeverity: value }))}
+                      >
+                        <SelectTrigger className="w-full border-sky-200 focus:border-sky-400 focus:ring-sky-100">
+                          <SelectValue placeholder="Pilih severity" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {riskCriteria?.scaleStatuses?.map((status) => (
+                            <SelectItem key={status.id} value={status.level.toString()}>
+                              {status.title}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <div>
-                      <label className="text-xs font-semibold text-sky-900 uppercase tracking-widest mb-2 block">Likelihood (1-5) *</label>
-                      <Input
-                        type="number"
-                        min="1"
-                        max="5"
-                        value={editForm.reassessedLikelihood}
-                        onChange={(e) => setEditForm((s) => ({ ...s, reassessedLikelihood: e.target.value }))}
-                        className="border-sky-200 focus:border-sky-400 focus:ring-sky-100"
-                      />
-                    </div>
-                  </div>
 
-                  <div>
-                    <label className="text-xs font-semibold text-sky-900 uppercase tracking-widest mb-2 block">Catatan Penilaian</label>
-                    <Input
-                      placeholder="Masukkan catatan tentang penilaian ulang ini"
-                      value={editForm.notes}
-                      onChange={(e) => setEditForm((s) => ({ ...s, notes: e.target.value }))}
-                      className="border-sky-200 focus:border-sky-400 focus:ring-sky-100"
-                    />
+                    {!riskCriteria?.isFMEA ? (
+                      <div>
+                        <label className="text-xs font-semibold text-sky-900 uppercase tracking-widest mb-2 block">Likelihood *</label>
+                        <Select
+                          value={editForm.reassessedLikelihood}
+                          onValueChange={(value) => setEditForm((s) => ({ ...s, reassessedLikelihood: value }))}
+                        >
+                          <SelectTrigger className="w-full border-sky-200 focus:border-sky-400 focus:ring-sky-100">
+                            <SelectValue placeholder="Pilih likelihood" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {riskCriteria?.scaleStatuses?.map((status) => (
+                              <SelectItem key={status.id} value={status.level.toString()}>
+                                {status.title}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    ) : (
+                      <>
+                        <div>
+                          <label className="text-xs font-semibold text-sky-900 uppercase tracking-widest mb-2 block">Occurrence *</label>
+                          <Select
+                            value={editForm.reassessedLikelihood}
+                            onValueChange={(value) => setEditForm((s) => ({ ...s, reassessedLikelihood: value }))}
+                          >
+                            <SelectTrigger className="w-full border-sky-200 focus:border-sky-400 focus:ring-sky-100">
+                              <SelectValue placeholder="Pilih occurrence" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {riskCriteria?.scaleStatuses?.map((status) => (
+                                <SelectItem key={status.id} value={status.level.toString()}>
+                                  {status.title}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-sky-900 uppercase tracking-widest mb-2 block">Detection *</label>
+                          <Select
+                            value={editForm.reassessedDetection || ""}
+                            onValueChange={(value) => setEditForm((s) => ({ ...s, reassessedDetection: value }))}
+                          >
+                            <SelectTrigger className="w-full border-sky-200 focus:border-sky-400 focus:ring-sky-100">
+                              <SelectValue placeholder="Pilih detection" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {riskCriteria?.scaleStatuses?.map((status) => (
+                                <SelectItem key={status.id} value={status.level.toString()}>
+                                  {status.title}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </>
+                    )}
+
+                    <div>
+                      <label className="text-xs font-semibold text-sky-900 uppercase tracking-widest mb-2 block">Catatan Penilaian</label>
+                      <Input
+                        placeholder="Masukkan catatan tentang penilaian ulang ini"
+                        value={editForm.notes}
+                        onChange={(e) => setEditForm((s) => ({ ...s, notes: e.target.value }))}
+                        className="border-sky-200 focus:border-sky-400 focus:ring-sky-100"
+                      />
+                    </div>
                   </div>
                 </div>
               )}
@@ -512,12 +675,35 @@ export default function ResiduRisikoPage() {
                 <Button variant="outline" onClick={() => setEditingRiskId(null)}>
                   Batal
                 </Button>
-                <Button onClick={saveReassessment} disabled={savingReassessment}>
+                <Button onClick={() => setSaveConfirmationOpen(true)} disabled={savingReassessment}>
                   {savingReassessment ? "Menyimpan..." : "Simpan Penilaian"}
                 </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
+
+          {/* Confirmation Dialog for Save */}
+          <AlertDialog open={saveConfirmationOpen} onOpenChange={setSaveConfirmationOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Konfirmasi Penilaian Ulang Risiko</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Apakah Anda yakin ingin menyimpan penilaian ulang risiko ini?
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Batal</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={async () => {
+                    setSaveConfirmationOpen(false);
+                    await saveReassessment();
+                  }}
+                >
+                  Simpan
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </>
       )}
     </div>
