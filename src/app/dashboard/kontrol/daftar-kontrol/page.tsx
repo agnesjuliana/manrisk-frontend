@@ -691,29 +691,28 @@ export default function DaftarKontrolPage() {
   };
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="flex flex-1 flex-col gap-6 p-4 pt-0 w-full min-w-0">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Penetapan Relevansi Kontrol</h1>
-          <p className="text-gray-600 mt-1">
-            Evaluasi dan tentukan relevansi kontrol ISO 27001 Annex A terhadap
-            organisasi
+          <h1 className="text-2xl font-bold text-gray-900">Penetapan Relevansi Kontrol</h1>
+          <p className="text-sm text-gray-600 mt-1">
+            Evaluasi dan tentukan relevansi kontrol ISO 27001 Annex A terhadap organisasi
           </p>
         </div>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => resetForm()} className="gap-2">
+            <Button onClick={() => resetForm()} className="gap-2 bg-sky-600 hover:bg-sky-700 text-white">
               <Plus className="w-4 h-4" />
               Tambah Kontrol
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>
+            <DialogHeader className="border-b border-sky-100 pb-4">
+              <DialogTitle className="text-xl text-gray-900">
                 {editingId ? "Edit Kontrol" : "Tambah Kontrol Baru"}
               </DialogTitle>
-              <DialogDescription>
+              <DialogDescription className="text-sm text-gray-600">
                 Kelola detail kontrol dan progress implementasi
               </DialogDescription>
             </DialogHeader>
@@ -721,17 +720,18 @@ export default function DaftarKontrolPage() {
             <div className="space-y-4 max-h-[60vh] overflow-y-auto">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="code">Kode Kontrol *</Label>
+                  <Label htmlFor="code" className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Kode Kontrol *</Label>
                   <Input
                     id="code"
                     value={form.code || ""}
                     onChange={(e) => setForm({ ...form, code: e.target.value })}
                     placeholder="Misal: 8.17, A1"
+                    className="mt-1 border-sky-200 focus:border-sky-400 focus:ring-sky-100"
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="category">Kategori *</Label>
+                  <Label htmlFor="category" className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Kategori *</Label>
                   <Input
                     id="category"
                     value={form.category || ""}
@@ -739,21 +739,23 @@ export default function DaftarKontrolPage() {
                       setForm({ ...form, category: e.target.value })
                     }
                     placeholder="Misal: Technological Controls"
+                    className="mt-1 border-sky-200 focus:border-sky-400 focus:ring-sky-100"
                   />
                 </div>
 
                 <div className="col-span-2">
-                  <Label htmlFor="title">Nama Kontrol *</Label>
+                  <Label htmlFor="title" className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Nama Kontrol *</Label>
                   <Input
                     id="title"
                     value={form.title || ""}
                     onChange={(e) => setForm({ ...form, title: e.target.value })}
                     placeholder="Misal: Clock synchronization"
+                    className="mt-1 border-sky-200 focus:border-sky-400 focus:ring-sky-100"
                   />
                 </div>
 
                 <div className="col-span-2">
-                  <Label htmlFor="description">Deskripsi</Label>
+                  <Label htmlFor="description" className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Deskripsi</Label>
                   <textarea
                     id="description"
                     value={form.description || ""}
@@ -761,18 +763,18 @@ export default function DaftarKontrolPage() {
                       setForm({ ...form, description: e.target.value })
                     }
                     placeholder="Detail deskripsi kontrol..."
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="mt-1 w-full px-3 py-2 border border-sky-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-400"
                     rows={4}
                   />
                 </div>
               </div>
             </div>
 
-            <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setIsOpen(false)}>
+            <div className="flex gap-2 justify-end pt-4 border-t border-sky-100">
+              <Button variant="outline" onClick={() => setIsOpen(false)} className="text-gray-700">
                 Batal
               </Button>
-              <Button onClick={handleSave}>
+              <Button onClick={handleSave} className="bg-sky-600 hover:bg-sky-700 text-white">
                 {editingId ? "Update" : "Simpan"}
               </Button>
             </div>
@@ -783,29 +785,29 @@ export default function DaftarKontrolPage() {
       {/* Statistics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         {loadingStats ? (
-          <div className="col-span-5 text-center py-8 text-gray-500">Loading statistics...</div>
+          <div className="col-span-5 text-center py-8 text-gray-500">Memuat statistik...</div>
         ) : stats ? (
           <>
-            <Card>
+            <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">
+                <CardTitle className="text-xs font-medium text-gray-600 uppercase tracking-wide">
                   Total Control Annex
                 </CardTitle>
-                <CardDescription className="text-xs">ISO 27001</CardDescription>
+                <CardDescription className="text-xs text-gray-500">ISO 27001</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-blue-600">
+                <div className="text-2xl font-bold text-sky-600">
                   {stats.totalAnnexControl}
                 </div>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">
+                <CardTitle className="text-xs font-medium text-gray-600 uppercase tracking-wide">
                   Annex Dinilai
                 </CardTitle>
-                <CardDescription className="text-xs">Sudah Assessed</CardDescription>
+                <CardDescription className="text-xs text-gray-500">Sudah Assessed</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-green-600">
@@ -814,12 +816,12 @@ export default function DaftarKontrolPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">
+                <CardTitle className="text-xs font-medium text-gray-600 uppercase tracking-wide">
                   Total Control Tambahan
                 </CardTitle>
-                <CardDescription className="text-xs">Organisasi</CardDescription>
+                <CardDescription className="text-xs text-gray-500">Organisasi</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-purple-600">
@@ -828,12 +830,12 @@ export default function DaftarKontrolPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">
+                <CardTitle className="text-xs font-medium text-gray-600 uppercase tracking-wide">
                   Tambahan Dinilai
                 </CardTitle>
-                <CardDescription className="text-xs">Sudah Assessed</CardDescription>
+                <CardDescription className="text-xs text-gray-500">Sudah Assessed</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-purple-600">
@@ -842,9 +844,9 @@ export default function DaftarKontrolPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">
+                <CardTitle className="text-xs font-medium text-gray-600 uppercase tracking-wide">
                   Belum Dinilai
                 </CardTitle>
                 <CardDescription className="text-xs">Unassessed</CardDescription>
@@ -870,7 +872,11 @@ export default function DaftarKontrolPage() {
             key={s}
             variant={filter === s ? "default" : "outline"}
             onClick={() => setFilter(s as RelevanceStatus | "ALL")}
-            className="text-sm"
+            className={`text-sm font-medium transition-colors ${
+              filter === s
+                ? "bg-sky-600 hover:bg-sky-700 text-white border-sky-600"
+                : "border border-gray-300 text-gray-700 hover:bg-sky-50 hover:text-sky-600 hover:border-sky-200"
+            }`}
           >
             {s === "ALL"
               ? "Semua"
@@ -884,9 +890,9 @@ export default function DaftarKontrolPage() {
       </div>
 
       {/* Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Daftar Kontrol ({filteredControls.length})</CardTitle>
+      <Card className="border border-gray-200 shadow-sm">
+        <CardHeader className="border-b py-4 px-6 ">
+          <CardTitle className="text-lg font-semibold text-sky-900">Daftar Kontrol ({filteredControls.length})</CardTitle>
         </CardHeader>
         <CardContent>
           {loadingControls ? (
@@ -895,14 +901,14 @@ export default function DaftarKontrolPage() {
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-gray-50">
-                    <TableHead>Kode</TableHead>
-                    <TableHead>Nama Kontrol</TableHead>
-                    <TableHead>Kategori</TableHead>
-                    <TableHead>Terkait Treatment</TableHead>
-                    <TableHead>Target Date</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Aksi</TableHead>
+                  <TableRow className="bg-gradient-to-r from-sky-50 to-sky-100 border-b border-sky-200">
+                    <TableHead className="text-xs font-semibold text-sky-900 uppercase tracking-wide">Kode</TableHead>
+                    <TableHead className="text-xs font-semibold text-sky-900 uppercase tracking-wide">Nama Kontrol</TableHead>
+                    <TableHead className="text-xs font-semibold text-sky-900 uppercase tracking-wide">Kategori</TableHead>
+                    <TableHead className="text-xs font-semibold text-sky-900 uppercase tracking-wide">Terkait Treatment</TableHead>
+                    <TableHead className="text-xs font-semibold text-sky-900 uppercase tracking-wide">Target Date</TableHead>
+                    <TableHead className="text-xs font-semibold text-sky-900 uppercase tracking-wide">Status</TableHead>
+                    <TableHead className="text-xs font-semibold text-sky-900 uppercase tracking-wide">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -910,7 +916,7 @@ export default function DaftarKontrolPage() {
                     <TableRow>
                       <TableCell
                         colSpan={7}
-                        className="text-center text-gray-500 py-4"
+                        className="text-center text-gray-500 py-8"
                       >
                         Tidak ada data
                       </TableCell>
@@ -919,14 +925,14 @@ export default function DaftarKontrolPage() {
                     filteredControls.map((control) => {
                       const relevanceStatus = getRelevanceStatus(control.soa);
                       return (
-                        <TableRow key={control.id}>
-                          <TableCell className="font-semibold text-sm">
+                        <TableRow key={control.id} className="border-b border-gray-100 hover:bg-gray-50">
+                          <TableCell className="font-semibold text-sm text-gray-900">
                             {control.code}
                           </TableCell>
                           <TableCell>
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex-1">
-                                <div className="font-medium text-sm">{truncateText(control.title, 50)}</div>
+                                <div className="font-medium text-sm text-gray-900">{truncateText(control.title, 50)}</div>
                                 {control.description && (
                                   <div className="text-xs text-gray-500 mt-1">
                                     {truncateText(control.description, 80)}
@@ -936,7 +942,7 @@ export default function DaftarKontrolPage() {
                               {control.organizationId && (
                                 <button
                                   onClick={() => openEditCustomControlModal(control)}
-                                  className="flex-shrink-0 p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                  className="flex-shrink-0 p-1 text-gray-400 hover:text-sky-600 hover:bg-sky-50 rounded transition-colors"
                                   title="Edit kontrol custom"
                                 >
                                   <Edit2 className="w-4 h-4" />
@@ -944,13 +950,13 @@ export default function DaftarKontrolPage() {
                               )}
                             </div>
                           </TableCell>
-                          <TableCell className="text-sm">
+                          <TableCell className="text-sm text-gray-700">
                             {control.category || "-"}
                           </TableCell>
-                          <TableCell className="text-sm">
+                          <TableCell className="text-sm text-gray-700">
                             {getTreatmentName(control.countRelatedTreatment)}
                           </TableCell>
-                          <TableCell className="text-sm">
+                          <TableCell className="text-sm text-gray-700">
                             {control.soa?.targetDate
                               ? new Date(control.soa.targetDate).toLocaleDateString(
                                   "id-ID"
@@ -977,7 +983,7 @@ export default function DaftarKontrolPage() {
                                 size="sm"
                                 variant="outline"
                                 onClick={() => openSoAModal(control.id)}
-                                className="text-xs"
+                                className="text-xs border-sky-200 text-sky-600 hover:bg-sky-50 hover:text-sky-800 font-medium"
                               >
                                 Buat SoA
                               </Button>
@@ -987,7 +993,7 @@ export default function DaftarKontrolPage() {
                                   size="sm"
                                   variant="outline"
                                   onClick={() => openViewDetailModal(control.id)}
-                                  className="text-xs gap-1"
+                                  className="text-xs gap-1 border-sky-200 text-sky-600 hover:bg-sky-50 hover:text-sky-800 font-medium"
                                   title="Lihat Detail SoA"
                                 >
                                   <Eye className="w-3.5 h-3.5" />
@@ -997,7 +1003,7 @@ export default function DaftarKontrolPage() {
                                   size="sm"
                                   variant="outline"
                                   onClick={() => openEditSoAModal(control.id)}
-                                  className="text-xs gap-1"
+                                  className="text-xs gap-1 border-sky-200 text-sky-600 hover:bg-sky-50 hover:text-sky-800 font-medium"
                                   title="Edit SoA"
                                 >
                                   <Edit2 className="w-3.5 h-3.5" />
@@ -1022,9 +1028,9 @@ export default function DaftarKontrolPage() {
       {/* SOA Modal */}
       <Dialog open={isSoaModalOpen} onOpenChange={setIsSoaModalOpen}>
       <DialogContent className="!w-[98vw] !max-w-[1400px] !max-h-[85vh] overflow-hidden flex flex-col p-6">
-        <DialogHeader>
-          <DialogTitle className="text-2xl">Buat Statement of Applicability (SoA)</DialogTitle>
-          <DialogDescription className="text-sm mt-2">
+        <DialogHeader className="border-b border-sky-100 pb-4">
+          <DialogTitle className="text-xl font-semibold text-gray-900">Buat Statement of Applicability (SoA)</DialogTitle>
+          <DialogDescription className="text-sm text-gray-600 mt-2">
             Tentukan relevansi kontrol terhadap organisasi
           </DialogDescription>
         </DialogHeader>
@@ -1102,12 +1108,12 @@ export default function DaftarKontrolPage() {
 
             {/* Right: SOA Form - 2 columns */}
             <div className="col-span-2">
-              <div className="border rounded-lg p-6 bg-white h-fit">
-                <h3 className="font-semibold text-base mb-6 text-gray-800">Form SoA</h3>
+              <div className="border border-gray-200 rounded-lg p-6 bg-white h-fit shadow-sm">
+                <h3 className="font-semibold text-base mb-6 text-gray-900 uppercase tracking-wide">Form SoA</h3>
 
                 <div className="space-y-5">
                   <div>
-                    <Label htmlFor="status" className="text-sm font-medium text-gray-700 block mb-2">Status *</Label>
+                    <Label htmlFor="status" className="text-xs font-semibold text-sky-900 block mb-2 uppercase tracking-widest">Status *</Label>
                     <Select
                       value={soaForm.status}
                       onValueChange={(value) =>
@@ -1117,7 +1123,7 @@ export default function DaftarKontrolPage() {
                         })
                       }
                     >
-                      <SelectTrigger id="status" className="w-full h-10 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+                      <SelectTrigger id="status" className="w-full h-10 border-sky-200 focus:border-sky-400 focus:ring-sky-100 mt-1">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -1129,7 +1135,7 @@ export default function DaftarKontrolPage() {
                   </div>
 
                   <div>
-                    <Label htmlFor="managerId" className="text-sm font-medium text-gray-700 block mb-2">Manager/Penanggungjawab *</Label>
+                    <Label htmlFor="managerId" className="text-xs font-semibold text-sky-900 block mb-2 uppercase tracking-widest">Manager/Penanggungjawab *</Label>
                     <Select
                       value={soaForm.managerId}
                       onValueChange={(value) =>
@@ -1137,7 +1143,7 @@ export default function DaftarKontrolPage() {
                       }
                       disabled={loadingUsers}
                     >
-                      <SelectTrigger id="managerId" className="w-full h-10 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+                      <SelectTrigger id="managerId" className="w-full h-10 border-sky-200 focus:border-sky-400 focus:ring-sky-100 mt-1">
                         <SelectValue placeholder={loadingUsers ? "Loading..." : "Pilih manager"} />
                       </SelectTrigger>
                       <SelectContent>
@@ -1157,7 +1163,7 @@ export default function DaftarKontrolPage() {
                   </div>
 
                   <div>
-                    <Label htmlFor="targetDate" className="text-sm font-medium text-gray-700 block mb-2">Target Date *</Label>
+                    <Label htmlFor="targetDate" className="text-xs font-semibold text-sky-900 block mb-2 uppercase tracking-widest">Target Date *</Label>
                     <Input
                       id="targetDate"
                       type="date"
@@ -1165,12 +1171,12 @@ export default function DaftarKontrolPage() {
                       onChange={(e) =>
                         setSoaForm({ ...soaForm, targetDate: e.target.value })
                       }
-                      className="w-full h-10 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                      className="w-full h-10 border-sky-200 focus:border-sky-400 focus:ring-sky-100 mt-1"
                     />
                   </div>
 
                   <div>
-                    <Label htmlFor="notes" className="text-sm font-medium text-gray-700 block mb-2">Catatan</Label>
+                    <Label htmlFor="notes" className="text-xs font-semibold text-sky-900 block mb-2 uppercase tracking-widest">Catatan</Label>
                     <textarea
                       id="notes"
                       value={soaForm.notes}
@@ -1178,22 +1184,22 @@ export default function DaftarKontrolPage() {
                         setSoaForm({ ...soaForm, notes: e.target.value })
                       }
                       placeholder="Catatan tambahan tentang relevansi kontrol ini..."
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                      className="w-full px-3 py-2 border border-sky-200 rounded-md text-sm focus:outline-none focus:border-sky-400 focus:ring-sky-100 mt-1"
                       rows={4}
                     />
                   </div>
 
-                  <div className="flex flex-col gap-2 pt-4 border-t">
+                  <div className="flex flex-col gap-2 pt-4 border-t border-sky-100">
                     <Button
                       onClick={handleSoASave}
-                      className="w-full h-10 text-sm font-medium"
+                      className="w-full h-10 text-sm font-medium bg-sky-600 hover:bg-sky-700 text-white"
                     >
                       Simpan SoA
                     </Button>
                     <Button
                       variant="outline"
                       onClick={() => setIsSoaModalOpen(false)}
-                      className="w-full h-10 text-sm font-medium"
+                      className="w-full h-10 text-sm font-medium border-sky-200 text-sky-600 hover:bg-sky-50"
                     >
                       Batal
                     </Button>
@@ -1210,9 +1216,9 @@ export default function DaftarKontrolPage() {
     {/* View Detail Modal */}
     <Dialog open={isViewDetailModalOpen} onOpenChange={setIsViewDetailModalOpen}>
       <DialogContent className="!w-[98vw] !max-w-[1400px] !max-h-[85vh] overflow-hidden flex flex-col p-6">
-        <DialogHeader>
-          <DialogTitle className="text-2xl">Detail Statement of Applicability (SoA)</DialogTitle>
-          <DialogDescription className="text-sm mt-2">
+        <DialogHeader className="border-b border-sky-100 pb-4">
+          <DialogTitle className="text-xl font-semibold text-gray-900">Detail Statement of Applicability (SoA)</DialogTitle>
+          <DialogDescription className="text-sm text-gray-600 mt-2">
             Informasi lengkap tentang relevansi kontrol terhadap organisasi
           </DialogDescription>
         </DialogHeader>
@@ -1290,8 +1296,8 @@ export default function DaftarKontrolPage() {
 
               {/* Right: SoA Details - 2 columns (Read-only) */}
               <div className="col-span-2">
-                <div className="border rounded-lg p-6 bg-gray-50 h-fit">
-                  <h3 className="font-semibold text-base mb-6 text-gray-800">Detail SoA</h3>
+                <div className="border border-gray-200 rounded-lg p-6 bg-gray-50 h-fit shadow-sm">
+                  <h3 className="font-semibold text-base mb-6 text-gray-900 uppercase tracking-wide">Detail SoA</h3>
 
                   <div className="space-y-5">
                     <div>
@@ -1351,11 +1357,11 @@ export default function DaftarKontrolPage() {
                       </p>
                     </div>
 
-                    <div className="flex gap-2 pt-4 border-t">
+                    <div className="flex gap-2 pt-4 border-t border-sky-100">
                       <Button
                         variant="outline"
                         onClick={() => setIsViewDetailModalOpen(false)}
-                        className="w-full h-10 text-sm font-medium"
+                        className="w-full h-10 text-sm font-medium border-sky-200 text-sky-600 hover:bg-sky-50"
                       >
                         Tutup
                       </Button>
@@ -1372,9 +1378,9 @@ export default function DaftarKontrolPage() {
     {/* Edit SoA Modal */}
     <Dialog open={isEditSoaModalOpen} onOpenChange={setIsEditSoaModalOpen}>
       <DialogContent className="!w-[98vw] !max-w-[1400px] !max-h-[85vh] overflow-hidden flex flex-col p-6">
-        <DialogHeader>
-          <DialogTitle className="text-2xl">Edit Statement of Applicability (SoA)</DialogTitle>
-          <DialogDescription className="text-sm mt-2">
+        <DialogHeader className="border-b border-sky-100 pb-4">
+          <DialogTitle className="text-xl font-semibold text-gray-900">Edit Statement of Applicability (SoA)</DialogTitle>
+          <DialogDescription className="text-sm text-gray-600 mt-2">
             Ubah penilaian relevansi kontrol terhadap organisasi
           </DialogDescription>
         </DialogHeader>
@@ -1452,12 +1458,12 @@ export default function DaftarKontrolPage() {
 
               {/* Right: Edit Form - 2 columns */}
               <div className="col-span-2">
-                <div className="border rounded-lg p-6 bg-white h-fit">
-                  <h3 className="font-semibold text-base mb-6 text-gray-800">Edit Form SoA</h3>
+                <div className="border border-gray-200 rounded-lg p-6 bg-white h-fit shadow-sm">
+                  <h3 className="font-semibold text-base mb-6 text-gray-900 uppercase tracking-wide">Edit Form SoA</h3>
 
                   <div className="space-y-5">
                     <div>
-                      <Label htmlFor="edit-status" className="text-sm font-medium text-gray-700 block mb-2">Status *</Label>
+                      <Label htmlFor="edit-status" className="text-xs font-semibold text-sky-900 block mb-2 uppercase tracking-widest">Status *</Label>
                       <Select
                         value={editSoaForm.status}
                         onValueChange={(value) =>
@@ -1467,7 +1473,7 @@ export default function DaftarKontrolPage() {
                           })
                         }
                       >
-                        <SelectTrigger id="edit-status" className="w-full h-10 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+                        <SelectTrigger id="edit-status" className="w-full h-10 border-sky-200 focus:border-sky-400 focus:ring-sky-100 mt-1">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -1479,7 +1485,7 @@ export default function DaftarKontrolPage() {
                     </div>
 
                     <div>
-                      <Label htmlFor="edit-managerId" className="text-sm font-medium text-gray-700 block mb-2">Manager/Penanggungjawab *</Label>
+                      <Label htmlFor="edit-managerId" className="text-xs font-semibold text-sky-900 block mb-2 uppercase tracking-widest">Manager/Penanggungjawab *</Label>
                       <Select
                         value={editSoaForm.managerId}
                         onValueChange={(value) =>
@@ -1487,7 +1493,7 @@ export default function DaftarKontrolPage() {
                         }
                         disabled={loadingUsers}
                       >
-                        <SelectTrigger id="edit-managerId" className="w-full h-10 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200">
+                        <SelectTrigger id="edit-managerId" className="w-full h-10 border-sky-200 focus:border-sky-400 focus:ring-sky-100 mt-1">
                           <SelectValue placeholder={loadingUsers ? "Loading..." : "Pilih manager"} />
                         </SelectTrigger>
                         <SelectContent>
@@ -1507,7 +1513,7 @@ export default function DaftarKontrolPage() {
                     </div>
 
                     <div>
-                      <Label htmlFor="edit-targetDate" className="text-sm font-medium text-gray-700 block mb-2">Target Date *</Label>
+                      <Label htmlFor="edit-targetDate" className="text-xs font-semibold text-sky-900 block mb-2 uppercase tracking-widest">Target Date *</Label>
                       <Input
                         id="edit-targetDate"
                         type="date"
@@ -1515,12 +1521,12 @@ export default function DaftarKontrolPage() {
                         onChange={(e) =>
                           setEditSoaForm({ ...editSoaForm, targetDate: e.target.value })
                         }
-                        className="w-full h-10 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                        className="w-full h-10 border-sky-200 focus:border-sky-400 focus:ring-sky-100 mt-1"
                       />
                     </div>
 
                     <div>
-                      <Label htmlFor="edit-notes" className="text-sm font-medium text-gray-700 block mb-2">Catatan</Label>
+                      <Label htmlFor="edit-notes" className="text-xs font-semibold text-sky-900 block mb-2 uppercase tracking-widest">Catatan</Label>
                       <textarea
                         id="edit-notes"
                         value={editSoaForm.notes}
@@ -1528,22 +1534,22 @@ export default function DaftarKontrolPage() {
                           setEditSoaForm({ ...editSoaForm, notes: e.target.value })
                         }
                         placeholder="Catatan tambahan tentang relevansi kontrol ini..."
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                        className="w-full px-3 py-2 border border-sky-200 rounded-md text-sm focus:outline-none focus:border-sky-400 focus:ring-sky-100 mt-1"
                         rows={4}
                       />
                     </div>
 
-                    <div className="flex flex-col gap-2 pt-4 border-t">
+                    <div className="flex flex-col gap-2 pt-4 border-t border-sky-100">
                       <Button
                         onClick={handleEditSoASave}
-                        className="w-full h-10 text-sm font-medium"
+                        className="w-full h-10 text-sm font-medium bg-sky-600 hover:bg-sky-700 text-white"
                       >
                         Simpan Perubahan
                       </Button>
                       <Button
                         variant="outline"
                         onClick={() => setIsEditSoaModalOpen(false)}
-                        className="w-full h-10 text-sm font-medium"
+                        className="w-full h-10 text-sm font-medium border-sky-200 text-sky-600 hover:bg-sky-50"
                       >
                         Batal
                       </Button>
@@ -1560,9 +1566,9 @@ export default function DaftarKontrolPage() {
     {/* Edit Custom Control Modal */}
     <Dialog open={isEditCustomControlModalOpen} onOpenChange={setIsEditCustomControlModalOpen}>
       <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Edit Kontrol Custom</DialogTitle>
-          <DialogDescription>
+        <DialogHeader className="border-b border-sky-100 pb-4">
+          <DialogTitle className="text-lg font-semibold text-gray-900">Edit Kontrol Custom</DialogTitle>
+          <DialogDescription className="text-sm text-gray-600 mt-2">
             Ubah detail kontrol yang telah ditambahkan oleh organisasi
           </DialogDescription>
         </DialogHeader>
@@ -1570,7 +1576,7 @@ export default function DaftarKontrolPage() {
         <div className="space-y-4 max-h-[60vh] overflow-y-auto">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="edit-code">Kode Kontrol *</Label>
+              <Label htmlFor="edit-code" className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Kode Kontrol *</Label>
               <Input
                 id="edit-code"
                 value={editCustomControlForm.code || ""}
@@ -1581,11 +1587,12 @@ export default function DaftarKontrolPage() {
                   })
                 }
                 placeholder="Misal: 8.17, A1"
+                className="border-sky-200 focus:border-sky-400 focus:ring-sky-100 mt-1"
               />
             </div>
 
             <div>
-              <Label htmlFor="edit-category">Kategori *</Label>
+              <Label htmlFor="edit-category" className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Kategori *</Label>
               <Input
                 id="edit-category"
                 value={editCustomControlForm.category || ""}
@@ -1596,11 +1603,12 @@ export default function DaftarKontrolPage() {
                   })
                 }
                 placeholder="Misal: Technological Controls"
+                className="border-sky-200 focus:border-sky-400 focus:ring-sky-100 mt-1"
               />
             </div>
 
             <div className="col-span-2">
-              <Label htmlFor="edit-title">Nama Kontrol *</Label>
+              <Label htmlFor="edit-title" className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Nama Kontrol *</Label>
               <Input
                 id="edit-title"
                 value={editCustomControlForm.title || ""}
@@ -1611,11 +1619,12 @@ export default function DaftarKontrolPage() {
                   })
                 }
                 placeholder="Misal: Clock synchronization"
+                className="border-sky-200 focus:border-sky-400 focus:ring-sky-100 mt-1"
               />
             </div>
 
             <div className="col-span-2">
-              <Label htmlFor="edit-description">Deskripsi</Label>
+              <Label htmlFor="edit-description" className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Deskripsi</Label>
               <textarea
                 id="edit-description"
                 value={editCustomControlForm.description || ""}
@@ -1626,18 +1635,18 @@ export default function DaftarKontrolPage() {
                   })
                 }
                 placeholder="Detail deskripsi kontrol..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-sky-200 rounded-md text-sm focus:outline-none focus:border-sky-400 focus:ring-sky-100 mt-1"
                 rows={4}
               />
             </div>
           </div>
         </div>
 
-        <div className="flex gap-2 justify-between">
+        <div className="flex gap-2 justify-between border-t border-sky-100 pt-4">
           <Button
             variant="destructive"
             onClick={handleDeleteCustomControl}
-            className="gap-2"
+            className="gap-2 bg-red-600 hover:bg-red-700"
           >
             <Trash2 className="w-4 h-4" />
             Hapus
@@ -1646,10 +1655,11 @@ export default function DaftarKontrolPage() {
             <Button
               variant="outline"
               onClick={() => setIsEditCustomControlModalOpen(false)}
+              className="border-sky-200 text-sky-600 hover:bg-sky-50"
             >
               Batal
             </Button>
-            <Button onClick={handleEditCustomControlSave}>
+            <Button onClick={handleEditCustomControlSave} className="bg-sky-600 hover:bg-sky-700 text-white">
               Simpan Perubahan
             </Button>
           </div>
