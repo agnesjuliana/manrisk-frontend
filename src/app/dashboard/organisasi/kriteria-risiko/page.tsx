@@ -261,15 +261,18 @@ export default function KriteriaRisikoPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-      <h2 className="text-lg font-semibold">Kriteria Risiko</h2>
+    <div className="flex flex-1 flex-col gap-6 p-4 pt-0 w-full">
+      <div>
+        <h1 className="text-2xl font-semibold text-gray-900">Kriteria Risiko</h1>
+        <p className="text-sm text-gray-600 mt-1">Atur metode penilaian, skala, dan threshold risiko organisasi</p>
+      </div>
 
       {setupNeeded && (
-        <div className="flex gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-          <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+        <div className="flex gap-3 p-4 bg-sky-50 border border-sky-200 rounded-lg">
+          <AlertCircle className="w-5 h-5 text-sky-600 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="font-medium text-amber-900">Setup Diperlukan</p>
-            <p className="text-sm text-amber-800">
+            <p className="font-medium text-sky-900">Setup Diperlukan</p>
+            <p className="text-sm text-sky-700">
               Kriteria risiko belum dikonfigurasi. Silakan atur Metode Penilaian terlebih dahulu.
             </p>
           </div>
@@ -277,37 +280,37 @@ export default function KriteriaRisikoPage() {
       )}
 
       <div className="grid grid-cols-1 gap-4">
-        <Card className={useFmea ? "bg-blue-50 border-blue-200" : ""}>
-          <CardHeader>
-            <CardTitle>Metode Penilaian</CardTitle>
-            <CardDescription>
+        <Card className="border-0 shadow-lg bg-gradient-to-r from-sky-200 via-sky-150 to-sky-100">
+          <CardHeader className="border-b border-sky-200 bg-transparent">
+            <CardTitle className="text-gray-900">Metode Penilaian</CardTitle>
+            <CardDescription className="text-gray-600">
               Pilih apakah organisasi akan menggunakan FMEA atau metode
               sederhana.
             </CardDescription>
           </CardHeader>
           <CardContent>
             {error && (
-              <div className="mb-4 p-3 rounded bg-red-100 text-red-800 text-sm">
+              <div className="mb-4 p-3 rounded bg-red-100 text-red-800 text-sm border border-red-200">
                 {error}
               </div>
             )}
             <div className="flex flex-col gap-3">
               <div
-                className={`flex items-center justify-between p-2 rounded-md ${
-                  useFmea ? "" : "border border-muted/30"
+                className={`flex items-center justify-between p-4 rounded-lg ${
+                  useFmea ? "bg-sky-100 border border-sky-200" : "border border-sky-100"
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <ShieldCheck
-                    className={
-                      useFmea ? "text-blue-600" : "text-muted-foreground"
-                    }
+                    className={`w-5 h-5 ${
+                      useFmea ? "text-sky-600" : "text-gray-400"
+                    }`}
                   />
                   <div>
-                    <div className="font-medium">
+                    <div className="font-medium text-gray-900">
                       FMEA (Failure Mode and Effects Analysis)
                     </div>
-                    <div className="text-sm text-muted-foreground">
+                    <div className="text-sm text-gray-600">
                       Tambahkan faktor deteksi dan perhitungan RPN jika
                       diaktifkan.
                     </div>
@@ -319,7 +322,10 @@ export default function KriteriaRisikoPage() {
                       {!useFmea ? (
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <Button variant="outline" disabled={savingFmea}>
+                            <Button 
+                              className="bg-sky-600 hover:bg-sky-700 text-white" 
+                              disabled={savingFmea}
+                            >
                               {savingFmea ? "Menyimpan..." : "Aktifkan"}
                             </Button>
                           </AlertDialogTrigger>
@@ -342,7 +348,10 @@ export default function KriteriaRisikoPage() {
                       ) : (
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <Button variant="outline" disabled={savingFmea}>
+                            <Button 
+                              className="bg-sky-600 hover:bg-sky-700 text-white" 
+                              disabled={savingFmea}
+                            >
                               {savingFmea ? "Menyimpan..." : "Nonaktifkan"}
                             </Button>
                           </AlertDialogTrigger>
@@ -372,24 +381,24 @@ export default function KriteriaRisikoPage() {
         </Card>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card>
-            <CardHeader>
+          <Card className="border border-sky-100 shadow-md bg-white">
+            <CardHeader className="border-b border-sky-100 bg-gradient-to-r from-sky-50/50 to-white pb-4">
               <div className="flex items-center justify-between w-full">
                 <div>
-                  <CardTitle>Label Skala</CardTitle>
-                  <CardDescription>
+                  <CardTitle className="text-gray-900">Label Skala</CardTitle>
+                  <CardDescription className="text-gray-600">
                     Atur ukuran skala dan label untuk semua dimensi penilaian risiko (misal 1–5).
                   </CardDescription>
                 </div>
                 {!isRiskOwner && (
                   <div>
-                    <Button
-                      variant={editingScale ? "default" : "outline"}
-                      onClick={() => editingScale ? handleSaveScale() : setEditingScale(true)}
-                      disabled={scaleSize === 0 || savingScale}
-                    >
-                      {savingScale ? "Menyimpan..." : editingScale ? "Simpan" : "Edit"}
-                    </Button>
+                  <Button
+                    className={editingScale ? "bg-sky-600 hover:bg-sky-700 text-white" : "bg-white hover:bg-sky-50 border border-sky-200 text-sky-700"}
+                    onClick={() => editingScale ? handleSaveScale() : setEditingScale(true)}
+                    disabled={scaleSize === 0 || savingScale}
+                  >
+                    {savingScale ? "Menyimpan..." : editingScale ? "Simpan" : "Edit"}
+                  </Button>
                   </div>
                 )}
               </div>
@@ -397,7 +406,7 @@ export default function KriteriaRisikoPage() {
             <CardContent>
               {scaleSize === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-sm text-muted-foreground mb-2">
+                  <p className="text-sm text-gray-500 mb-2">
                     Belum ada konfigurasi skala
                   </p>
                   <p className="text-xs text-muted-foreground">
@@ -490,14 +499,14 @@ export default function KriteriaRisikoPage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
+          <Card className="border border-sky-100 shadow-md bg-white">
+            <CardHeader className="border-b border-sky-100 bg-gradient-to-r from-sky-50/50 to-white pb-4">
               <div className="flex items-center justify-between w-full">
                 <div>
-                  <CardTitle>
+                  <CardTitle className="text-gray-900">
                     {useFmea ? "Threshold RPN" : "Threshold Risiko"}
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-gray-600">
                     {useFmea
                       ? "Atur nilai batas RPN (Risk Priority Number) yang dianggap kritis."
                       : "Atur nilai batas risiko yang dianggap diterima (≤ threshold = diterima)."}
@@ -506,7 +515,11 @@ export default function KriteriaRisikoPage() {
                 {!isRiskOwner && (
                   <div>
                     <Button
-                      variant={useFmea ? (editingRpnThreshold ? "default" : "outline") : (editingThreshold ? "default" : "outline")}
+                      className={
+                        (useFmea ? editingRpnThreshold : editingThreshold)
+                          ? "bg-sky-600 hover:bg-sky-700 text-white"
+                          : "bg-white hover:bg-sky-50 border border-sky-200 text-sky-700"
+                      }
                       onClick={() => {
                         if (useFmea) {
                           editingRpnThreshold ? handleSaveThreshold() : setEditingRpnThreshold(true);
@@ -564,14 +577,14 @@ export default function KriteriaRisikoPage() {
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>
+      <Card className="border border-sky-100 shadow-md bg-white">
+        <CardHeader className="border-b border-sky-100 bg-gradient-to-r from-sky-50/50 to-white pb-4">
+          <CardTitle className="text-gray-900">
             {useFmea 
               ? `Tabel FMEA (S × O × D Hitung = RPN)` 
               : `Matriks Risiko (${scaleSize}x${scaleSize})`}
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-gray-600">
             {useFmea
               ? "Risk Priority Number (RPN) = Severity × Occurrence × Detection. Semakin tinggi RPN, semakin kritis."
               : "Hasil perhitungan likelihood × impact berdasarkan skala yang dipilih."}
@@ -583,12 +596,12 @@ export default function KriteriaRisikoPage() {
               // FMEA Table View
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-gray-50">
-                    <TableHead>No</TableHead>
-                    <TableHead>Severity</TableHead>
-                    <TableHead>Occurrence</TableHead>
-                    <TableHead>Detection</TableHead>
-                    <TableHead className="text-center">RPN</TableHead>
+                  <TableRow className="bg-sky-100 border-sky-200">
+                    <TableHead className="text-sky-900">No</TableHead>
+                    <TableHead className="text-sky-900">Severity</TableHead>
+                    <TableHead className="text-sky-900">Occurrence</TableHead>
+                    <TableHead className="text-sky-900">Detection</TableHead>
+                    <TableHead className="text-center text-sky-900">RPN</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -618,9 +631,9 @@ export default function KriteriaRisikoPage() {
               <table className="w-full table-fixed border-collapse">
                 <thead>
                   <tr>
-                    <th className="w-24 border border-gray-200 p-2"></th>
+                    <th className="w-24 border border-sky-200 p-2 bg-sky-100 text-sky-900 font-semibold"></th>
                     {scale.map((s) => (
-                      <th key={s} className="text-center text-sm font-semibold text-gray-700 border border-gray-200 p-2">
+                      <th key={s} className="text-center text-sm font-semibold text-sky-900 border border-sky-200 p-2 bg-sky-100">
                         I{s}
                       </th>
                     ))}
@@ -629,13 +642,13 @@ export default function KriteriaRisikoPage() {
                 <tbody>
                   {matrix.map((row, li) => (
                     <tr key={li}>
-                      <td className="font-medium text-sm text-gray-700 border border-gray-200 p-2 text-center">
+                      <td className="font-medium text-sm text-sky-900 border border-sky-200 p-2 text-center bg-sky-50">
                         L{li + 1}
                       </td>
                       {row.map((val, ii) => (
                         <td
                           key={ii}
-                          className={`text-center p-3 border border-gray-200 ${riskColor(val)} text-sm font-semibold h-16 align-middle`}
+                          className={`text-center p-3 border border-sky-200 ${riskColor(val)} text-sm font-semibold h-16 align-middle`}
                         >
                           {val}
                         </td>
