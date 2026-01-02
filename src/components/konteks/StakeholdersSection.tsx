@@ -17,6 +17,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Edit, Trash } from "lucide-react";
 
+const formatRole = (role: string) => {
+  return role
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
+};
+
 export default function StakeholdersSection({
   users,
   external,
@@ -40,7 +47,7 @@ export default function StakeholdersSection({
           Daftar pemangku kepentingan internal dan eksternal.
         </CardDescription>
       </CardHeader>
-      <CardContent className="pt-6">
+      <CardContent>
         <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-medium text-gray-900">Internal</h3>
@@ -52,7 +59,7 @@ export default function StakeholdersSection({
                 <TableHead className="text-gray-700 font-semibold">No</TableHead>
                 <TableHead className="text-gray-700 font-semibold">Nama</TableHead>
                 <TableHead className="text-gray-700 font-semibold">Role</TableHead>
-                <TableHead className="text-gray-700 font-semibold">Divisi</TableHead>
+                {/* <TableHead className="text-gray-700 font-semibold">Divisi</TableHead> */}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -60,8 +67,8 @@ export default function StakeholdersSection({
                 <TableRow key={u.id ?? i} className="border-b border-sky-50 hover:bg-sky-50/30 transition-colors">
                   <TableCell className="w-8 text-gray-600">{i + 1}</TableCell>
                   <TableCell className="text-gray-900">{u.name}</TableCell>
-                  <TableCell className="text-gray-700">{u.role}</TableCell>
-                  <TableCell className="text-gray-700">{u.division}</TableCell>
+                  <TableCell className="text-gray-700">{formatRole(u.role)}</TableCell>
+                  {/* <TableCell className="text-gray-700">{u.division}</TableCell> */}
                 </TableRow>
               ))}
             </TableBody>

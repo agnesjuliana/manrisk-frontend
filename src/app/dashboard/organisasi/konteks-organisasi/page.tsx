@@ -25,6 +25,7 @@ import ScopeSection from "@/components/konteks/ScopeSection";
 import StakeholdersSection from "@/components/konteks/StakeholdersSection";
 import CiaSection from "@/components/konteks/CiaSection";
 import RegulationsSection from "@/components/konteks/RegulationsSection";
+import { DeleteConfirmationDialog } from "@/components/delete-confirmation-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -656,9 +657,32 @@ export default function KonteksOrganisasiPage() {
 
   function removeArrayItem(path: string, idx: number) {
     if (path === "scope.technical_bounds") {
+      const itemName = data.scope.technical_bounds[idx]?.name;
+      setDeleteConfirm({ open: true, path, idx, itemName });
+    } else if (path === "stakeholders.external") {
+      const itemName = data.stakeholders.external[idx]?.name;
+      setDeleteConfirm({ open: true, path, idx, itemName });
+    } else if (path === "stakeholders.internal") {
+      const itemName = data.stakeholders.internal[idx]?.name;
+      setDeleteConfirm({ open: true, path, idx, itemName });
+    } else if (path === "cia.service_priorities") {
+      const itemName = data.cia_objectives.service_priorities[idx]?.service;
+      setDeleteConfirm({ open: true, path, idx, itemName });
+    } else if (path === "regulations.selected") {
+      const itemName = data.regulations.selected[idx]?.name;
+      setDeleteConfirm({ open: true, path, idx, itemName });
+    }
+  }
+
+  function confirmDelete() {
+    const path = deleteConfirm.path;
+    const idx = deleteConfirm.idx;
+
+    if (!path || idx === null) return;
+
+    if (path === "scope.technical_bounds") {
       const contextId = data.scope.technical_bounds[idx]?.id;
       if (!contextId) return;
-      // Call API to delete context
       (async () => {
         try {
           const response = await contextsApi.delete(contextId);
@@ -672,6 +696,7 @@ export default function KonteksOrganisasiPage() {
                 ),
               },
             }));
+            setDeleteConfirm({ open: false, path: null, idx: null });
           }
         } catch (error) {
           console.error("Error deleting context:", error);
@@ -680,7 +705,6 @@ export default function KonteksOrganisasiPage() {
     } else if (path === "stakeholders.external") {
       const externalId = data.stakeholders.external[idx]?.id;
       if (!externalId) return;
-      // Call API to delete external stakeholder
       (async () => {
         try {
           const response = await externalStakeholdersApi.delete(externalId);
@@ -692,12 +716,13 @@ export default function KonteksOrganisasiPage() {
                 external: s.stakeholders.external.filter((_, i) => i !== idx),
               },
             }));
+            setDeleteConfirm({ open: false, path: null, idx: null });
           }
         } catch (error) {
           console.error("Error deleting external stakeholder:", error);
         }
       })();
-    } else if (path === "stakeholders.internal")
+    } else if (path === "stakeholders.internal") {
       setData((s) => ({
         ...s,
         stakeholders: {
@@ -705,11 +730,11 @@ export default function KonteksOrganisasiPage() {
           internal: s.stakeholders.internal.filter((_, i) => i !== idx),
         },
       }));
-    else if (path === "cia.service_priorities") {
+      setDeleteConfirm({ open: false, path: null, idx: null });
+    } else if (path === "cia.service_priorities") {
       const priorityId =
         data.cia_objectives.service_priorities[idx]?.priority_id;
       if (!priorityId) return;
-      // Call API to delete service priority
       (async () => {
         try {
           const response = await ciaApi.deletePriority(priorityId);
@@ -723,6 +748,7 @@ export default function KonteksOrganisasiPage() {
                 ),
               },
             }));
+            setDeleteConfirm({ open: false, path: null, idx: null });
           }
         } catch (error) {
           console.error("Error deleting service priority:", error);
@@ -731,7 +757,6 @@ export default function KonteksOrganisasiPage() {
     } else if (path === "regulations.selected") {
       const regulationId = data.regulations.selected[idx]?.id;
       if (!regulationId) return;
-      // Call API to delete regulation
       (async () => {
         try {
           const response = await regulationsApi.delete(regulationId);
@@ -743,6 +768,7 @@ export default function KonteksOrganisasiPage() {
                 selected: s.regulations.selected.filter((_, i) => i !== idx),
               },
             }));
+            setDeleteConfirm({ open: false, path: null, idx: null });
           }
         } catch (error) {
           console.error("Error deleting regulation:", error);
@@ -799,6 +825,15 @@ export default function KonteksOrganisasiPage() {
   // user edit (internal stakeholders map to users)
   const [userEditOpen, setUserEditOpen] = useState(false);
   const [userForm, setUserForm] = useState<StoreUser | null>(null);
+  
+  // delete confirmation dialog
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    open: boolean;
+    path: string | null;
+    idx: number | null;
+    itemName?: string;
+  }>({ open: false, path: null, idx: null });
+
   function openUserEdit(u: StoreUser) {
     setUserForm(u);
     setUserEditOpen(true);
@@ -829,8 +864,8 @@ export default function KonteksOrganisasiPage() {
       </div>
 
       {/* Profile Card Section */}
-      <Card className="border border-sky-100 shadow-md bg-white">
-        <CardHeader className="border-b border-sky-100 bg-gradient-to-r from-sky-50/50 to-white pb-4">
+      <Card className="border-0 shadow-lg bg-gradient-to-r from-sky-200 via-sky-150 to-sky-100">
+        <CardHeader className="border-b border-sky-200 bg-transparent pb-4">
           <div className="flex items-start justify-between">
             <div>
               <CardTitle className="text-xl text-gray-900">
@@ -842,6 +877,11 @@ export default function KonteksOrganisasiPage() {
             </div>
             {!isRiskOwner && (
               <Dialog>
+                <DialogTrigger asChild>
+                  <Button className="bg-sky-600 hover:bg-sky-700 text-white" size="sm">
+                    Edit Profil
+                  </Button>
+                </DialogTrigger>
                 <DialogContent className="sm:max-w-lg">
                   <DialogHeader>
                     <DialogTitle>Perbarui Profil Instansi</DialogTitle>
@@ -858,16 +898,11 @@ export default function KonteksOrganisasiPage() {
                     isEditMode={true}
                   />
                 </DialogContent>
-                <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    Edit Profil
-                  </Button>
-                </DialogTrigger>
               </Dialog>
             )}
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="bg-transparent">
           {authLoading ? (
             <div className="grid gap-6 md:grid-cols-3">
               <Skeleton className="h-20" />
@@ -876,7 +911,7 @@ export default function KonteksOrganisasiPage() {
             </div>
           ) : (
             <div className="grid gap-6 md:grid-cols-3">
-              <div className="p-4 rounded-lg bg-gradient-to-br from-sky-50/30 to-white border border-sky-100 hover:border-sky-200 hover:shadow-md transition-all">
+              <div className="p-4 rounded-lg bg-white border border-sky-100 hover:border-sky-200 hover:shadow-md transition-all">
                 <div className="text-xs font-semibold text-sky-700 uppercase tracking-wide">
                   Alamat
                 </div>
@@ -884,7 +919,7 @@ export default function KonteksOrganisasiPage() {
                   {profile.address}
                 </div>
               </div>
-              <div className="p-4 rounded-lg bg-gradient-to-br from-sky-50/30 to-white border border-sky-100 hover:border-sky-200 hover:shadow-md transition-all">
+              <div className="p-4 rounded-lg bg-white border border-sky-100 hover:border-sky-200 hover:shadow-md transition-all">
                 <div className="text-xs font-semibold text-sky-700 uppercase tracking-wide">
                   Email
                 </div>
@@ -892,7 +927,7 @@ export default function KonteksOrganisasiPage() {
                   {profile.email}
                 </div>
               </div>
-              <div className="p-4 rounded-lg bg-gradient-to-br from-sky-50/30 to-white border border-sky-100 hover:border-sky-200 hover:shadow-md transition-all">
+              <div className="p-4 rounded-lg bg-white border border-sky-100 hover:border-sky-200 hover:shadow-md transition-all">
                 <div className="text-xs font-semibold text-sky-700 uppercase tracking-wide">
                   Telepon
                 </div>
@@ -949,17 +984,17 @@ export default function KonteksOrganisasiPage() {
           onOpenChange={(v) => (v ? null : closeCiaEdit())}
         >
           <DialogContent className="sm:max-w-lg">
-            <DialogHeader>
-              <DialogTitle className="text-xl">Edit Objektif CIA</DialogTitle>
-              <DialogDescription>
-                Ubah Confidentiality, Integrity, dan Availability sekaligus.
+            <DialogHeader className="border-b border-sky-100 pb-4">
+              <DialogTitle className="text-2xl text-gray-900">Ubah Objektif CIA</DialogTitle>
+              <DialogDescription className="text-gray-600 mt-1">
+                Ubah tujuan Kerahasiaan, Integritas, dan Ketersediaan sekaligus.
               </DialogDescription>
             </DialogHeader>
 
-            <div className="grid gap-4">
+            <div className="grid gap-6 mt-6">
               <div className="space-y-2">
-                <Label className="font-semibold text-gray-900">
-                  Confidentiality
+                <Label className="text-xs font-semibold text-sky-900 uppercase tracking-widest">
+                  Kerahasiaan (Confidentiality)
                 </Label>
                 <Textarea
                   value={ciaDraft.confidentiality}
@@ -969,38 +1004,41 @@ export default function KonteksOrganisasiPage() {
                       confidentiality: e.target.value,
                     }))
                   }
-                  className="min-h-20"
+                  className="min-h-24 border-gray-300"
+                  placeholder="Jelaskan strategi kerahasiaan organisasi..."
                 />
               </div>
               <div className="space-y-2">
-                <Label className="font-semibold text-gray-900">Integrity</Label>
+                <Label className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Integritas (Integrity)</Label>
                 <Textarea
                   value={ciaDraft.integrity}
                   onChange={(e) =>
                     setCiaDraft((d) => ({ ...d, integrity: e.target.value }))
                   }
-                  className="min-h-20"
+                  className="min-h-24 border-gray-300"
+                  placeholder="Jelaskan strategi integritas organisasi..."
                 />
               </div>
               <div className="space-y-2">
-                <Label className="font-semibold text-gray-900">
-                  Availability
+                <Label className="text-xs font-semibold text-sky-900 uppercase tracking-widest">
+                  Ketersediaan (Availability)
                 </Label>
                 <Textarea
                   value={ciaDraft.availability}
                   onChange={(e) =>
                     setCiaDraft((d) => ({ ...d, availability: e.target.value }))
                   }
-                  className="min-h-20"
+                  className="min-h-24 border-gray-300"
+                  placeholder="Jelaskan target ketersediaan layanan..."
                 />
               </div>
             </div>
 
-            <DialogFooter className="gap-2">
+            <DialogFooter className="gap-2 border-t border-sky-100 pt-4 mt-6">
               <Button variant="outline" onClick={closeCiaEdit}>
                 Batal
               </Button>
-              <Button onClick={saveCiaEdit}>Simpan Perubahan</Button>
+              <Button className="bg-sky-600 hover:bg-sky-700 text-white" onClick={saveCiaEdit}>Simpan Perubahan</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -1013,27 +1051,28 @@ export default function KonteksOrganisasiPage() {
           onOpenChange={(v) => (v ? null : closeEdit())}
         >
           <DialogContent className="sm:max-w-lg">
-            <DialogHeader>
-              <DialogTitle className="text-xl">Edit {editingSection}</DialogTitle>
-              <DialogDescription>
-                Ubah detail untuk bagian ini lalu simpan.
+            <DialogHeader className="border-b border-sky-100 pb-4">
+              <DialogTitle className="text-2xl text-gray-900">Sunting {editingSection}</DialogTitle>
+              <DialogDescription className="text-gray-600 mt-1">
+                Ubah detail untuk bagian ini kemudian simpan.
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-2">
-              <Label className="font-semibold text-gray-900">Isi</Label>
+            <div className="space-y-2 mt-6">
+              <Label className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Konten</Label>
               <Textarea
                 value={draftText}
                 onChange={(e) => setDraftText(e.target.value)}
-                className="min-h-24"
+                className="min-h-24 border-gray-300"
+                placeholder="Masukkan konten..."
               />
             </div>
 
-            <DialogFooter className="gap-2">
+            <DialogFooter className="gap-2 border-t border-sky-100 pt-4 mt-6">
               <Button variant="outline" onClick={closeEdit}>
                 Batal
               </Button>
-              <Button onClick={saveEdit}>Simpan Perubahan</Button>
+              <Button className="bg-sky-600 hover:bg-sky-700 text-white" onClick={saveEdit}>Simpan Perubahan</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -1046,25 +1085,26 @@ export default function KonteksOrganisasiPage() {
           onOpenChange={(v) => (v ? null : closeUserEdit())}
         >
           <DialogContent className="sm:max-w-lg">
-            <DialogHeader>
-              <DialogTitle className="text-xl">Edit Pengguna</DialogTitle>
-              <DialogDescription>
-                Ubah data pengguna internal stakeholder
+            <DialogHeader className="border-b border-sky-100 pb-4">
+              <DialogTitle className="text-2xl text-gray-900">Sunting Pengguna</DialogTitle>
+              <DialogDescription className="text-gray-600 mt-1">
+                Ubah data pengguna stakeholder internal
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4">
+            <div className="grid gap-6 mt-6">
               <div className="space-y-2">
-                <Label className="font-semibold text-gray-900">Nama</Label>
+                <Label className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Nama</Label>
                 <Input
                   value={userForm?.name ?? ""}
                   onChange={(e) =>
                     setUserForm((p) => (p ? { ...p, name: e.target.value } : p))
                   }
                   className="border-gray-300"
+                  placeholder="Nama lengkap pengguna"
                 />
               </div>
               <div className="space-y-2">
-                <Label className="font-semibold text-gray-900">Email</Label>
+                <Label className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Email</Label>
                 <Input
                   type="email"
                   value={userForm?.email ?? ""}
@@ -1072,10 +1112,11 @@ export default function KonteksOrganisasiPage() {
                     setUserForm((p) => (p ? { ...p, email: e.target.value } : p))
                   }
                   className="border-gray-300"
+                  placeholder="Email pengguna"
                 />
               </div>
               <div className="space-y-2">
-                <Label className="font-semibold text-gray-900">Role</Label>
+                <Label className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Peran (Role)</Label>
                 <Input
                   value={userForm?.role ?? ""}
                   onChange={(e) =>
@@ -1084,10 +1125,11 @@ export default function KonteksOrganisasiPage() {
                     )
                   }
                   className="border-gray-300"
+                  placeholder="Peran dalam organisasi"
                 />
               </div>
               <div className="space-y-2">
-                <Label className="font-semibold text-gray-900">Divisi</Label>
+                <Label className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Unit/Divisi</Label>
                 <Input
                   value={userForm?.division ?? ""}
                   onChange={(e) =>
@@ -1096,14 +1138,15 @@ export default function KonteksOrganisasiPage() {
                     )
                   }
                   className="border-gray-300"
+                  placeholder="Unit atau divisi pengguna"
                 />
               </div>
             </div>
-            <DialogFooter className="gap-2">
+            <DialogFooter className="gap-2 border-t border-sky-100 pt-4 mt-6">
               <Button variant="outline" onClick={closeUserEdit}>
                 Batal
               </Button>
-              <Button onClick={saveUserEdit}>Simpan Perubahan</Button>
+              <Button className="bg-sky-600 hover:bg-sky-700 text-white" onClick={saveUserEdit}>Simpan Perubahan</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -1125,6 +1168,14 @@ export default function KonteksOrganisasiPage() {
           }))}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteConfirmationDialog
+        open={deleteConfirm.open}
+        itemName={deleteConfirm.itemName}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteConfirm({ open: false, path: null, idx: null })}
+      />
     </div>
   );
 }

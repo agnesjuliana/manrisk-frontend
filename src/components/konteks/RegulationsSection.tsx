@@ -39,7 +39,7 @@ export default function RegulationsSection({
           Daftar regulasi yang relevan dan catatan.
         </CardDescription>
       </CardHeader>
-      <CardContent className="pt-6">
+      <CardContent>
         <div className="mb-4">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-medium text-gray-900">Regulasi Terpilih</h3>

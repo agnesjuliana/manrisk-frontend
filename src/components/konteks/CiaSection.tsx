@@ -61,17 +61,17 @@ export default function CiaSection({
           )}
         </div>
       </CardHeader>
-      <CardContent className="pt-6">
+      <CardContent>
         <div className="mb-4 p-3 bg-sky-50 rounded-lg border border-sky-100">
-          <Label className="text-sky-900 font-semibold">Confidentiality</Label>
+          <Label className="text-sky-900 font-semibold">Confidentiality<i>(Kerahasiaan)</i></Label>
           <p className="mb-2 text-sm text-gray-700">{cia.confidentiality}</p>
         </div>
         <div className="mb-4 p-3 bg-sky-50 rounded-lg border border-sky-100">
-          <Label className="text-sky-900 font-semibold">Integrity</Label>
+          <Label className="text-sky-900 font-semibold">Integrity<i>(Integritas)</i></Label>
           <p className="mb-2 text-sm text-gray-700">{cia.integrity}</p>
         </div>
         <div className="mb-4 p-3 bg-sky-50 rounded-lg border border-sky-100">
-          <Label className="text-sky-900 font-semibold">Availability</Label>
+          <Label className="text-sky-900 font-semibold">Availability<i>(Ketersediaan)</i></Label>
           <p className="mb-2 text-sm text-gray-700">{cia.availability}</p>
         </div>
 
