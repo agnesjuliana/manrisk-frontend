@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { PaginatedTable, type ColumnDef } from "@/components/paginated-table";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ConfirmationDialog } from "@/components/confirmation-dialog";
 import { ArrowLeft, CheckCircle, X } from "lucide-react";
 import { apiClient } from "@/lib/api/config";
 import { useAuth } from "@/hooks/use-auth";
@@ -68,6 +69,15 @@ export default function DetailApprovalPage() {
   const [approval, setApproval] = React.useState<RiskApproval | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isProcessing, setIsProcessing] = React.useState(false);
+  const [confirmDialogOpen, setConfirmDialogOpen] = React.useState(false);
+  const [confirmDialogConfig, setConfirmDialogConfig] = React.useState<{
+    title: string;
+    description: string;
+    message: string;
+    confirmText: string;
+    onConfirm: () => Promise<void>;
+    variant?: "default" | "danger";
+  } | null>(null);
 
   const isTopManagement = user?.role === "TOP_MANAGEMENT";
 
@@ -153,61 +163,82 @@ export default function DetailApprovalPage() {
   async function handleApproveApproval() {
     if (!approval) return;
 
-    setIsProcessing(true);
-    try {
-      const response = await apiClient.patch(
-        `/risk-approvals/${approval.id}`,
-        {
-          status: RiskApprovalTLStatus.DISETUJUI,
-        }
-      );
+    setConfirmDialogConfig({
+      title: "Setujui Pengajuan",
+      description: "Apakah Anda yakin ingin menyetujui pengajuan ini?",
+      message: `Pengajuan dari ${approval.manager.name} dengan ${approval.risks.length} risiko akan disetujui.`,
+      confirmText: "Ya, Setujui",
+      onConfirm: async () => {
+        setIsProcessing(true);
+        try {
+          const response = await apiClient.patch(
+            `/risk-approvals/${approval.id}`,
+            {
+              status: RiskApprovalTLStatus.DISETUJUI,
+            }
+          );
 
-      if (response.status === 200) {
-        toast.success("Pengajuan berhasil disetujui");
-        setApproval({
-          ...approval,
-          status: RiskApprovalTLStatus.DISETUJUI,
-        });
-        setTimeout(() => router.back(), 1000);
-      } else {
-        toast.error("Gagal menyetujui pengajuan");
-      }
-    } catch (err) {
-      console.error("Error approving:", err);
-      toast.error("Gagal menyetujui pengajuan");
-    } finally {
-      setIsProcessing(false);
-    }
+          if (response.status === 200) {
+            toast.success("Pengajuan berhasil disetujui");
+            setApproval({
+              ...approval,
+              status: RiskApprovalTLStatus.DISETUJUI,
+            });
+            setConfirmDialogOpen(false);
+            setTimeout(() => router.back(), 1000);
+          } else {
+            toast.error("Gagal menyetujui pengajuan");
+          }
+        } catch (err) {
+          console.error("Error approving:", err);
+          toast.error("Gagal menyetujui pengajuan");
+        } finally {
+          setIsProcessing(false);
+        }
+      },
+    });
+    setConfirmDialogOpen(true);
   }
 
   async function handleRejectApproval() {
     if (!approval) return;
 
-    setIsProcessing(true);
-    try {
-      const response = await apiClient.patch(
-        `/risk-approvals/${approval.id}`,
-        {
-          status: RiskApprovalTLStatus.DITOLAK,
-        }
-      );
+    setConfirmDialogConfig({
+      title: "Tolak Pengajuan",
+      description: "Apakah Anda yakin ingin menolak pengajuan ini?",
+      message: `Pengajuan dari ${approval.manager.name} dengan ${approval.risks.length} risiko akan ditolak dan dikembalikan ke manager.`,
+      confirmText: "Ya, Tolak",
+      variant: "danger",
+      onConfirm: async () => {
+        setIsProcessing(true);
+        try {
+          const response = await apiClient.patch(
+            `/risk-approvals/${approval.id}`,
+            {
+              status: RiskApprovalTLStatus.DITOLAK,
+            }
+          );
 
-      if (response.status === 200) {
-        toast.success("Pengajuan berhasil ditolak");
-        setApproval({
-          ...approval,
-          status: RiskApprovalTLStatus.DITOLAK,
-        });
-        setTimeout(() => router.back(), 1000);
-      } else {
-        toast.error("Gagal menolak pengajuan");
-      }
-    } catch (err) {
-      console.error("Error rejecting:", err);
-      toast.error("Gagal menolak pengajuan");
-    } finally {
-      setIsProcessing(false);
-    }
+          if (response.status === 200) {
+            toast.success("Pengajuan berhasil ditolak");
+            setApproval({
+              ...approval,
+              status: RiskApprovalTLStatus.DITOLAK,
+            });
+            setConfirmDialogOpen(false);
+            setTimeout(() => router.back(), 1000);
+          } else {
+            toast.error("Gagal menolak pengajuan");
+          }
+        } catch (err) {
+          console.error("Error rejecting:", err);
+          toast.error("Gagal menolak pengajuan");
+        } finally {
+          setIsProcessing(false);
+        }
+      },
+    });
+    setConfirmDialogOpen(true);
   }
 
   if (isLoading) {
@@ -298,28 +329,27 @@ export default function DetailApprovalPage() {
             </div>
           </div>
         </div>
+        {isTopManagement && isPending && (
+          <div className="border-t border-sky-100 bg-gradient-to-r from-sky-50/30 to-white px-6 py-4 flex gap-2 justify-end">
+            <Button
+              onClick={handleRejectApproval}
+              disabled={isProcessing}
+              className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-medium"
+            >
+              <X size={16} />
+              {isProcessing ? "Menolak..." : "Tolak Pengajuan"}
+            </Button>
+            <Button
+              onClick={handleApproveApproval}
+              disabled={isProcessing}
+              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+            >
+              <CheckCircle size={16} />
+              {isProcessing ? "Menyetujui..." : "Setujui Pengajuan"}
+            </Button>
+          </div>
+        )}
       </div>
-
-      {isTopManagement && isPending && (
-        <div className="flex gap-2">
-          <Button
-            onClick={handleApproveApproval}
-            disabled={isProcessing}
-            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
-          >
-            <CheckCircle size={16} />
-            {isProcessing ? "Menyetujui..." : "Setujui Pengajuan"}
-          </Button>
-          <Button
-            onClick={handleRejectApproval}
-            disabled={isProcessing}
-            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white"
-          >
-            <X size={16} />
-            {isProcessing ? "Menolak..." : "Tolak Pengajuan"}
-          </Button>
-        </div>
-      )}
 
       <div className="rounded-lg border border-sky-100 shadow-md bg-white">
         <div className="border-b border-sky-100 bg-gradient-to-r from-sky-50/50 to-white px-6 py-4">
@@ -355,18 +385,18 @@ export default function DetailApprovalPage() {
               render: (value: any) => value?.title || "-",
             },
             {
-              header: "Identified Risk",
+              header: "Risiko",
               key: "identifiedRisk",
               render: (value) => (
                 <span className="font-bold text-sky-900">{String(value || "-")}</span>
               ),
             },
             {
-              header: "Vulnerability",
+              header: "Kerentanan",
               key: "vulnerability",
             },
             {
-              header: "Threat",
+              header: "Ancaman",
               key: "threat",
             },
             {
@@ -396,7 +426,7 @@ export default function DetailApprovalPage() {
               searchable: false,
             },
             {
-              header: "Risk Score",
+              header: "Skor Risiko",
               key: (row: Risk) => {
                 const score =
                   (row.impactSeverity ?? 1) *
@@ -433,6 +463,20 @@ export default function DetailApprovalPage() {
         />
         </div>
       </div>
+
+      {confirmDialogConfig && (
+        <ConfirmationDialog
+          open={confirmDialogOpen}
+          onOpenChange={setConfirmDialogOpen}
+          title={confirmDialogConfig.title}
+          description={confirmDialogConfig.description}
+          message={confirmDialogConfig.message}
+          confirmText={confirmDialogConfig.confirmText}
+          variant={confirmDialogConfig.variant}
+          isLoading={isProcessing}
+          onConfirm={confirmDialogConfig.onConfirm}
+        />
+      )}
     </div>
   );
 }

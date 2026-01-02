@@ -269,42 +269,6 @@ export default function RiskApprovalPage() {
                       </TooltipTrigger>
                       <TooltipContent>Lihat detail pengajuan</TooltipContent>
                     </Tooltip>
-                    {isTopManagement &&
-                      row.status ===
-                        RiskApprovalTLStatus.MENUNGGU_PERSETUJUAN_FINAL && (
-                        <>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() =>
-                                  handleApproveApproval(String(value))
-                                }
-                                className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
-                              >
-                                <CheckCircle size={16} />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Setujui pengajuan</TooltipContent>
-                          </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() =>
-                                  handleRejectApproval(String(value))
-                                }
-                                className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                              >
-                                <X size={16} />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Tolak pengajuan</TooltipContent>
-                          </Tooltip>
-                        </>
-                      )}
                   </div>
                 </TooltipProvider>
               );

@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import { PaginatedTable } from "@/components/paginated-table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { ConfirmationDialog } from "@/components/confirmation-dialog";
+import { DeleteConfirmationDialog } from "@/components/delete-confirmation-dialog";
 import {
   Dialog,
   DialogContent,
@@ -131,6 +133,23 @@ export default function DaftarRisikoPage() {
     null
   );
   const [scaleStatuses, setScaleStatuses] = React.useState<ScaleStatus[]>([]);
+
+  // Confirmation dialog state
+  const [confirmDialogOpen, setConfirmDialogOpen] = React.useState(false);
+  const [confirmDialogConfig, setConfirmDialogConfig] = React.useState<{
+    title: string;
+    description: string;
+    message?: string;
+    confirmText: string;
+    onConfirm: () => Promise<void>;
+  } | null>(null);
+
+  // Delete confirmation dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [deleteDialogConfig, setDeleteDialogConfig] = React.useState<{
+    itemName: string;
+    onConfirm: () => Promise<void>;
+  } | null>(null);
 
   // Mark component as mounted to prevent hydration mismatches
   React.useEffect(() => {
@@ -365,38 +384,48 @@ export default function DaftarRisikoPage() {
     setOpen(true);
   };
 
-  const handleSubmitForApproval = async (risk: Risk) => {
-    setIsSubmitting(true);
-    try {
-      const payload = {
-        status: "MENUNGGU_PERSETUJUAN_RM",
-      };
+  const handleSubmitForApproval = (risk: Risk) => {
+    setConfirmDialogConfig({
+      title: "Ajukan Risiko untuk Persetujuan",
+      description: "Apakah Anda yakin ingin mengajukan risiko ini untuk persetujuan RM?",
+      message: `Risiko: ${risk.customRiskId} - ${risk.identifiedRisk}`,
+      confirmText: "Ajukan",
+      onConfirm: async () => {
+        setIsSubmitting(true);
+        try {
+          const payload = {
+            status: "MENUNGGU_PERSETUJUAN_RM",
+          };
 
-      const response = await apiClient.patch(`/risk-registers/${risk.id}`, payload);
+          const response = await apiClient.patch(`/risk-registers/${risk.id}`, payload);
 
-      if (response.status === 200) {
-        toast.success("Risiko berhasil diajukan untuk persetujuan");
-        setCurrentPage(1);
-        const reloadResponse = await apiClient.get("/risk-registers", {
-          params: {
-            page: 1,
-            per_page: 10,
-          },
-        });
-        if (reloadResponse.data?.status && reloadResponse.data?.data?.data) {
-          setRisks(reloadResponse.data.data.data);
-          if (reloadResponse.data.data.metadata) {
-            setTotalPages(reloadResponse.data.data.metadata.total_page);
-            setTotalRisks(reloadResponse.data.data.metadata.total_data);
+          if (response.status === 200) {
+            toast.success("Risiko berhasil diajukan untuk persetujuan");
+            setConfirmDialogOpen(false);
+            setCurrentPage(1);
+            const reloadResponse = await apiClient.get("/risk-registers", {
+              params: {
+                page: 1,
+                per_page: 10,
+              },
+            });
+            if (reloadResponse.data?.status && reloadResponse.data?.data?.data) {
+              setRisks(reloadResponse.data.data.data);
+              if (reloadResponse.data.data.metadata) {
+                setTotalPages(reloadResponse.data.data.metadata.total_page);
+                setTotalRisks(reloadResponse.data.data.metadata.total_data);
+              }
+            }
           }
+        } catch (err) {
+          console.error("Error submitting for approval:", err);
+          toast.error("Gagal mengajukan risiko untuk persetujuan");
+        } finally {
+          setIsSubmitting(false);
         }
-      }
-    } catch (err) {
-      console.error("Error submitting for approval:", err);
-      toast.error("Gagal mengajukan risiko untuk persetujuan");
-    } finally {
-      setIsSubmitting(false);
-    }
+      },
+    });
+    setConfirmDialogOpen(true);
   };
 
   const handleReturnToDraft = async (risk: Risk) => {
@@ -556,38 +585,41 @@ export default function DaftarRisikoPage() {
     }
   };
 
-  const handleDelete = async (risk: Risk) => {
-    if (!confirm(`Apakah Anda yakin ingin menghapus risiko ${risk.customRiskId}?`)) {
-      return;
-    }
+  const handleDelete = (risk: Risk) => {
+    setDeleteDialogConfig({
+      itemName: `${risk.customRiskId} - ${risk.identifiedRisk}`,
+      onConfirm: async () => {
+        setIsSubmitting(true);
+        try {
+          const response = await apiClient.delete(`/risk-registers/${risk.id}`);
 
-    setIsSubmitting(true);
-    try {
-      const response = await apiClient.delete(`/risk-registers/${risk.id}`);
-
-      if (response.status === 200) {
-        toast.success("Risiko berhasil dihapus");
-        setCurrentPage(1);
-        const reloadResponse = await apiClient.get("/risk-registers", {
-          params: {
-            page: 1,
-            per_page: 10,
-          },
-        });
-        if (reloadResponse.data?.status && reloadResponse.data?.data?.data) {
-          setRisks(reloadResponse.data.data.data);
-          if (reloadResponse.data.data.metadata) {
-            setTotalPages(reloadResponse.data.data.metadata.total_page);
-            setTotalRisks(reloadResponse.data.data.metadata.total_data);
+          if (response.status === 200) {
+            toast.success("Risiko berhasil dihapus");
+            setDeleteDialogOpen(false);
+            setCurrentPage(1);
+            const reloadResponse = await apiClient.get("/risk-registers", {
+              params: {
+                page: 1,
+                per_page: 10,
+              },
+            });
+            if (reloadResponse.data?.status && reloadResponse.data?.data?.data) {
+              setRisks(reloadResponse.data.data.data);
+              if (reloadResponse.data.data.metadata) {
+                setTotalPages(reloadResponse.data.data.metadata.total_page);
+                setTotalRisks(reloadResponse.data.data.metadata.total_data);
+              }
+            }
           }
+        } catch (err) {
+          console.error("Error deleting risk:", err);
+          toast.error("Gagal menghapus risiko");
+        } finally {
+          setIsSubmitting(false);
         }
-      }
-    } catch (err) {
-      console.error("Error deleting risk:", err);
-      toast.error("Gagal menghapus risiko");
-    } finally {
-      setIsSubmitting(false);
-    }
+      },
+    });
+    setDeleteDialogOpen(true);
   };
 
   function getStatusBadgeColor(status?: string) {
@@ -662,7 +694,7 @@ export default function DaftarRisikoPage() {
       {!mounted ? null : (
         <>
           <div className="flex items-center justify-between gap-4 flex-shrink-0">
-            <h1 className="text-2xl font-semibold">Daftar Risiko & Assessment</h1>
+            <h1 className="text-2xl font-semibold">Daftar & Penilaian Risiko</h1>
             {(isRiskOwner || isRiskManager) && (
           <Dialog open={open} onOpenChange={(newOpen) => {
             setOpen(newOpen);
@@ -693,20 +725,20 @@ export default function DaftarRisikoPage() {
               </Button>
             </DialogTrigger>
             <DialogContent className="max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>{selectedRisk?.id ? "Edit Risiko" : "Tambah Risiko"}</DialogTitle>
+              <DialogHeader className="border-b border-sky-100 pb-4">
+                <DialogTitle className="text-xl text-gray-900">{selectedRisk?.id ? "Edit Risiko" : "Tambah Risiko"}</DialogTitle>
                 <DialogDescription>
                   {selectedRisk?.id ? "Perbarui detail risiko dan metrik penilaian." : "Isi detail risiko dan metrik penilaian."}
                 </DialogDescription>
               </DialogHeader>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <div className="bg-sky-50 border border-sky-200 rounded-lg p-4 mb-6">
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <p className="text-xs font-medium text-blue-700 mb-2">
+                    <p className="text-xs font-semibold text-sky-900 uppercase tracking-widest mb-2">
                       Risk ID
                     </p>
-                    <p className="text-lg font-mono font-bold text-blue-900">
+                    <p className="text-lg font-mono font-bold text-sky-900">
                       {showCustomRiskId && customRiskId.trim()
                         ? customRiskId
                         : `RISK-${String(totalRisks + 1).padStart(3, "0")}`}
@@ -716,18 +748,18 @@ export default function DaftarRisikoPage() {
                     size="sm"
                     variant="outline"
                     onClick={() => setShowCustomRiskId(!showCustomRiskId)}
-                    className="text-xs whitespace-nowrap border-blue-300 text-blue-700 hover:bg-blue-100 hover:border-blue-400"
+                    className="text-xs whitespace-nowrap border-sky-300 text-sky-700 hover:bg-sky-100 hover:border-sky-400 hover:text-sky-900 font-medium"
                   >
                     {!showCustomRiskId ? "Gunakan Custom" : "Gunakan Auto"}
                   </Button>
                 </div>
                 {showCustomRiskId && (
-                  <div className="mt-4 pt-4 border-t border-blue-200">
+                  <div className="mt-4 pt-4 border-t border-sky-200">
                     <Input
                       placeholder="Masukkan Risk ID Custom"
                       value={customRiskId}
                       onChange={(e) => setCustomRiskId(e.target.value)}
-                      className="w-full border-blue-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-300"
+                      className="w-full border-sky-200 focus:border-sky-400 focus:ring-sky-100"
                     />
                   </div>
                 )}
@@ -737,7 +769,7 @@ export default function DaftarRisikoPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <Field>
-                      <FieldLabel>Risk Category *</FieldLabel>
+                      <FieldLabel className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Kategori *</FieldLabel>
                       <div className="relative">
                         <Input
                           placeholder="Pilih atau ketik kategori"
@@ -752,7 +784,7 @@ export default function DaftarRisikoPage() {
                           }}
                           onFocus={() => setShowCategoryDropdown(true)}
                           onBlur={() => setTimeout(() => setShowCategoryDropdown(false), 200)}
-                          className="w-full"
+                          className="w-full border-sky-200 focus:border-sky-400 focus:ring-sky-100"
                         />
                         {showCategoryDropdown && (
                           <div className="absolute top-full left-0 right-0 bg-white border border-slate-200 rounded-md shadow-lg max-h-48 overflow-y-auto z-50 mt-1">
@@ -789,7 +821,7 @@ export default function DaftarRisikoPage() {
 
                   <div>
                     <Field>
-                      <FieldLabel>Identified Risk</FieldLabel>
+                      <FieldLabel className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Risiko</FieldLabel>
                       <Input
                         value={String(form.identifiedRisk || "")}
                         onChange={(e) =>
@@ -798,6 +830,7 @@ export default function DaftarRisikoPage() {
                             identifiedRisk: e.target.value,
                           }))
                         }
+                        className="border-sky-200 focus:border-sky-400 focus:ring-sky-100"
                       />
                     </Field>
                   </div>
@@ -806,7 +839,7 @@ export default function DaftarRisikoPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <Field>
-                      <FieldLabel>Vulnerability *</FieldLabel>
+                      <FieldLabel className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Kerentanan *</FieldLabel>
                       <Input
                         value={String(form.vulnerability || "")}
                         onChange={(e) =>
@@ -815,18 +848,20 @@ export default function DaftarRisikoPage() {
                             vulnerability: e.target.value,
                           }))
                         }
+                        className="border-sky-200 focus:border-sky-400 focus:ring-sky-100"
                       />
                     </Field>
                   </div>
 
                   <div>
                     <Field>
-                      <FieldLabel>Threat</FieldLabel>
+                      <FieldLabel className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Ancaman</FieldLabel>
                       <Input
                         value={String(form.threat || "")}
                         onChange={(e) =>
                           setForm((p) => ({ ...p, threat: e.target.value }))
                         }
+                        className="border-sky-200 focus:border-sky-400 focus:ring-sky-100"
                       />
                     </Field>
                   </div>
@@ -835,7 +870,7 @@ export default function DaftarRisikoPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <Field>
-                      <FieldLabel>Risk Source *</FieldLabel>
+                      <FieldLabel className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Asal Risiko *</FieldLabel>
                       <div className="relative">
                         <Input
                           placeholder="Pilih atau ketik sumber"
@@ -850,7 +885,7 @@ export default function DaftarRisikoPage() {
                           }}
                           onFocus={() => setShowSourceDropdown(true)}
                           onBlur={() => setTimeout(() => setShowSourceDropdown(false), 200)}
-                          className="w-full"
+                          className="w-full border-sky-200 focus:border-sky-400 focus:ring-sky-100"
                         />
                         {showSourceDropdown && (
                           <div className="absolute top-full left-0 right-0 bg-white border border-slate-200 rounded-md shadow-lg max-h-48 overflow-y-auto z-50 mt-1">
@@ -887,14 +922,14 @@ export default function DaftarRisikoPage() {
 
                   <div>
                     <Field>
-                      <FieldLabel>Asset</FieldLabel>
+                      <FieldLabel className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Aset</FieldLabel>
                       <Select
                         value={form.assetId || ""}
                         onValueChange={(id) =>
                           setForm((p) => ({ ...p, assetId: id }))
                         }
                       >
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger className="w-full border-sky-200 focus:border-sky-400 focus:ring-sky-100">
                           <SelectValue placeholder="Pilih aset" />
                         </SelectTrigger>
                         <SelectContent>
@@ -912,15 +947,15 @@ export default function DaftarRisikoPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <Field>
-                      <FieldLabel>Context</FieldLabel>
+                      <FieldLabel className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Ruang Lingkup</FieldLabel>
                       <Select
                         value={form.contextId || ""}
                         onValueChange={(id) =>
                           setForm((p) => ({ ...p, contextId: id }))
                         }
                       >
-                        <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Pilih konteks" />
+                        <SelectTrigger className="w-full border-sky-200 focus:border-sky-400 focus:ring-sky-100">
+                          <SelectValue placeholder="Pilih ruang lingkup" />
                         </SelectTrigger>
                         <SelectContent>
                           {contexts.map((c) => (
@@ -936,7 +971,7 @@ export default function DaftarRisikoPage() {
                   {isRiskManager && (
                     <div>
                       <Field>
-                        <FieldLabel>Risk Owner</FieldLabel>
+                        <FieldLabel className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Risk Owner</FieldLabel>
                         <Select
                           value={form.owner?.id || ""}
                           onValueChange={(id) => {
@@ -949,7 +984,7 @@ export default function DaftarRisikoPage() {
                             }
                           }}
                         >
-                          <SelectTrigger className="w-full">
+                          <SelectTrigger className="w-full border-sky-200 focus:border-sky-400 focus:ring-sky-100">
                             <SelectValue placeholder="Pilih risk owner" />
                           </SelectTrigger>
                           <SelectContent>
@@ -967,13 +1002,13 @@ export default function DaftarRisikoPage() {
 
                 <div>
                   <Field>
-                    <FieldLabel>CIA Impact</FieldLabel>
+                    <FieldLabel className="text-xs font-semibold text-sky-900 uppercase tracking-widest">CIA Impact</FieldLabel>
                     <div className="flex gap-3 flex-wrap">
                       <label
                         className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors ${
                           form.isConfidentiality
-                            ? "border-blue-500 bg-blue-50"
-                            : "border-gray-200 hover:border-blue-400 hover:bg-blue-50"
+                            ? "border-sky-500 bg-sky-50"
+                            : "border-sky-200 hover:border-sky-400 hover:bg-sky-50"
                         }`}
                       >
                         <input
@@ -985,7 +1020,7 @@ export default function DaftarRisikoPage() {
                               isConfidentiality: e.target.checked,
                             }))
                           }
-                          className="w-4 h-4 cursor-pointer accent-blue-600"
+                          className="w-4 h-4 cursor-pointer accent-sky-600"
                         />
                         <span className="text-sm font-medium">
                           Confidentiality
@@ -994,8 +1029,8 @@ export default function DaftarRisikoPage() {
                       <label
                         className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors ${
                           form.isIntegrity
-                            ? "border-blue-500 bg-blue-50"
-                            : "border-gray-200 hover:border-blue-400 hover:bg-blue-50"
+                            ? "border-sky-500 bg-sky-50"
+                            : "border-sky-200 hover:border-sky-400 hover:bg-sky-50"
                         }`}
                       >
                         <input
@@ -1007,15 +1042,15 @@ export default function DaftarRisikoPage() {
                               isIntegrity: e.target.checked,
                             }))
                           }
-                          className="w-4 h-4 cursor-pointer accent-blue-600"
+                          className="w-4 h-4 cursor-pointer accent-sky-600"
                         />
                         <span className="text-sm font-medium">Integrity</span>
                       </label>
                       <label
                         className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer transition-colors ${
                           form.isAvailability
-                            ? "border-blue-500 bg-blue-50"
-                            : "border-gray-200 hover:border-blue-400 hover:bg-blue-50"
+                            ? "border-sky-500 bg-sky-50"
+                            : "border-sky-200 hover:border-sky-400 hover:bg-sky-50"
                         }`}
                       >
                         <input
@@ -1027,7 +1062,7 @@ export default function DaftarRisikoPage() {
                               isAvailability: e.target.checked,
                             }))
                           }
-                          className="w-4 h-4 cursor-pointer accent-blue-600"
+                          className="w-4 h-4 cursor-pointer accent-sky-600"
                         />
                         <span className="text-sm font-medium">
                           Availability
@@ -1040,7 +1075,7 @@ export default function DaftarRisikoPage() {
                 <div className="grid grid-cols-3 gap-6">
                   <div>
                     <Field>
-                      <FieldLabel>Impact Severity</FieldLabel>
+                      <FieldLabel className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Impact Severity</FieldLabel>
                       <Select
                         value={String(form.impactSeverity ?? "")}
                         onValueChange={(value) =>
@@ -1050,7 +1085,7 @@ export default function DaftarRisikoPage() {
                           }))
                         }
                       >
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger className="w-full border-sky-200 focus:border-sky-400 focus:ring-sky-100">
                           <SelectValue placeholder="Pilih severity" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1068,7 +1103,7 @@ export default function DaftarRisikoPage() {
                   </div>
                   <div>
                     <Field>
-                      <FieldLabel>Likelihood</FieldLabel>
+                      <FieldLabel className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Likelihood</FieldLabel>
                       <Select
                         value={String(form.likelihoodOccurence ?? "")}
                         onValueChange={(value) =>
@@ -1078,7 +1113,7 @@ export default function DaftarRisikoPage() {
                           }))
                         }
                       >
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger className="w-full border-sky-200 focus:border-sky-400 focus:ring-sky-100">
                           <SelectValue placeholder="Pilih likelihood" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1097,7 +1132,7 @@ export default function DaftarRisikoPage() {
                   {riskCriteria?.isFMEA && (
                     <div>
                       <Field>
-                        <FieldLabel>Detection</FieldLabel>
+                        <FieldLabel className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Detection</FieldLabel>
                         <Select
                           value={String(form.detection ?? "")}
                           onValueChange={(value) =>
@@ -1107,7 +1142,7 @@ export default function DaftarRisikoPage() {
                             }))
                           }
                         >
-                          <SelectTrigger className="w-full">
+                          <SelectTrigger className="w-full border-sky-200 focus:border-sky-400 focus:ring-sky-100">
                             <SelectValue placeholder="Pilih detection" />
                           </SelectTrigger>
                           <SelectContent>
@@ -1128,19 +1163,20 @@ export default function DaftarRisikoPage() {
 
                 <div>
                   <Field>
-                    <FieldLabel>Detail</FieldLabel>
+                    <FieldLabel className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Detail</FieldLabel>
                     <Textarea
                       value={String(form.detail ?? "")}
                       onChange={(e) =>
                         setForm((p) => ({ ...p, detail: e.target.value }))
                       }
                       rows={3}
+                      className="border-sky-200 focus:border-sky-400 focus:ring-sky-100"
                     />
                   </Field>
                 </div>
               </div>
 
-              <DialogFooter>
+              <DialogFooter className="border-t border-sky-100 pt-4 mt-6">
                 <div className="flex justify-end w-full gap-2">
                   <Button
                     variant="outline"
@@ -1149,10 +1185,11 @@ export default function DaftarRisikoPage() {
                       setSelectedRisk(null);
                     }}
                     disabled={isSubmitting}
+                    className="border-sky-200 text-sky-700 hover:bg-sky-50 hover:text-sky-900"
                   >
                     Batal
                   </Button>
-                  <Button onClick={handleAdd} disabled={isSubmitting}>
+                  <Button onClick={handleAdd} disabled={isSubmitting} className="bg-sky-600 hover:bg-sky-700 text-white">
                     {isSubmitting ? (selectedRisk?.id ? "Memperbarui..." : "Menambahkan...") : (selectedRisk?.id ? "Perbarui Risiko" : "Tambah Risiko")}
                   </Button>
                 </div>
@@ -1187,7 +1224,7 @@ export default function DaftarRisikoPage() {
             render: (value: any) => value?.title || "-",
           },
           {
-            header: "Identified Risk",
+            header: "Risiko",
             key: "identifiedRisk",
             render: (value) => (
               <span className="font-bold">{String(value || "-")}</span>
@@ -1263,7 +1300,7 @@ export default function DaftarRisikoPage() {
               ]
             : [
                 {
-                  header: "Risk Score",
+                  header: "Skor Risiko",
                   key: (row: Risk) => {
                     const score =
                       (row.impactSeverity ?? 1) *
@@ -1496,11 +1533,11 @@ export default function DaftarRisikoPage() {
       {/* Detail Modal */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto !max-w-5xl w-full">
-          <DialogHeader>
-            <DialogTitle className="text-xl">Detail Risiko</DialogTitle>
+          <DialogHeader className="border-b border-sky-100 pb-4">
+            <DialogTitle className="text-xl text-gray-900">Detail Risiko</DialogTitle>
             <DialogDescription>
               Informasi lengkap risiko:{" "}
-              <span className="font-mono font-semibold text-slate-700">
+              <span className="font-mono font-semibold text-sky-700">
                 {selectedRisk?.customRiskId}
               </span>
             </DialogDescription>
@@ -1511,19 +1548,19 @@ export default function DaftarRisikoPage() {
               {/* Header Section with ID, Status and Action Buttons */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
                 {/* Left: ID and Status Box */}
-                <div className="md:col-span-2">
-                  <div className="border border-blue-200 rounded-lg p-4 bg-blue-50">
+                <div className={isRiskManager && selectedRisk.status === RiskStatus.MENUNGGU_PERSETUJUAN_RM ? "md:col-span-2" : "md:col-span-3"}>
+                  <div className="border border-sky-700 rounded-lg p-4 bg-gradient-to-r from-sky-200 to-sky-50">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">
+                        <p className="text-xs font-semibold text-sky-900 uppercase tracking-widest">
                           Risk ID
                         </p>
-                        <p className="text-lg font-mono font-bold text-blue-900 mt-2">
+                        <p className="text-lg font-mono font-bold text-sky-900 mt-2">
                           {selectedRisk.customRiskId}
                         </p>
                       </div>
-                      <div>
-                        <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">
+                      <div className="flex flex-col justify-start items-end">
+                        <p className="text-xs font-semibold text-sky-900 uppercase tracking-widest">
                           Status
                         </p>
                         <div className="mt-2">
@@ -1546,7 +1583,7 @@ export default function DaftarRisikoPage() {
                     <Button
                       onClick={() => handleApproveRisk(selectedRisk)}
                       disabled={isSubmitting}
-                      className="w-full bg-green-600 hover:bg-green-700 text-white"
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
                     >
                       Setujui
                     </Button>
@@ -1554,7 +1591,7 @@ export default function DaftarRisikoPage() {
                       <Button
                         onClick={() => handleRequestRevision(selectedRisk)}
                         disabled={isSubmitting}
-                        className="w-full border-orange-500 hover:bg-orange-50 text-orange-600"
+                        className="w-full border-amber-300 text-amber-700 hover:bg-amber-50 hover:text-amber-900 font-medium"
                         variant="outline"
                       >
                         Revisi
@@ -1562,7 +1599,7 @@ export default function DaftarRisikoPage() {
                       <Button
                         onClick={() => handleRejectRisk(selectedRisk)}
                         disabled={isSubmitting}
-                        className="w-full border-red-500 hover:bg-red-50 text-red-600"
+                        className="w-full border-red-200 text-red-700 hover:bg-red-50 hover:text-red-900 font-medium"
                         variant="outline"
                       >
                         Tolak
@@ -1575,14 +1612,14 @@ export default function DaftarRisikoPage() {
               {/* Single Column Layout */}
               <div className="space-y-5">
                 {/* Risk Classification Section */}
-                <div className="border border-slate-200 rounded-lg p-4 bg-white">
-                  <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-blue-600"></span>
+                <div className="border border-sky-100 rounded-lg p-4 bg-sky-50/50">
+                  <h3 className="text-sm font-semibold text-sky-900 mb-3 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-sky-600"></span>
                     Klasifikasi Risiko
                   </h3>
                   <div className="grid grid-cols-1 gap-3">
                     <div>
-                      <p className="text-xs font-medium text-slate-500 uppercase mb-1">
+                      <p className="text-xs font-semibold text-sky-900 uppercase tracking-widest mb-1">
                         Kategori
                       </p>
                       <p className="text-sm text-slate-900 font-medium">
@@ -1590,7 +1627,7 @@ export default function DaftarRisikoPage() {
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs font-medium text-slate-500 uppercase mb-1">
+                      <p className="text-xs font-semibold text-sky-900 uppercase tracking-widest mb-1">
                         Sumber Risiko
                       </p>
                       <p className="text-sm text-slate-900 font-medium">
@@ -1601,33 +1638,33 @@ export default function DaftarRisikoPage() {
                 </div>
 
                 {/* Risk Elements Section */}
-                <div className="border border-slate-200 rounded-lg p-4 bg-white">
-                  <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-red-600"></span>
+                <div className="border border-sky-100 rounded-lg p-4 bg-sky-50/50">
+                  <h3 className="text-sm font-semibold text-sky-900 mb-3 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-sky-600"></span>
                     Elemen Risiko
                   </h3>
                   <div className="space-y-3">
                     <div>
-                      <p className="text-xs font-medium text-slate-500 uppercase mb-1">
+                      <p className="text-xs font-semibold text-sky-900 uppercase tracking-widest mb-1">
                         Identified Risk
                       </p>
-                      <p className="text-sm text-slate-900 border-l-2 border-red-600 pl-2 py-1">
+                      <p className="text-sm text-slate-900 border-l-2 border-sky-600 pl-2 py-1">
                         {selectedRisk.identifiedRisk || "-"}
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs font-medium text-slate-500 uppercase mb-1">
+                      <p className="text-xs font-semibold text-sky-900 uppercase tracking-widest mb-1">
                         Vulnerability
                       </p>
-                      <p className="text-sm text-slate-900 font-mono border-l-2 border-slate-200 pl-2 py-1">
+                      <p className="text-sm text-slate-900 font-medium border-l-2 border-sky-200 pl-2 py-1">
                         {selectedRisk.vulnerability}
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs font-medium text-slate-500 uppercase mb-1">
+                      <p className="text-xs font-semibold text-sky-900 uppercase tracking-widest mb-1">
                         Threat
                       </p>
-                      <p className="text-sm text-slate-900 font-mono border-l-2 border-slate-200 pl-2 py-1">
+                      <p className="text-sm text-slate-900 font-medium border-l-2 border-sky-200 pl-2 py-1">
                         {selectedRisk.threat || "-"}
                       </p>
                     </div>
@@ -1635,14 +1672,14 @@ export default function DaftarRisikoPage() {
                 </div>
 
                 {/* Assets & Context Section */}
-                <div className="border border-slate-200 rounded-lg p-4 bg-white">
-                  <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-green-600"></span>
+                <div className="border border-sky-100 rounded-lg p-4 bg-sky-50/50">
+                  <h3 className="text-sm font-semibold text-sky-900 mb-3 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-sky-600"></span>
                     Aset & Konteks
                   </h3>
                   <div className="grid grid-cols-1 gap-3">
                     <div>
-                      <p className="text-xs font-medium text-slate-500 uppercase mb-1">
+                      <p className="text-xs font-semibold text-sky-900 uppercase tracking-widest mb-1">
                         Asset
                       </p>
                       <p className="text-sm text-slate-900 font-medium">
@@ -1650,7 +1687,7 @@ export default function DaftarRisikoPage() {
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs font-medium text-slate-500 uppercase mb-1">
+                      <p className="text-xs font-semibold text-sky-900 uppercase tracking-widest mb-1">
                         Context
                       </p>
                       <p className="text-sm text-slate-900 font-medium">
@@ -1658,7 +1695,7 @@ export default function DaftarRisikoPage() {
                       </p>
                     </div>
                     <div>
-                      <p className="text-xs font-medium text-slate-500 uppercase mb-1">
+                      <p className="text-xs font-semibold text-sky-900 uppercase tracking-widest mb-1">
                         Risk Owner
                       </p>
                       <p className="text-sm text-slate-900 font-medium">
@@ -1671,29 +1708,29 @@ export default function DaftarRisikoPage() {
                 </div>
 
                 {/* CIA Impact & Scoring Section */}
-                <div className="border border-slate-200 rounded-lg p-4 bg-white">
-                  <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-amber-600"></span>
+                <div className="border border-sky-100 rounded-lg p-4 bg-sky-50/50">
+                  <h3 className="text-sm font-semibold text-sky-900 mb-3 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-sky-600"></span>
                     Penilaian & Dampak
                   </h3>
                   <div className="space-y-3">
                     <div>
-                      <p className="text-xs font-medium text-slate-500 uppercase mb-2">
+                      <p className="text-xs font-semibold text-sky-900 uppercase tracking-widest mb-2">
                         CIA Impact
                       </p>
                       <div className="flex flex-wrap gap-2">
                         {selectedRisk.isConfidentiality && (
-                          <span className="px-2.5 py-1 rounded text-xs font-medium bg-slate-100 text-slate-700">
+                          <span className="px-2.5 py-1 rounded text-xs font-medium bg-sky-100 text-sky-700">
                             C - Confidentiality
                           </span>
                         )}
                         {selectedRisk.isIntegrity && (
-                          <span className="px-2.5 py-1 rounded text-xs font-medium bg-slate-100 text-slate-700">
+                          <span className="px-2.5 py-1 rounded text-xs font-medium bg-sky-100 text-sky-700">
                             I - Integrity
                           </span>
                         )}
                         {selectedRisk.isAvailability && (
-                          <span className="px-2.5 py-1 rounded text-xs font-medium bg-slate-100 text-slate-700">
+                          <span className="px-2.5 py-1 rounded text-xs font-medium bg-sky-100 text-sky-700">
                             A - Availability
                           </span>
                         )}
@@ -1710,28 +1747,28 @@ export default function DaftarRisikoPage() {
                         riskCriteria?.isFMEA ? "grid-cols-3" : "grid-cols-2"
                       } gap-2`}
                     >
-                      <div className="bg-white p-3 rounded border border-slate-200 text-center">
-                        <p className="text-xs font-medium text-slate-600 uppercase">
+                      <div className="bg-white p-3 rounded border border-sky-200 text-center">
+                        <p className="text-xs font-semibold text-sky-900 uppercase tracking-widest">
                           {riskCriteria?.isFMEA ? "Severity" : "Impact"}
                         </p>
-                        <p className="text-2xl font-bold text-slate-900 mt-1">
+                        <p className="text-2xl font-bold text-sky-900 mt-1">
                           {selectedRisk.impactSeverity || "-"}
                         </p>
                       </div>
-                      <div className="bg-white p-3 rounded border border-slate-200 text-center">
-                        <p className="text-xs font-medium text-slate-600 uppercase">
+                      <div className="bg-white p-3 rounded border border-sky-200 text-center">
+                        <p className="text-xs font-semibold text-sky-900 uppercase tracking-widest">
                           {riskCriteria?.isFMEA ? "Occurence" : "Likelihood"}
                         </p>
-                        <p className="text-2xl font-bold text-slate-900 mt-1">
+                        <p className="text-2xl font-bold text-sky-900 mt-1">
                           {selectedRisk.likelihoodOccurence || "-"}
                         </p>
                       </div>
                       {riskCriteria?.isFMEA && (
-                        <div className="bg-white p-3 rounded border border-slate-200 text-center">
-                          <p className="text-xs font-medium text-slate-600 uppercase">
+                        <div className="bg-white p-3 rounded border border-sky-200 text-center">
+                          <p className="text-xs font-semibold text-sky-900 uppercase tracking-widest">
                             Detection
                           </p>
-                          <p className="text-2xl font-bold text-slate-900 mt-1">
+                          <p className="text-2xl font-bold text-sky-900 mt-1">
                             {selectedRisk.detection || "-"}
                           </p>
                         </div>
@@ -1750,7 +1787,7 @@ export default function DaftarRisikoPage() {
                       )} border-slate-200`}
                     >
                       <p className="text-xs font-medium uppercase mb-2 opacity-75">
-                        {riskCriteria?.isFMEA ? "RPN Score" : "Risk Score"}
+                        {riskCriteria?.isFMEA ? "Skor RPN" : "Skor Risiko"}
                       </p>
                       <p className="text-3xl font-bold">
                         {riskCriteria?.isFMEA
@@ -1766,24 +1803,24 @@ export default function DaftarRisikoPage() {
               </div>
 
               {/* Detail & Metadata Section - Full Width */}
-              <div className="border border-slate-200 rounded-lg p-4 bg-white">
-                <h3 className="text-sm font-semibold text-slate-900 mb-3 flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-slate-600"></span>
+              <div className="border border-sky-100 rounded-lg p-4 bg-sky-50/50">
+                <h3 className="text-sm font-semibold text-sky-900 mb-3 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-sky-600"></span>
                   Detail Tambahan
                 </h3>
                 <div className="space-y-3">
                   {selectedRisk.detail && (
                     <div>
-                      <p className="text-xs font-medium text-slate-500 uppercase mb-1">
+                      <p className="text-xs font-semibold text-sky-900 uppercase tracking-widest mb-1">
                         Keterangan Detail
                       </p>
-                      <p className="text-sm text-slate-900 whitespace-pre-wrap font-mono bg-slate-50 border border-slate-200 p-2 rounded">
+                      <p className="text-sm text-slate-900 whitespace-pre-wrap font-medium bg-white border border-sky-200 p-2 rounded">
                         {selectedRisk.detail}
                       </p>
                     </div>
                   )}
                   <div>
-                    <p className="text-xs font-medium text-slate-500 uppercase mb-1">
+                    <p className="text-xs font-semibold text-sky-900 uppercase tracking-widest mb-1">
                       Dibuat Pada
                     </p>
                     <p className="text-sm text-slate-900">
@@ -1795,13 +1832,36 @@ export default function DaftarRisikoPage() {
             </div>
           )}
 
-          <DialogFooter>
-            <Button onClick={() => setDetailOpen(false)} className="w-full">
+          <DialogFooter className="border-t border-sky-100 pt-4 mt-6">
+            <Button onClick={() => setDetailOpen(false)} className="w-full bg-sky-600 hover:bg-sky-700 text-white font-medium">
               Tutup
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {confirmDialogConfig && (
+        <ConfirmationDialog
+          open={confirmDialogOpen}
+          onOpenChange={setConfirmDialogOpen}
+          title={confirmDialogConfig.title}
+          description={confirmDialogConfig.description}
+          message={confirmDialogConfig.message}
+          confirmText={confirmDialogConfig.confirmText}
+          isLoading={isSubmitting}
+          onConfirm={confirmDialogConfig.onConfirm}
+        />
+      )}
+
+      {deleteDialogConfig && (
+        <DeleteConfirmationDialog
+          open={deleteDialogOpen}
+          onCancel={() => setDeleteDialogOpen(false)}
+          onConfirm={deleteDialogConfig.onConfirm}
+          itemName={deleteDialogConfig.itemName}
+          isLoading={isSubmitting}
+        />
+      )}
         </>
       )}
     </div>
