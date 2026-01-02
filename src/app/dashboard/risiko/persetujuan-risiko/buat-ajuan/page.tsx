@@ -257,18 +257,22 @@ export default function BuatAjuanPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-semibold">
+      <div>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-semibold text-gray-900">
             Buat Pengajuan Persetujuan Final Risiko
           </h1>
+          <Button
+            onClick={handleAjukanClick}
+            disabled={selected.size === 0}
+            className="bg-sky-600 hover:bg-sky-700 text-white"
+          >
+            Ajukan ({selected.size} risiko)
+          </Button>
         </div>
-        <Button
-          onClick={handleAjukanClick}
-          disabled={selected.size === 0}
-        >
-          Ajukan ({selected.size} risiko)
-        </Button>
+        <p className="text-sm text-gray-600 mt-1">
+          Pilih risiko yang telah disetujui RM untuk dikirim ke top level management
+        </p>
       </div>
 
       {(() => {
@@ -440,6 +444,7 @@ export default function BuatAjuanPage() {
               variant="outline"
               onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
               disabled={currentPage === 1 || isLoading}
+              className="border-sky-200 text-sky-700 hover:bg-sky-50"
             >
               Sebelumnya
             </Button>
@@ -447,10 +452,11 @@ export default function BuatAjuanPage() {
               {Array.from({ length: totalPages }).map((_, i) => (
                 <Button
                   key={i + 1}
-                  variant={currentPage === i + 1 ? "default" : "outline"}
                   size="sm"
                   onClick={() => setCurrentPage(i + 1)}
                   disabled={isLoading}
+                  className={currentPage === i + 1 ? "bg-sky-600 hover:bg-sky-700 text-white" : "border-sky-200 text-sky-700 hover:bg-sky-50"}
+                  variant={currentPage === i + 1 ? "default" : "outline"}
                 >
                   {i + 1}
                 </Button>
@@ -462,6 +468,7 @@ export default function BuatAjuanPage() {
                 setCurrentPage(Math.min(totalPages, currentPage + 1))
               }
               disabled={currentPage === totalPages || isLoading}
+              className="border-sky-200 text-sky-700 hover:bg-sky-50"
             >
               Selanjutnya
             </Button>
@@ -472,8 +479,8 @@ export default function BuatAjuanPage() {
       {/* Approval Message Modal */}
       <Dialog open={showModal} onOpenChange={setShowModal}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Ajukan Persetujuan Final Risiko</DialogTitle>
+          <DialogHeader className="border-b border-sky-100 pb-4">
+            <DialogTitle className="text-xl text-gray-900">Ajukan Persetujuan Final Risiko</DialogTitle>
             <DialogDescription>
               Masukkan pesan untuk persetujuan {selected.size} risiko ke top level
               management
@@ -481,7 +488,7 @@ export default function BuatAjuanPage() {
           </DialogHeader>
 
           <Field>
-            <FieldLabel>Pesan Persetujuan</FieldLabel>
+            <FieldLabel className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Pesan Persetujuan</FieldLabel>
             <Textarea
               placeholder="Contoh: Persetujuan untuk risiko-risiko berikut ke top level management"
               value={message}
@@ -489,10 +496,11 @@ export default function BuatAjuanPage() {
                 setMessage(e.target.value)
               }
               rows={4}
+              className="border-sky-200 focus:border-sky-400 focus:ring-sky-100"
             />
           </Field>
 
-          <DialogFooter>
+          <DialogFooter className="border-t border-sky-100 pt-4 mt-6">
             <div className="flex justify-end w-full gap-2">
               <Button
                 variant="outline"
@@ -501,12 +509,14 @@ export default function BuatAjuanPage() {
                   setMessage("");
                 }}
                 disabled={isSending}
+                className="border-sky-200 text-sky-700 hover:bg-sky-50"
               >
                 Batal
               </Button>
               <Button
                 onClick={handleSubmitApproval}
                 disabled={isSending || !message.trim()}
+                className="bg-sky-600 hover:bg-sky-700 text-white"
               >
                 {isSending ? "Mengirim..." : "Kirim Persetujuan"}
               </Button>
@@ -518,8 +528,8 @@ export default function BuatAjuanPage() {
       {/* Detail Modal */}
       <Dialog open={detailOpen} onOpenChange={setDetailOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto !max-w-5xl w-full">
-          <DialogHeader>
-            <DialogTitle className="text-xl">Detail Risiko</DialogTitle>
+          <DialogHeader className="border-b border-sky-100 pb-4">
+            <DialogTitle className="text-xl text-gray-900">Detail Risiko</DialogTitle>
             <DialogDescription>
               Informasi lengkap risiko:{" "}
               <span className="font-mono font-semibold text-slate-700">
@@ -531,18 +541,18 @@ export default function BuatAjuanPage() {
           {selectedRisk && (
             <div className="space-y-5">
               {/* Header Section with ID and Status */}
-              <div className="border border-blue-200 rounded-lg p-4 bg-blue-50">
+              <div className="border border-sky-200 rounded-lg p-4 bg-sky-50">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">
+                    <p className="text-xs font-semibold text-sky-900 uppercase tracking-wide">
                       Risk ID
                     </p>
-                    <p className="text-lg font-mono font-bold text-blue-900 mt-2">
+                    <p className="text-lg font-mono font-bold text-sky-900 mt-2">
                       {selectedRisk.customRiskId}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide">
+                    <p className="text-xs font-semibold text-sky-900 uppercase tracking-wide">
                       Status
                     </p>
                     <div className="mt-2">
@@ -559,7 +569,7 @@ export default function BuatAjuanPage() {
               </div>
 
               {/* Risk Classification */}
-              <div className="border border-slate-200 rounded-lg p-4 bg-white">
+              <div className="border border-sky-200 rounded-lg p-4 bg-white">
                 <h3 className="text-sm font-semibold text-slate-900 mb-3">
                   Klasifikasi Risiko
                 </h3>
@@ -584,7 +594,7 @@ export default function BuatAjuanPage() {
               </div>
 
               {/* Risk Elements */}
-              <div className="border border-slate-200 rounded-lg p-4 bg-white">
+              <div className="border border-sky-200 rounded-lg p-4 bg-white">
                 <h3 className="text-sm font-semibold text-slate-900 mb-3">
                   Elemen Risiko
                 </h3>
@@ -617,7 +627,7 @@ export default function BuatAjuanPage() {
               </div>
 
               {/* Assets & Context */}
-              <div className="border border-slate-200 rounded-lg p-4 bg-white">
+              <div className="border border-sky-200 rounded-lg p-4 bg-white">
                 <h3 className="text-sm font-semibold text-slate-900 mb-3">
                   Aset & Konteks
                 </h3>
@@ -650,13 +660,13 @@ export default function BuatAjuanPage() {
               </div>
 
               {/* Scoring */}
-              <div className="border border-slate-200 rounded-lg p-4 bg-white">
+              <div className="border border-sky-200 rounded-lg p-4 bg-white">
                 <h3 className="text-sm font-semibold text-slate-900 mb-3">
                   Penilaian
                 </h3>
                 <div className="space-y-3">
                   <div className="grid grid-cols-2 gap-2">
-                    <div className="bg-white p-3 rounded border border-slate-200 text-center">
+                    <div className="bg-white p-3 rounded border border-sky-200 text-center">
                       <p className="text-xs font-medium text-slate-600 uppercase">
                         Impact
                       </p>
@@ -664,7 +674,7 @@ export default function BuatAjuanPage() {
                         {selectedRisk.impactSeverity || "-"}
                       </p>
                     </div>
-                    <div className="bg-white p-3 rounded border border-slate-200 text-center">
+                    <div className="bg-white p-3 rounded border border-sky-200 text-center">
                       <p className="text-xs font-medium text-slate-600 uppercase">
                         Likelihood
                       </p>
@@ -673,11 +683,11 @@ export default function BuatAjuanPage() {
                       </p>
                     </div>
                   </div>
-                  <div className="p-4 rounded border border-slate-200 text-center bg-slate-50">
-                    <p className="text-xs font-medium text-slate-600 uppercase mb-2">
+                  <div className="p-4 rounded border border-sky-200 text-center bg-sky-50">
+                    <p className="text-xs font-medium text-sky-600 uppercase mb-2">
                       Risk Score
                     </p>
-                    <p className="text-3xl font-bold text-slate-900">
+                    <p className="text-3xl font-bold text-sky-900">
                       {(selectedRisk.impactSeverity ?? 1) *
                         (selectedRisk.likelihoodOccurence ?? 1)}
                     </p>
@@ -686,7 +696,7 @@ export default function BuatAjuanPage() {
               </div>
 
               {/* Detail */}
-              <div className="border border-slate-200 rounded-lg p-4 bg-white">
+              <div className="border border-sky-200 rounded-lg p-4 bg-white">
                 <h3 className="text-sm font-semibold text-slate-900 mb-3">
                   Detail Tambahan
                 </h3>
@@ -695,7 +705,7 @@ export default function BuatAjuanPage() {
                     <p className="text-xs font-medium text-slate-500 uppercase mb-1">
                       Keterangan
                     </p>
-                    <p className="text-sm text-slate-900 whitespace-pre-wrap font-mono bg-slate-50 border border-slate-200 p-2 rounded">
+                    <p className="text-sm text-slate-900 whitespace-pre-wrap font-mono bg-sky-50 border border-sky-200 p-2 rounded">
                       {selectedRisk.detail}
                     </p>
                   </div>
@@ -714,8 +724,8 @@ export default function BuatAjuanPage() {
             </div>
           )}
 
-          <DialogFooter>
-            <Button onClick={() => setDetailOpen(false)} className="w-full">
+          <DialogFooter className="border-t border-sky-100 pt-4 mt-6">
+            <Button onClick={() => setDetailOpen(false)} className="w-full bg-sky-600 hover:bg-sky-700 text-white">
               Tutup
             </Button>
           </DialogFooter>

@@ -181,7 +181,10 @@ export default function PrioritasRisikoPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 pt-0 w-full min-w-0">
-      <h2 className="text-lg font-semibold">Prioritas Risiko</h2>
+      <div>
+        <h1 className="text-2xl font-semibold text-gray-900">Prioritas Risiko</h1>
+        <p className="text-sm text-gray-600 mt-1">Analisis dan prioritas risiko berdasarkan kriteria yang telah ditentukan</p>
+      </div>
 
       {isLoading ? (
         <div className="text-center py-8 text-gray-500">
@@ -195,16 +198,18 @@ export default function PrioritasRisikoPage() {
         <div className="flex flex-col gap-4">
           {!riskCriteria.isFMEA && matrix && cellMap && (
             <div>
-              <h3 className="text-lg font-semibold mb-4">Matriks Risiko (Impact × Likelihood)</h3>
-              <Card>
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Matriks Risiko (Impact × Likelihood)</h3>
+              </div>
+              <Card className="border-sky-100 shadow-md bg-white">
                 <CardContent>
                   <div className="overflow-auto">
                     <table className="w-full table-fixed border-collapse">
                       <thead>
-                        <tr>
-                          <th className="w-24"></th>
+                        <tr className="bg-sky-100">
+                          <th className="w-24 px-4 py-3 text-sm font-semibold text-sky-900 border border-sky-200"></th>
                           {Array.from({ length: 5 }).map((_, i) => (
-                            <th key={i} className="text-center">
+                            <th key={i} className="text-center px-4 py-3 text-sm font-semibold text-sky-900 border border-sky-200">
                               L{i + 1}
                             </th>
                           ))}
@@ -213,7 +218,7 @@ export default function PrioritasRisikoPage() {
                       <tbody>
                         {matrix.map((row, si) => (
                           <tr key={si}>
-                            <td className="font-medium">I{si + 1}</td>
+                            <td className="font-semibold px-4 py-3 border border-sky-200 bg-sky-50 text-sky-900">I{si + 1}</td>
                             {row.map((count, li) => {
                               const score = (si + 1) * (li + 1);
                               const lvl = riskLevelForScore(score);
@@ -221,7 +226,7 @@ export default function PrioritasRisikoPage() {
                               return (
                                 <td
                                   key={li}
-                                  className={`text-center p-2 border ${lvl.className} h-16 align-middle`}
+                                  className={`text-center p-2 border border-sky-200 ${lvl.className} h-16 align-middle`}
                                 >
                                   <div className="flex flex-col items-center gap-1 h-full justify-center">
                                     <div className="text-sm font-semibold">
@@ -268,18 +273,20 @@ export default function PrioritasRisikoPage() {
 
           {riskCriteria.isFMEA && (
             <div>
-              <h3 className="text-lg font-semibold mb-4">FMEA Scoring Matrix (Impact × Likelihood × Detection)</h3>
-              <Card>
-                <CardContent>
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">FMEA Scoring Matrix (Impact × Likelihood × Detection)</h3>
+              </div>
+              <Card className="border-sky-100 shadow-md bg-white">
+                <CardContent className="pt-6">
                   <div className="overflow-auto">
                     <table className="w-full border-collapse">
                       <thead>
-                        <tr className="bg-gray-50 border-b">
-                          <th className="text-left px-4 py-2 text-sm font-semibold">Impact</th>
-                          <th className="text-left px-4 py-2 text-sm font-semibold">Likelihood</th>
-                          <th className="text-left px-4 py-2 text-sm font-semibold">Detection</th>
-                          <th className="text-center px-4 py-2 text-sm font-semibold">RPN</th>
-                          <th className="text-left px-4 py-2 text-sm font-semibold">Count</th>
+                        <tr className="bg-sky-100 border-b border-sky-200">
+                          <th className="text-left px-4 py-3 text-sm font-semibold text-sky-900">Impact</th>
+                          <th className="text-left px-4 py-3 text-sm font-semibold text-sky-900">Likelihood</th>
+                          <th className="text-left px-4 py-3 text-sm font-semibold text-sky-900">Detection</th>
+                          <th className="text-center px-4 py-3 text-sm font-semibold text-sky-900">RPN</th>
+                          <th className="text-left px-4 py-3 text-sm font-semibold text-sky-900">Count</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -335,40 +342,42 @@ export default function PrioritasRisikoPage() {
           )}
 
           <div>
-            <h3 className="text-lg font-semibold mt-4 mb-4">
-              Tabel Prioritas Risiko (≥ Threshold: {riskCriteria.threshold})
-            </h3>
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Tabel Prioritas Risiko (≥ Threshold: {riskCriteria.threshold})
+              </h3>
+            </div>
             {computed.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 Tidak ada risiko yang memenuhi threshold
               </div>
             ) : (
-              <div className="border border-gray-200 rounded-lg overflow-hidden bg-white">
+              <div className="border border-sky-100 rounded-lg overflow-hidden bg-white shadow-md">
                 <div className="overflow-x-auto">
                   <Table className="min-w-full">
                     <TableHeader>
-                      <TableRow className="bg-gray-50 border-b border-gray-200 hover:bg-gray-50">
-                        <TableHead className="px-6 py-4 text-left text-sm font-semibold text-gray-700 bg-gray-50 whitespace-nowrap">
+                      <TableRow className="bg-sky-100 border-b border-sky-200 hover:bg-sky-100">
+                        <TableHead className="px-6 py-4 text-left text-sm font-semibold text-sky-900 whitespace-nowrap">
                           Risk ID
                         </TableHead>
-                        <TableHead className="px-6 py-4 text-left text-sm font-semibold text-gray-700 bg-gray-50 whitespace-nowrap">
+                        <TableHead className="px-6 py-4 text-left text-sm font-semibold text-sky-900 whitespace-nowrap">
                           Identified Risk
                         </TableHead>
-                        <TableHead className="px-6 py-4 text-left text-sm font-semibold text-gray-700 bg-gray-50 whitespace-nowrap">
+                        <TableHead className="px-6 py-4 text-left text-sm font-semibold text-sky-900 whitespace-nowrap">
                           Impact
                         </TableHead>
-                        <TableHead className="px-6 py-4 text-left text-sm font-semibold text-gray-700 bg-gray-50 whitespace-nowrap">
+                        <TableHead className="px-6 py-4 text-left text-sm font-semibold text-sky-900 whitespace-nowrap">
                           Likelihood
                         </TableHead>
                         {riskCriteria.isFMEA && (
-                          <TableHead className="px-6 py-4 text-left text-sm font-semibold text-gray-700 bg-gray-50 whitespace-nowrap">
+                          <TableHead className="px-6 py-4 text-left text-sm font-semibold text-sky-900 whitespace-nowrap">
                             Detection
                           </TableHead>
                         )}
-                        <TableHead className="px-6 py-4 text-left text-sm font-semibold text-gray-700 bg-gray-50 whitespace-nowrap">
+                        <TableHead className="px-6 py-4 text-left text-sm font-semibold text-sky-900 whitespace-nowrap">
                           {riskCriteria.isFMEA ? "RPN" : "Score"}
                         </TableHead>
-                        <TableHead className="px-6 py-4 text-left text-sm font-semibold text-gray-700 bg-gray-50 whitespace-nowrap">
+                        <TableHead className="px-6 py-4 text-left text-sm font-semibold text-sky-900 whitespace-nowrap">
                           Risk Level
                         </TableHead>
                       </TableRow>
@@ -377,7 +386,7 @@ export default function PrioritasRisikoPage() {
                       {computed.map(({ r, score, rpn }) => (
                         <TableRow
                           key={r.id}
-                          className="border-b border-gray-200 hover:bg-gray-50 transition-colors"
+                          className="border-b border-sky-100 hover:bg-sky-50 transition-colors"
                         >
                           <TableCell className="px-6 py-4 text-sm text-gray-700 whitespace-nowrap font-medium">
                             {r.customRiskId}

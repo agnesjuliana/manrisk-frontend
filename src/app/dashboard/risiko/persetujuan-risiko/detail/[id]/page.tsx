@@ -241,51 +241,61 @@ export default function DetailApprovalPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
+      <div>
+        <div className="flex items-center gap-3 mb-1">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => router.back()}
-            className="flex items-center gap-1"
+            className="h-10 w-10 p-0 text-sky-600 hover:bg-sky-50"
           >
-            <ArrowLeft size={16} /> Kembali
+            <ArrowLeft size={24} />
           </Button>
-          <h1 className="text-2xl font-semibold">Detail Pengajuan Persetujuan</h1>
+          <h1 className="text-2xl font-semibold text-gray-900">Detail Pengajuan Persetujuan</h1>
         </div>
+        <p className="text-sm text-gray-600 ml-14">
+          Lihat detail dan kelola persetujuan risiko dari top level management
+        </p>
       </div>
 
-      <div className="rounded-lg border p-4 bg-gray-50">
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <p className="text-sm text-gray-600">Tanggal Pengajuan</p>
-            <p className="font-semibold">{formatDate(approval.createdAt)}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-600">Status</p>
-            <div className="mt-1">
-              <span
-                className={`rounded-full px-3 py-1 text-sm font-medium ${getStatusBadgeColor(
-                  approval.status
-                )}`}
-              >
-                {getStatusLabel(approval.status)}
-              </span>
+      <div className="rounded-lg border border-sky-100 shadow-md bg-white">
+        <div className="border-b border-sky-100 bg-gradient-to-r from-sky-50/50 to-white px-6 py-4">
+          <h2 className="text-sm font-semibold text-sky-900 uppercase tracking-widest">Informasi Pengajuan</h2>
+        </div>
+        <div className="p-6">
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <p className="text-xs font-semibold text-sky-900 uppercase tracking-widest mb-2">Tanggal Pengajuan</p>
+              <p className="text-sm text-gray-900 font-medium">{formatDate(approval.createdAt)}</p>
             </div>
-          </div>
-          <div>
-            <p className="text-sm text-gray-600">Manager</p>
-            <p className="font-semibold">{approval.manager.name}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-600">Email Manager</p>
-            <p className="font-semibold">{approval.manager.email}</p>
-          </div>
-          <div className="col-span-2">
-            <p className="text-sm text-gray-600">Pesan</p>
-            <p className="font-semibold text-gray-800 mt-1">
-              {approval.message || "-"}
-            </p>
+            <div>
+              <p className="text-xs font-semibold text-sky-900 uppercase tracking-widest mb-2">Status</p>
+              <div>
+                <span
+                  className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getStatusBadgeColor(
+                    approval.status
+                  )}`}
+                >
+                  {getStatusLabel(approval.status)}
+                </span>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-sky-900 uppercase tracking-widest mb-2">Manager</p>
+              <p className="text-sm text-gray-900 font-medium">{approval.manager.name}</p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-sky-900 uppercase tracking-widest mb-2">Email Manager</p>
+              <p className="text-sm text-gray-900 font-medium">{approval.manager.email}</p>
+            </div>
+            <div className="col-span-2">
+              <p className="text-xs font-semibold text-sky-900 uppercase tracking-widest mb-2">Pesan</p>
+              <div className="bg-sky-50 border border-sky-100 rounded-lg p-3">
+                <p className="text-sm text-gray-900">
+                  {approval.message || "-"}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -295,7 +305,7 @@ export default function DetailApprovalPage() {
           <Button
             onClick={handleApproveApproval}
             disabled={isProcessing}
-            className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
           >
             <CheckCircle size={16} />
             {isProcessing ? "Menyetujui..." : "Setujui Pengajuan"}
@@ -303,8 +313,7 @@ export default function DetailApprovalPage() {
           <Button
             onClick={handleRejectApproval}
             disabled={isProcessing}
-            variant="destructive"
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white"
           >
             <X size={16} />
             {isProcessing ? "Menolak..." : "Tolak Pengajuan"}
@@ -312,10 +321,13 @@ export default function DetailApprovalPage() {
         </div>
       )}
 
-      <div className="rounded-lg border p-6">
-        <h2 className="font-semibold mb-4">
-          Daftar Risiko ({approval.risks.length})
-        </h2>
+      <div className="rounded-lg border border-sky-100 shadow-md bg-white">
+        <div className="border-b border-sky-100 bg-gradient-to-r from-sky-50/50 to-white px-6 py-4">
+          <h2 className="text-sm font-semibold text-sky-900 uppercase tracking-widest">
+            Daftar Risiko ({approval.risks.length})
+          </h2>
+        </div>
+        <div className="p-6">
         <PaginatedTable<Risk>
           data={approval.risks}
           columns={[
@@ -334,7 +346,7 @@ export default function DetailApprovalPage() {
               header: "Risk ID",
               key: "customRiskId",
               render: (value) => (
-                <span className="font-medium">{String(value)}</span>
+                <span className="font-medium text-sky-900">{String(value)}</span>
               ),
             },
             {
@@ -346,7 +358,7 @@ export default function DetailApprovalPage() {
               header: "Identified Risk",
               key: "identifiedRisk",
               render: (value) => (
-                <span className="font-bold">{String(value || "-")}</span>
+                <span className="font-bold text-sky-900">{String(value || "-")}</span>
               ),
             },
             {
@@ -409,7 +421,7 @@ export default function DetailApprovalPage() {
               header: "Status",
               key: "status",
               render: (value) => (
-                <span className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                <span className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-sky-100 text-sky-700">
                   {getStatusLabel(String(value))}
                 </span>
               ),
@@ -419,6 +431,7 @@ export default function DetailApprovalPage() {
           pageSize={10}
           emptyMessage="Tidak ada risiko dalam pengajuan ini"
         />
+        </div>
       </div>
     </div>
   );
