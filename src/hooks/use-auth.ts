@@ -5,7 +5,7 @@ import { authApi } from "@/lib/api"
 const USER_CACHE_KEY = "isms:user:cached"
 const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes in milliseconds
 
-export function useAuth() {
+export function useAuth(options?: { requireAuth?: boolean }) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(true)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -17,9 +17,12 @@ export function useAuth() {
       try {
         const token = localStorage.getItem("token")
         
-        // If no token, redirect to login
+        // If no token and auth is required, redirect to login
         if (!token) {
-          router.push("/auth/login")
+          if (options?.requireAuth) {
+            router.push("/auth/login")
+          }
+          setIsLoading(false)
           return
         }
 
@@ -67,15 +70,21 @@ export function useAuth() {
           }
         }
       } catch (error) {
-        // Token is invalid or expired, redirect to login
+        // Token is invalid or expired
         localStorage.removeItem("token")
         localStorage.removeItem(USER_CACHE_KEY)
-        router.push("/auth/login")
+        
+        // Only redirect if auth is required
+        if (options?.requireAuth) {
+          router.push("/auth/login")
+        } else {
+          setIsLoading(false)
+        }
       }
     }
 
     checkAuth()
-  }, [router])
+  }, [router, options?.requireAuth])
 
   const logout = () => {
     authApi.logout()
