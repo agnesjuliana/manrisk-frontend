@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -235,42 +235,42 @@ export default function KonteksOrganisasiPage() {
     loadExternalStakeholders();
   }, []);
 
-  // Load CIA objectives from API on mount
-  useEffect(() => {
-    const loadCia = async () => {
-      setIsLoadingCia(true);
-      setCiaLoadError(false);
-      try {
-        const response = await ciaApi.getObjectives();
-        if (response.status && response.data) {
-          const ciaData = response.data.cia_objectives;
-          setData((prev) => ({
-            ...prev,
-            cia_objectives: {
-              confidentiality: ciaData.confidentiality,
-              integrity: ciaData.integrity,
-              availability: ciaData.availability,
-              service_priorities: ciaData.service_priorities.map((p) => ({
-                service: p.service,
-                C: p.C,
-                I: p.I,
-                A: p.A,
-                // Store priority_id for API calls
-                ...(p.priority_id ? { priority_id: p.priority_id } : {}),
-              })),
-            },
-          }));
-        }
-      } catch (error) {
-        console.error("Error loading CIA objectives:", error);
-        setCiaLoadError(true);
-      } finally {
-        setIsLoadingCia(false);
+  // Load CIA objectives from API
+  const loadCia = useCallback(async () => {
+    setIsLoadingCia(true);
+    setCiaLoadError(false);
+    try {
+      const response = await ciaApi.getObjectives();
+      if (response.status && response.data) {
+        const ciaData = response.data.cia_objectives;
+        setData((prev) => ({
+          ...prev,
+          cia_objectives: {
+            confidentiality: ciaData.confidentiality,
+            integrity: ciaData.integrity,
+            availability: ciaData.availability,
+            service_priorities: ciaData.service_priorities.map((p) => ({
+              service: p.service,
+              C: p.C,
+              I: p.I,
+              A: p.A,
+              // Store priority_id for API calls
+              ...(p.priority_id ? { priority_id: p.priority_id } : {}),
+            })),
+          },
+        }));
       }
-    };
-
-    loadCia();
+    } catch (error) {
+      console.error("Error loading CIA objectives:", error);
+      setCiaLoadError(true);
+    } finally {
+      setIsLoadingCia(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadCia();
+  }, [loadCia]);
 
   // Load regulations from API on mount
   useEffect(() => {
@@ -489,22 +489,9 @@ export default function KonteksOrganisasiPage() {
               a_score: validatedDraft.A,
             });
             if (response.status) {
-              setData((s) => ({
-                ...s,
-                cia_objectives: {
-                  ...s.cia_objectives,
-                  service_priorities: [
-                    ...s.cia_objectives.service_priorities,
-                    {
-                      priority_id: response.data.priority_id,
-                      service: response.data.service,
-                      C: response.data.C,
-                      I: response.data.I,
-                      A: response.data.A,
-                    },
-                  ],
-                },
-              }));
+              console.log("Service priority created, refreshing CIA data...");
+              // Refresh CIA data from endpoint
+              await loadCia();
               closeArrayModal();
             }
           } catch (error) {
@@ -629,24 +616,9 @@ export default function KonteksOrganisasiPage() {
               a_score: validatedDraft.A,
             });
             if (response.status) {
-              setData((s) => ({
-                ...s,
-                cia_objectives: {
-                  ...s.cia_objectives,
-                  service_priorities: s.cia_objectives.service_priorities.map(
-                    (v, i) =>
-                      i === idx
-                        ? {
-                            priority_id: response.data.priority_id,
-                            service: response.data.service,
-                            C: response.data.C,
-                            I: response.data.I,
-                            A: response.data.A,
-                          }
-                        : v
-                  ),
-                },
-              }));
+              console.log("Service priority updated, refreshing CIA data...");
+              // Refresh CIA data from endpoint
+              await loadCia();
               closeArrayModal();
             }
           } catch (error) {
@@ -741,15 +713,9 @@ export default function KonteksOrganisasiPage() {
         try {
           const response = await ciaApi.deletePriority(priorityId);
           if (response.status) {
-            setData((s) => ({
-              ...s,
-              cia_objectives: {
-                ...s.cia_objectives,
-                service_priorities: s.cia_objectives.service_priorities.filter(
-                  (_, i) => i !== idx
-                ),
-              },
-            }));
+            console.log("Service priority deleted, refreshing CIA data...");
+            // Refresh CIA data from endpoint
+            await loadCia();
             setDeleteConfirm({ open: false, path: null, idx: null });
           }
         } catch (error) {
@@ -807,15 +773,9 @@ export default function KonteksOrganisasiPage() {
           availability: ciaDraft.availability,
         });
         if (response.status) {
-          setData((s) => ({
-            ...s,
-            cia_objectives: {
-              ...s.cia_objectives,
-              confidentiality: ciaDraft.confidentiality,
-              integrity: ciaDraft.integrity,
-              availability: ciaDraft.availability,
-            },
-          }));
+          console.log("CIA objectives updated, refreshing CIA data...");
+          // Refresh CIA data from endpoint
+          await loadCia();
         }
       } catch (error) {
         console.error("Error updating CIA objectives:", error);
@@ -967,6 +927,7 @@ export default function KonteksOrganisasiPage() {
           openAddModal={openAddModal}
           openEditRow={openEditRow}
           removeArrayItem={removeArrayItem}
+          onCiaModified={loadCia}
           isReadOnly={isRiskOwner}
         />
 

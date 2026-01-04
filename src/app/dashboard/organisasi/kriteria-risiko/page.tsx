@@ -94,47 +94,48 @@ export default function KriteriaRisikoPage() {
   // RPN threshold for FMEA (same as threshold)
   const [editingRpnThreshold, setEditingRpnThreshold] = useState(false);
 
-  // Load risk criteria from API on mount
-  useEffect(() => {
-    const loadRiskCriteria = async () => {
-      setIsLoadingCriteria(true);
-      try {
-        const response = await riskCriteriaApi.get();
+  // Load risk criteria from API
+  const loadRiskCriteria = async () => {
+    setIsLoadingCriteria(true);
+    try {
+      const response = await riskCriteriaApi.get();
+      
+      if (response.status && response.data) {
+        const data = response.data;
+        setUseFmea(data.isFMEA);
+        setScaleSize(data.scale);
+        setThreshold(data.threshold);
         
-        if (response.status && response.data) {
-          const data = response.data;
-          setUseFmea(data.isFMEA);
-          setScaleSize(data.scale);
-          setThreshold(data.threshold);
-          
-          // Map scaleStatuses to labels
-          if (data.scaleStatuses && data.scaleStatuses.length > 0) {
-            const labels = data.scaleStatuses
-              .sort((a, b) => a.level - b.level)
-              .map(status => status.title);
-            setLikelihoodLabels(labels);
-            setImpactLabels(labels);
-            setSeverityLabels(labels);
-            setOccurrenceLabels(labels);
-            setDetectionLabels(labels);
-          }
-        } else {
-          // No data from API - setup needed
-          setSetupNeeded(true);
-          setScaleSize(0);
-          setThreshold(0);
+        // Map scaleStatuses to labels
+        if (data.scaleStatuses && data.scaleStatuses.length > 0) {
+          const labels = data.scaleStatuses
+            .sort((a, b) => a.level - b.level)
+            .map(status => status.title);
+          setLikelihoodLabels(labels);
+          setImpactLabels(labels);
+          setSeverityLabels(labels);
+          setOccurrenceLabels(labels);
+          setDetectionLabels(labels);
         }
-      } catch (err) {
-        console.error("Error loading risk criteria:", err);
-        // If error, assume setup needed
+      } else {
+        // No data from API - setup needed
         setSetupNeeded(true);
         setScaleSize(0);
         setThreshold(0);
-      } finally {
-        setIsLoadingCriteria(false);
       }
-    };
+    } catch (err) {
+      console.error("Error loading risk criteria:", err);
+      // If error, assume setup needed
+      setSetupNeeded(true);
+      setScaleSize(0);
+      setThreshold(0);
+    } finally {
+      setIsLoadingCriteria(false);
+    }
+  };
 
+  // Load risk criteria from API on mount
+  useEffect(() => {
     loadRiskCriteria();
   }, []);
 
@@ -206,7 +207,8 @@ export default function KriteriaRisikoPage() {
         throw new Error(response.message || "Gagal menyimpan pengaturan FMEA");
       }
 
-      setUseFmea(newValue);
+      // Refetch risk criteria after successful FMEA toggle
+      await loadRiskCriteria();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Terjadi kesalahan");
       console.error("Error toggling FMEA:", err);

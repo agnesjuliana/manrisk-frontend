@@ -27,6 +27,7 @@ export default function CiaSection({
   openAddModal,
   openEditRow,
   removeArrayItem,
+  onCiaModified,
   isReadOnly = false,
 }: {
   cia: any;
@@ -35,6 +36,7 @@ export default function CiaSection({
   openAddModal: (path: string) => void;
   openEditRow: (path: string, idx: number) => void;
   removeArrayItem: (path: string, idx: number) => void;
+  onCiaModified?: () => void;
   isReadOnly?: boolean;
 }) {
   const handleAddServicePriority = () => {
@@ -43,6 +45,16 @@ export default function CiaSection({
       return;
     }
     openAddModal("cia.service_priorities");
+  };
+
+  const handleEditServicePriority = (path: string, idx: number) => {
+    openEditRow(path, idx);
+  };
+
+  const handleRemoveServicePriority = (path: string, idx: number) => {
+    removeArrayItem(path, idx);
+    // Trigger refresh after deletion
+    onCiaModified?.();
   };
   return (
     <Card className="border border-sky-100 shadow-md bg-white">
@@ -112,18 +124,18 @@ export default function CiaSection({
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <button
-                          className="p-2 hover:bg-gray-100 rounded transition-colors"
-                          onClick={() => openEditRow("cia.service_priorities", i)}
+                          className="p-2 hover:bg-sky-100 rounded transition-colors"
+                          onClick={() => handleEditServicePriority("cia.service_priorities", i)}
                         >
-                          <Edit size={18} className="text-gray-600" />
+                          <Edit size={18} className="text-sky-600" />
                         </button>
                         <button
-                          className="p-2 hover:bg-gray-100 rounded transition-colors"
+                          className="p-2 hover:bg-red-100 rounded transition-colors"
                           onClick={() =>
-                            removeArrayItem("cia.service_priorities", i)
+                            handleRemoveServicePriority("cia.service_priorities", i)
                           }
                         >
-                          <Trash size={18} className="text-gray-600" />
+                          <Trash size={18} className="text-red-600" />
                         </button>
                       </div>
                     </TableCell>

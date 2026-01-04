@@ -77,8 +77,8 @@ export default function ArrayItemDialog({ open, path, mode, draft, onChangeDraft
   return (
     <Dialog open={open} onOpenChange={(v) => (v ? null : onClose())}>
       <DialogContent>
-        <DialogHeader>
-          <DialogTitle>
+        <DialogHeader className="border-b border-sky-100 pb-4">
+          <DialogTitle className="text-2xl text-gray-900">
             {(() => {
               if (!path) return mode === "add" ? "Tambah item" : "Edit item"
               const labelMap: Record<string, string> = {
@@ -93,89 +93,104 @@ export default function ArrayItemDialog({ open, path, mode, draft, onChangeDraft
               return mode === "add" ? `Tambah ${label}` : `Edit ${label}`
             })()}
           </DialogTitle>
-          <DialogDescription>Isi data lalu simpan.</DialogDescription>
+          <DialogDescription className="text-gray-600 mt-1">Isi data lalu simpan.</DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-3">
+        <div className="grid gap-6">
           {path === "stakeholders.internal" || path === "stakeholders.external" ? (
             <>
-              <Label>Nama</Label>
-              <Input value={draft?.name ?? ""} onChange={(e: any) => onChangeDraft({ ...draft, name: e.target.value })} />
-              {errors.name && <p className="text-sm text-destructive mt-1">{errors.name}</p>}
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Nama</Label>
+                <Input className="border-gray-300" value={draft?.name ?? ""} onChange={(e: any) => onChangeDraft({ ...draft, name: e.target.value })} />
+                {errors.name && <p className="text-sm text-destructive mt-1">{errors.name}</p>}
+              </div>
 
-              <Label>Interest</Label>
-              <Input value={draft?.interest ?? ""} onChange={(e: any) => onChangeDraft({ ...draft, interest: e.target.value })} />
-              {errors.interest && <p className="text-sm text-destructive mt-1">{errors.interest}</p>}
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Interest</Label>
+                <Input className="border-gray-300" value={draft?.interest ?? ""} onChange={(e: any) => onChangeDraft({ ...draft, interest: e.target.value })} />
+                {errors.interest && <p className="text-sm text-destructive mt-1">{errors.interest}</p>}
+              </div>
             </>
             ) : path === "cia.service_priorities" ? (
             <>
-              <Label>Context</Label>
-              <Select value={draft?.context_id ?? ""} onValueChange={(value) => onChangeDraft({ ...draft, context_id: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih context" />
-                </SelectTrigger>
-                <SelectContent>
-                  {contexts.map((ctx) => (
-                    <SelectItem key={ctx.id} value={ctx.id}>
-                      {ctx.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.context_id && <p className="text-sm text-destructive mt-1">{errors.context_id}</p>}
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Context</Label>
+                <Select value={draft?.context_id ?? ""} onValueChange={(value) => onChangeDraft({ ...draft, context_id: value })}>
+                  <SelectTrigger className="border-gray-300">
+                    <SelectValue placeholder="Pilih context" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {contexts.map((ctx) => (
+                      <SelectItem key={ctx.id} value={ctx.id}>
+                        {ctx.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.context_id && <p className="text-sm text-destructive mt-1">{errors.context_id}</p>}
+              </div>
 
-              <Label>Service</Label>
-              <Input value={draft?.service ?? ""} onChange={(e: any) => onChangeDraft({ ...draft, service: e.target.value })} />
-              {errors.service && <p className="text-sm text-destructive mt-1">{errors.service}</p>}
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Service</Label>
+                <Input className="border-gray-300" value={draft?.service ?? ""} onChange={(e: any) => onChangeDraft({ ...draft, service: e.target.value })} />
+                {errors.service && <p className="text-sm text-destructive mt-1">{errors.service}</p>}
+              </div>
 
               <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <Label>C</Label>
-                  <Input type="number" value={draft?.C ?? 50} onChange={(e: any) => onChangeDraft({ ...draft, C: Number(e.target.value) })} />
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold text-sky-900 uppercase tracking-widest">C</Label>
+                  <Input className="border-gray-300" type="number" value={draft?.C ?? 50} onChange={(e: any) => onChangeDraft({ ...draft, C: Number(e.target.value) })} />
                   {errors.C && <p className="text-sm text-destructive mt-1">{errors.C}</p>}
                 </div>
-                <div>
-                  <Label>I</Label>
-                  <Input type="number" value={draft?.I ?? 50} onChange={(e: any) => onChangeDraft({ ...draft, I: Number(e.target.value) })} />
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold text-sky-900 uppercase tracking-widest">I</Label>
+                  <Input className="border-gray-300" type="number" value={draft?.I ?? 50} onChange={(e: any) => onChangeDraft({ ...draft, I: Number(e.target.value) })} />
                   {errors.I && <p className="text-sm text-destructive mt-1">{errors.I}</p>}
                 </div>
-                <div>
-                  <Label>A</Label>
-                  <Input type="number" value={draft?.A ?? 50} onChange={(e: any) => onChangeDraft({ ...draft, A: Number(e.target.value) })} />
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold text-sky-900 uppercase tracking-widest">A</Label>
+                  <Input className="border-gray-300" type="number" value={draft?.A ?? 50} onChange={(e: any) => onChangeDraft({ ...draft, A: Number(e.target.value) })} />
                   {errors.A && <p className="text-sm text-destructive mt-1">{errors.A}</p>}
                 </div>
               </div>
             </>
             ) : path === "scope.technical_bounds" ? (
               <>
-                <Label>Nama Batasan</Label>
-                <Input value={draft?.name ?? ""} onChange={(e: any) => onChangeDraft({ ...(draft ?? {}), name: e.target.value })} />
-                {errors.name && <p className="text-sm text-destructive mt-1">{errors.name}</p>}
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Nama Batasan</Label>
+                  <Input className="border-gray-300" value={draft?.name ?? ""} onChange={(e: any) => onChangeDraft({ ...(draft ?? {}), name: e.target.value })} />
+                  {errors.name && <p className="text-sm text-destructive mt-1">{errors.name}</p>}
+                </div>
 
-                <Label>Deskripsi</Label>
-                <Textarea
-                  value={draft?.description ?? ""}
-                  onChange={(e: any) => onChangeDraft({ ...(draft ?? {}), description: e.target.value })}
-                  className="border-input w-full min-h-[90px] rounded-md px-3 py-2 text-sm"
-                />
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Deskripsi</Label>
+                  <Textarea
+                    className="border-gray-300 min-h-24"
+                    value={draft?.description ?? ""}
+                    onChange={(e: any) => onChangeDraft({ ...(draft ?? {}), description: e.target.value })}
+                  />
+                </div>
               </>
             ) : (
               <>
-                <Label>Value</Label>
-                <Input 
-                  value={draft ?? ""} 
-                  onChange={(e: any) => {
-                    onChangeDraft(e.target.value);
-                  }} 
-                />
-                {errors.value && <p className="text-sm text-destructive mt-1">{errors.value}</p>}
+                <div className="space-y-2">
+                  <Label className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Value</Label>
+                  <Input 
+                    className="border-gray-300"
+                    value={draft ?? ""} 
+                    onChange={(e: any) => {
+                      onChangeDraft(e.target.value);
+                    }} 
+                  />
+                  {errors.value && <p className="text-sm text-destructive mt-1">{errors.value}</p>}
+                </div>
               </>
             )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="gap-2 border-t border-sky-100 pt-4 mt-6">
           <Button variant="outline" onClick={onClose}>Batal</Button>
-          <Button onClick={handleSave}>Simpan</Button>
+          <Button className="bg-sky-600 hover:bg-sky-700 text-white" onClick={handleSave}>Simpan</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
