@@ -41,6 +41,7 @@ export interface GetProfileResponse {
   message: string
   status: boolean
   data: {
+    organization: any
     id: string
     email: string
     name: string

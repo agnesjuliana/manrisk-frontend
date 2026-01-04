@@ -58,19 +58,21 @@ export function ProfileForm({
   }
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setValues(prev => ({ ...prev, phone: e.target.value }))
+    // Only allow numbers (0-9)
+    const value = e.target.value.replace(/[^0-9]/g, "")
+    setValues(prev => ({ ...prev, phone: value }))
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     
-    // If onSubmitProfile callback is provided AND not in edit mode, use it
-    if (onSubmitProfile && !isEditMode) {
-      onSubmitProfile(values)
+    // Validate phone number
+    if (values.phone.length < 11) {
+      toast.error("Nomor telepon minimal 11 digit (contoh: 085xxxxxxxxx)")
       return
     }
 
-    // Otherwise, submit to API
+    // Submit to API
     setIsLoading(true)
 
     try {
@@ -83,11 +85,12 @@ export function ProfileForm({
 
       if (response.status) {
         toast.success("Organisasi berhasil disimpan!")
+        
+        // Call onSubmitProfile callback after successful API call
         if (onSubmitProfile) {
-          onSubmitProfile(values)
-        }
-        // Redirect to dashboard only if not in edit mode
-        if (!isEditMode) {
+          await onSubmitProfile(values)
+        } else {
+          // Only redirect if no callback provided
           router.push("/dashboard")
         }
       }
@@ -152,13 +155,18 @@ export function ProfileForm({
             <FieldLabel htmlFor="phone">Nomor Telepon</FieldLabel>
             <Input 
               id="phone" 
-              type="tel" 
-              placeholder="+62 888-8888-8888" 
+              type="text"
+              inputMode="numeric"
+              placeholder="085xxxxxxxxx" 
               required 
               value={values.phone} 
               onChange={handlePhoneChange}
               disabled={isLoading}
+              maxLength={13}
             />
+            <FieldDescription className="text-xs text-gray-500">
+              Minimal 11 digit, hanya angka (contoh: 085123456789)
+            </FieldDescription>
           </Field>
           <Field>
             <Button type="submit" disabled={isLoading}>

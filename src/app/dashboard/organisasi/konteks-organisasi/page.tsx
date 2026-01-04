@@ -37,6 +37,7 @@ import {
   ciaApi,
   usersApi,
   regulationsApi,
+  authApi,
 } from "@/lib/api";
 import {
   loadUsers,
@@ -116,9 +117,10 @@ export default function KonteksOrganisasiPage() {
     phone: "",
   });
 
-  // Load profile from user data on mount
+  // Load profile from auth hook's user data
   useEffect(() => {
-    if (user?.organization) {
+    if (!authLoading && user?.organization) {
+      console.log("Setting profile from user.organization:", user.organization);
       setProfile({
         name: user.organization.name || "",
         address: user.organization.address || "",
@@ -126,7 +128,7 @@ export default function KonteksOrganisasiPage() {
         phone: user.organization.noTelp || "",
       });
     }
-  }, [user]);
+  }, [user, authLoading]);
 
   const [data, setData] = useState<ContextData>(initialData);
   const [isLoadingContexts, setIsLoadingContexts] = useState(false);
