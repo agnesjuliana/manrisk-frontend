@@ -45,7 +45,18 @@ export default function UserRegistryPage() {
     division_id: "",
   });
 
-  // Fetch divisions for dropdown
+  // Find the last (oldest) ADMIN user - cannot be deleted
+  const lastAdmin = React.useMemo(() => {
+    const admins = rows.filter(user => user.role === "ADMIN");
+    if (admins.length === 0) return null;
+    
+    // Sort by createdAt ascending (oldest first)
+    return admins.reduce((oldest, current) => {
+      const oldestDate = new Date(oldest.createdAt).getTime();
+      const currentDate = new Date(current.createdAt).getTime();
+      return currentDate < oldestDate ? current : oldest;
+    });
+  }, [rows]);
   const fetchDivisions = React.useCallback(async () => {
     try {
       const response = await departmentsApi.getAll(1, 1000);
@@ -347,24 +358,29 @@ export default function UserRegistryPage() {
           {
             header: "Aksi",
             key: "id",
-            render: (value, row: any) => (
-              <div className="flex items-center gap-2">
-                <button
-                  className="p-2 hover:bg-gray-100 rounded transition-colors disabled:opacity-50"
-                  onClick={() => handleEdit(row)}
-                  disabled={isLoading}
-                >
-                  <Edit size={18} className="text-gray-600" />
-                </button>
-                <button
-                  className="p-2 hover:bg-gray-100 rounded transition-colors disabled:opacity-50"
-                  onClick={() => handleDelete(String(value))}
-                  disabled={isLoading}
-                >
-                  <Trash size={18} className="text-gray-600" />
-                </button>
-              </div>
-            ),
+            render: (value, row: any) => {
+              const isLastAdmin = lastAdmin && lastAdmin.id === row.id;
+              return (
+                <div className="flex items-center gap-2">
+                  <button
+                    className="p-2 hover:bg-gray-100 rounded transition-colors disabled:opacity-50"
+                    onClick={() => handleEdit(row)}
+                    disabled={isLoading || !!isLastAdmin}
+                    title={isLastAdmin ? "Tidak dapat menghapus ADMIN terakhir dalam organisasi" : ""}
+                  >
+                    <Edit size={18} className="text-gray-600" />
+                  </button>
+                  <button
+                    className="p-2 hover:bg-gray-100 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={() => handleDelete(String(value))}
+                    disabled={isLoading || !!isLastAdmin}
+                    title={isLastAdmin ? "Tidak dapat menghapus ADMIN terakhir dalam organisasi" : ""}
+                  >
+                    <Trash size={18} className={isLastAdmin ? "text-gray-300" : "text-gray-600"} />
+                  </button>
+                </div>
+              );
+            },
             searchable: false,
           },
         ]}
