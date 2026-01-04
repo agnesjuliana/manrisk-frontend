@@ -10,8 +10,22 @@ export function RouteProtector({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Wait for auth check to complete
-    if (!isLoading && !user) {
-      router.push("/auth/login")
+    if (!isLoading) {
+      // No user or not authenticated
+      if (!user) {
+        console.log("RouteProtector: No user, redirecting to login")
+        router.push("/auth/login")
+        return
+      }
+
+      // User authenticated but no organization data - redirect to onboard
+      if (!user.organization) {
+        console.log("RouteProtector: User has no organization, redirecting to onboard")
+        router.push("/onboard/welcome")
+        return
+      }
+
+      console.log("RouteProtector: User authenticated with organization, allowing access")
     }
   }, [isLoading, user, router])
 
@@ -26,7 +40,7 @@ export function RouteProtector({ children }: { children: React.ReactNode }) {
     )
   }
 
-  if (!user) {
+  if (!user || !user.organization) {
     return null
   }
 
