@@ -7,6 +7,7 @@ import { loadUsers, type User as StoreUser } from "@/lib/usersStore";
 import { type Asset, AssetStatus } from "@/lib/assetsStore";
 import { PaginatedTable, type ColumnDef } from "@/components/paginated-table";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +20,7 @@ import { Field, FieldLabel } from "@/components/ui/field";
 import { Textarea } from "@/components/ui/textarea";
 import { assetsApi } from "@/lib/api";
 import { apiClient } from "@/lib/api/config";
+import { useAuth } from "@/hooks/use-auth";
 
 type User = StoreUser;
 
@@ -28,7 +30,9 @@ interface AssetWithCheckbox extends Asset {
 
 export default function BuatAjuanPage() {
   const router = useRouter();
+  const { user, isLoading: isAuthLoading } = useAuth();
 
+  // Define all state and hooks BEFORE any conditional logic
   const [assets, setAssets] = React.useState<Asset[]>([]);
   const [users, setUsers] = React.useState<User[]>([]);
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
@@ -39,6 +43,14 @@ export default function BuatAjuanPage() {
   const [totalAssets, setTotalAssets] = React.useState(0);
   const [showModal, setShowModal] = React.useState(false);
   const [message, setMessage] = React.useState("");
+
+  // Check if user is RISK_MANAGER
+  React.useEffect(() => {
+    if (!isAuthLoading && user?.role !== "RISK_MANAGER") {
+      toast.error("Akses ditolak. Hanya Risk Manager yang dapat akses halaman ini.");
+      router.back();
+    }
+  }, [isAuthLoading, user, router]);
 
   // Load users on client side
   React.useEffect(() => {
@@ -98,6 +110,23 @@ export default function BuatAjuanPage() {
 
     loadAssetsFromAPI();
   }, [currentPage]);
+
+  // Show loading skeleton while checking auth
+  if (isAuthLoading) {
+    return (
+      <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-4 w-96" />
+        <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
+
+  // If user is not RISK_MANAGER, don't render anything (will redirect)
+  if (user?.role !== "RISK_MANAGER") {
+    return null;
+  }
 
   function toggle(id: string) {
     setSelected((prev) => {

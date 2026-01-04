@@ -22,6 +22,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { DeleteConfirmationDialog } from "@/components/delete-confirmation-dialog";
+import { ConfirmationDialog } from "@/components/confirmation-dialog";
 import { Plus, Trash, Edit, SendHorizontal, ArchiveX, ArchiveRestore, X, CheckCircle } from "lucide-react";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import {
@@ -74,6 +75,11 @@ export default function DaftarAsetPage() {
     React.useState(false);
   const [deletingAssetId, setDeletingAssetId] = React.useState<string | null>(null);
   const [deletingAssetName, setDeletingAssetName] = React.useState<string>("");
+  const [submitConfirmDialog, setSubmitConfirmDialog] = React.useState<{open: boolean, assetId: string | null, assetName: string, isLoading: boolean}>({ open: false, assetId: null, assetName: "", isLoading: false });
+  const [revertConfirmDialog, setRevertConfirmDialog] = React.useState<{open: boolean, assetId: string | null, assetName: string, isLoading: boolean}>({ open: false, assetId: null, assetName: "", isLoading: false });
+  const [reviseConfirmDialog, setReviseConfirmDialog] = React.useState<{open: boolean, assetId: string | null, assetName: string, isLoading: boolean}>({ open: false, assetId: null, assetName: "", isLoading: false });
+  const [rejectConfirmDialog, setRejectConfirmDialog] = React.useState<{open: boolean, assetId: string | null, assetName: string, isLoading: boolean}>({ open: false, assetId: null, assetName: "", isLoading: false });
+  const [approveConfirmDialog, setApproveConfirmDialog] = React.useState<{open: boolean, assetId: string | null, assetName: string, isLoading: boolean}>({ open: false, assetId: null, assetName: "", isLoading: false });
 
   const filteredAssetTypes = React.useMemo(() => {
     if (!form.type.trim()) return assetTypes;
@@ -95,60 +101,61 @@ export default function DaftarAsetPage() {
   }, []);
 
   // Load assets from API with pagination
-  React.useEffect(() => {
-    const loadAssetsFromAPI = async () => {
-      setIsLoadingAssets(true);
-      try {
-        // For TOP_MANAGEMENT, filter by approved and waiting for final approval statuses
-        const statusFilter = isTopManagement 
-          ? "DISETUJUI,MENUNGGU_PERSETUJUAN_FINAL" 
-          : undefined;
+  const loadAssetsFromAPI = React.useCallback(async (page: number = 1) => {
+    setIsLoadingAssets(true);
+    try {
+      // For TOP_MANAGEMENT, filter by approved and waiting for final approval statuses
+      const statusFilter = isTopManagement 
+        ? "DISETUJUI,MENUNGGU_PERSETUJUAN_FINAL" 
+        : undefined;
 
-        const response = await assetsApi.getAssets(currentPage, 20, statusFilter);
+      const response = await assetsApi.getAssets(page, 20, statusFilter);
 
-        if (response.status && response.data) {
-          // Map API response to local Asset type
-          const mappedAssets: Asset[] = response.data.data.map((asset) => {
-            // Map API status to local AssetStatus enum
-            let mappedStatus: AssetStatus = AssetStatus.DRAFT;
-            const apiStatus = (asset.status || "").toUpperCase();
+      if (response.status && response.data) {
+        // Map API response to local Asset type
+        const mappedAssets: Asset[] = response.data.data.map((asset) => {
+          // Map API status to local AssetStatus enum
+          let mappedStatus: AssetStatus = AssetStatus.DRAFT;
+          const apiStatus = (asset.status || "").toUpperCase();
 
-            // Map API status to enum values
-            if (apiStatus in AssetStatus) {
-              mappedStatus = apiStatus as AssetStatus;
-            }
-
-            return {
-              id: asset.id,
-              name: asset.name,
-              type: asset.type?.title || "", // Changed from .name to .title
-              classification: asset.classification?.title || "", // Changed from .name to .title
-              location: asset.location || "",
-              status: mappedStatus,
-              ownerId: asset.owner?.id,
-              ownerName: asset.owner?.name,
-              division: asset.owner?.department?.name,
-            };
-          });
-
-          setAssets(mappedAssets);
-
-          // Update pagination info
-          if (response.data.metadata) {
-            setTotalPages(response.data.metadata.total_page);
-            setTotalAssets(response.data.metadata.total_data);
+          // Map API status to enum values
+          if (apiStatus in AssetStatus) {
+            mappedStatus = apiStatus as AssetStatus;
           }
-        }
-      } catch (err) {
-        console.error("Error loading assets:", err);
-        toast.error("Gagal memuat daftar aset");
-      } finally {
-        setIsLoadingAssets(false);
-      }
-    };
 
-    loadAssetsFromAPI();
-  }, [currentPage, isTopManagement]);
+          return {
+            id: asset.id,
+            name: asset.name,
+            type: asset.type?.title || "", // Changed from .name to .title
+            classification: asset.classification?.title || "", // Changed from .name to .title
+            location: asset.location || "",
+            status: mappedStatus,
+            ownerId: asset.owner?.id,
+            ownerName: asset.owner?.name,
+            division: asset.owner?.department?.name,
+          };
+        });
+
+        setAssets(mappedAssets);
+
+        // Update pagination info
+        if (response.data.metadata) {
+          setTotalPages(response.data.metadata.total_page);
+          setTotalAssets(response.data.metadata.total_data);
+        }
+      }
+    } catch (err) {
+      console.error("Error loading assets:", err);
+      toast.error("Gagal memuat daftar aset");
+    } finally {
+      setIsLoadingAssets(false);
+    }
+  }, [isTopManagement]);
+
+  // Load assets from API with pagination
+  React.useEffect(() => {
+    loadAssetsFromAPI(currentPage);
+  }, [currentPage, isTopManagement, loadAssetsFromAPI]);
 
   // Load asset types and classifications on mount
   React.useEffect(() => {
@@ -213,23 +220,6 @@ export default function DaftarAsetPage() {
         });
 
         if (response.status) {
-          // Add to local state (optional - can also refetch)
-          const newAsset: Asset = {
-            id: response.data.id,
-            name: response.data.name,
-            type: response.data.type.title,
-            classification: response.data.classification.title,
-            location: response.data.location || "",
-            status: AssetStatus.DRAFT,
-          };
-
-          setAssets((prev) => {
-            const next = [newAsset, ...prev];
-            // Don't save to localStorage, refresh from API instead
-            setCurrentPage(1); // Reset to first page to show new asset
-            return next;
-          });
-
           setForm({
             name: "",
             type: "",
@@ -240,6 +230,9 @@ export default function DaftarAsetPage() {
           });
           setOpen(false);
           toast.success("Aset berhasil ditambahkan!");
+          
+          // Refetch assets from API
+          await loadAssetsFromAPI(1);
         } else {
           toast.error(response.message || "Gagal menambah aset");
         }
@@ -259,7 +252,7 @@ export default function DaftarAsetPage() {
   function removeAsset(id: string) {
     setAssets((prev) => prev.filter((p) => p.id !== id));
     // Refresh data from API
-    setCurrentPage(1);
+    loadAssetsFromAPI(currentPage);
   }
 
   async function handleDeleteAsset(id: string) {
@@ -284,15 +277,18 @@ export default function DaftarAsetPage() {
     }
   }
 
-  async function handleSubmitForApproval(id: string) {
-    if (
-      !confirm(
-        "Apakah Anda yakin ingin mengirim aset ini untuk persetujuan RM?"
-      )
-    )
-      return;
+  function handleSubmitForApproval(id: string) {
+    const asset = assets.find((a) => a.id === id);
+    setSubmitConfirmDialog({ open: true, assetId: id, assetName: asset?.name || "", isLoading: false });
+  }
+
+  async function confirmSubmitForApproval() {
+    if (!submitConfirmDialog.assetId) return;
+
+    setSubmitConfirmDialog((prev) => ({ ...prev, isLoading: true }));
 
     try {
+      const id = submitConfirmDialog.assetId;
       const assetToSubmit = assets.find((a) => a.id === id);
       if (!assetToSubmit) return;
 
@@ -323,6 +319,7 @@ export default function DaftarAsetPage() {
           )
         );
         toast.success("Aset berhasil dikirim untuk persetujuan RM!");
+        setSubmitConfirmDialog({ open: false, assetId: null, assetName: "", isLoading: false });
       } else {
         toast.error(
           response.message || "Gagal mengirim aset untuk persetujuan"
@@ -335,13 +332,23 @@ export default function DaftarAsetPage() {
           ? err.message
           : "Terjadi kesalahan saat mengirim aset untuk persetujuan"
       );
+    } finally {
+      setSubmitConfirmDialog((prev) => ({ ...prev, isLoading: false }));
     }
   }
 
-  async function handleRevertToDraft(id: string) {
-    if (!confirm("Apakah Anda yakin ingin mengubah status aset kembali ke Draft?")) return;
+  function handleRevertToDraft(id: string) {
+    const asset = assets.find((a) => a.id === id);
+    setRevertConfirmDialog({ open: true, assetId: id, assetName: asset?.name || "", isLoading: false });
+  }
+
+  async function confirmRevertToDraft() {
+    if (!revertConfirmDialog.assetId) return;
+
+    setRevertConfirmDialog((prev) => ({ ...prev, isLoading: true }));
 
     try {
+      const id = revertConfirmDialog.assetId;
       const assetToRevert = assets.find((a) => a.id === id);
       if (!assetToRevert) return;
 
@@ -372,6 +379,7 @@ export default function DaftarAsetPage() {
           )
         );
         toast.success("Status aset berhasil diubah kembali ke Draft!");
+        setRevertConfirmDialog({ open: false, assetId: null, assetName: "", isLoading: false });
       } else {
         toast.error(response.message || "Gagal mengubah status aset");
       }
@@ -382,13 +390,23 @@ export default function DaftarAsetPage() {
           ? err.message
           : "Terjadi kesalahan saat mengubah status aset"
       );
+    } finally {
+      setRevertConfirmDialog((prev) => ({ ...prev, isLoading: false }));
     }
   }
 
-  async function handleReviseAsset(id: string) {
-    if (!confirm("Apakah Anda yakin ingin mengirim aset ini untuk revisi?")) return;
+  function handleReviseAsset(id: string) {
+    const asset = assets.find((a) => a.id === id);
+    setReviseConfirmDialog({ open: true, assetId: id, assetName: asset?.name || "", isLoading: false });
+  }
+
+  async function confirmReviseAsset() {
+    if (!reviseConfirmDialog.assetId) return;
+
+    setReviseConfirmDialog((prev) => ({ ...prev, isLoading: true }));
 
     try {
+      const id = reviseConfirmDialog.assetId;
       const assetToRevise = assets.find((a) => a.id === id);
       if (!assetToRevise) return;
 
@@ -419,6 +437,7 @@ export default function DaftarAsetPage() {
           )
         );
         toast.success("Aset berhasil dikirim untuk revisi!");
+        setReviseConfirmDialog({ open: false, assetId: null, assetName: "", isLoading: false });
       } else {
         toast.error(response.message || "Gagal mengirim aset untuk revisi");
       }
@@ -429,13 +448,23 @@ export default function DaftarAsetPage() {
           ? err.message
           : "Terjadi kesalahan saat mengirim aset untuk revisi"
       );
+    } finally {
+      setReviseConfirmDialog((prev) => ({ ...prev, isLoading: false }));
     }
   }
 
-  async function handleRejectAsset(id: string) {
-    if (!confirm("Apakah Anda yakin ingin menolak aset ini?")) return;
+  function handleRejectAsset(id: string) {
+    const asset = assets.find((a) => a.id === id);
+    setRejectConfirmDialog({ open: true, assetId: id, assetName: asset?.name || "", isLoading: false });
+  }
+
+  async function confirmRejectAsset() {
+    if (!rejectConfirmDialog.assetId) return;
+
+    setRejectConfirmDialog((prev) => ({ ...prev, isLoading: true }));
 
     try {
+      const id = rejectConfirmDialog.assetId;
       const assetToReject = assets.find((a) => a.id === id);
       if (!assetToReject) return;
 
@@ -466,6 +495,7 @@ export default function DaftarAsetPage() {
           )
         );
         toast.success("Aset berhasil ditolak!");
+        setRejectConfirmDialog({ open: false, assetId: null, assetName: "", isLoading: false });
       } else {
         toast.error(response.message || "Gagal menolak aset");
       }
@@ -476,13 +506,23 @@ export default function DaftarAsetPage() {
           ? err.message
           : "Terjadi kesalahan saat menolak aset"
       );
+    } finally {
+      setRejectConfirmDialog((prev) => ({ ...prev, isLoading: false }));
     }
   }
 
-  async function handleApproveAsset(id: string) {
-    if (!confirm("Apakah Anda yakin ingin menyetujui aset ini?")) return;
+  function handleApproveAsset(id: string) {
+    const asset = assets.find((a) => a.id === id);
+    setApproveConfirmDialog({ open: true, assetId: id, assetName: asset?.name || "", isLoading: false });
+  }
+
+  async function confirmApproveAsset() {
+    if (!approveConfirmDialog.assetId) return;
+
+    setApproveConfirmDialog((prev) => ({ ...prev, isLoading: true }));
 
     try {
+      const id = approveConfirmDialog.assetId;
       const assetToApprove = assets.find((a) => a.id === id);
       if (!assetToApprove) return;
 
@@ -513,6 +553,7 @@ export default function DaftarAsetPage() {
           )
         );
         toast.success("Aset berhasil disetujui!");
+        setApproveConfirmDialog({ open: false, assetId: null, assetName: "", isLoading: false });
       } else {
         toast.error(response.message || "Gagal menyetujui aset");
       }
@@ -523,6 +564,8 @@ export default function DaftarAsetPage() {
           ? err.message
           : "Terjadi kesalahan saat menyetujui aset"
       );
+    } finally {
+      setApproveConfirmDialog((prev) => ({ ...prev, isLoading: false }));
     }
   }
 
@@ -581,21 +624,6 @@ export default function DaftarAsetPage() {
       });
 
       if (response.status) {
-        // Update local state
-        setAssets((prev) =>
-          prev.map((a) =>
-            a.id === editingAssetId
-              ? {
-                  ...a,
-                  name: response.data.name,
-                  type: response.data.type?.title || "",
-                  classification: response.data.classification?.title || "",
-                  location: response.data.location || "",
-                }
-              : a
-          )
-        );
-
         setForm({
           name: "",
           type: "",
@@ -607,6 +635,9 @@ export default function DaftarAsetPage() {
         setEditingAssetId(null);
         setOpen(false);
         toast.success("Aset berhasil diperbarui!");
+        
+        // Refetch assets from API
+        await loadAssetsFromAPI(currentPage);
       } else {
         toast.error(response.message || "Gagal mengupdate aset");
       }
@@ -684,7 +715,8 @@ export default function DaftarAsetPage() {
                             key={t.id}
                             type="button"
                             className="w-full px-3 py-2 text-left hover:bg-gray-100 transition-colors text-sm"
-                            onClick={() => {
+                            onMouseDown={(e) => {
+                              e.preventDefault();
                               setForm((p) => ({
                                 ...p,
                                 type: t.title,
@@ -728,7 +760,8 @@ export default function DaftarAsetPage() {
                               key={c.id}
                               type="button"
                               className="w-full px-3 py-2 text-left hover:bg-gray-100 transition-colors text-sm"
-                              onClick={() => {
+                              onMouseDown={(e) => {
+                                e.preventDefault();
                                 setForm((p) => ({
                                   ...p,
                                   classification: c.title,
@@ -1107,6 +1140,19 @@ export default function DaftarAsetPage() {
                               </TooltipTrigger>
                               <TooltipContent>Tolak aset</TooltipContent>
                             </Tooltip>
+                            {isOwner && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    className="p-2 hover:bg-yellow-100 rounded transition-colors"
+                                    onClick={() => handleRevertToDraft(row.id)}
+                                  >
+                                    <ArchiveX size={18} className="text-yellow-600" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent>Ubah status kembali ke Draft</TooltipContent>
+                              </Tooltip>
+                            )}
                           </>
                         )}
 
@@ -1202,6 +1248,77 @@ export default function DaftarAsetPage() {
           setDeletingAssetId(null);
           setDeletingAssetName("");
         }}
+      />
+
+      <ConfirmationDialog
+        open={submitConfirmDialog.open}
+        onOpenChange={(open) =>
+          setSubmitConfirmDialog((prev) => ({ ...prev, open }))
+        }
+        title="Konfirmasi Pengiriman Aset"
+        description="Apakah Anda yakin ingin mengirim aset ini untuk persetujuan RM?"
+        message={submitConfirmDialog.assetName ? `${submitConfirmDialog.assetName}` : ""}
+        confirmText="Kirim"
+        cancelText="Batal"
+        isLoading={submitConfirmDialog.isLoading}
+        onConfirm={confirmSubmitForApproval}
+      />
+
+      <ConfirmationDialog
+        open={revertConfirmDialog.open}
+        onOpenChange={(open) =>
+          setRevertConfirmDialog((prev) => ({ ...prev, open }))
+        }
+        title="Konfirmasi Ubah Status ke Draft"
+        description="Apakah Anda yakin ingin mengubah status aset kembali ke Draft?"
+        message={revertConfirmDialog.assetName ? `${revertConfirmDialog.assetName}` : ""}
+        confirmText="Ubah Status"
+        cancelText="Batal"
+        isLoading={revertConfirmDialog.isLoading}
+        onConfirm={confirmRevertToDraft}
+      />
+
+      <ConfirmationDialog
+        open={reviseConfirmDialog.open}
+        onOpenChange={(open) =>
+          setReviseConfirmDialog((prev) => ({ ...prev, open }))
+        }
+        title="Konfirmasi Kirim untuk Revisi"
+        description="Apakah Anda yakin ingin mengirim aset ini untuk revisi?"
+        message={reviseConfirmDialog.assetName ? `${reviseConfirmDialog.assetName}` : ""}
+        confirmText="Kirim Revisi"
+        cancelText="Batal"
+        isLoading={reviseConfirmDialog.isLoading}
+        onConfirm={confirmReviseAsset}
+      />
+
+      <ConfirmationDialog
+        open={rejectConfirmDialog.open}
+        onOpenChange={(open) =>
+          setRejectConfirmDialog((prev) => ({ ...prev, open }))
+        }
+        title="Konfirmasi Tolak Aset"
+        description="Apakah Anda yakin ingin menolak aset ini?"
+        message={rejectConfirmDialog.assetName ? `${rejectConfirmDialog.assetName}` : ""}
+        confirmText="Tolak"
+        cancelText="Batal"
+        isLoading={rejectConfirmDialog.isLoading}
+        onConfirm={confirmRejectAsset}
+        variant="danger"
+      />
+
+      <ConfirmationDialog
+        open={approveConfirmDialog.open}
+        onOpenChange={(open) =>
+          setApproveConfirmDialog((prev) => ({ ...prev, open }))
+        }
+        title="Konfirmasi Setujui Aset"
+        description="Apakah Anda yakin ingin menyetujui aset ini?"
+        message={approveConfirmDialog.assetName ? `${approveConfirmDialog.assetName}` : ""}
+        confirmText="Setujui"
+        cancelText="Batal"
+        isLoading={approveConfirmDialog.isLoading}
+        onConfirm={confirmApproveAsset}
       />
     </div>
   );

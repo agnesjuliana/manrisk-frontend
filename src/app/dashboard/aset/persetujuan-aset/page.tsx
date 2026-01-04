@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { PaginatedTable } from "@/components/paginated-table";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, CheckCircle, X, Eye } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { apiClient } from "@/lib/api/config";
@@ -45,7 +46,9 @@ interface AssetApproval {
 
 export default function AssetApprovalPage() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isLoading: isAuthLoading } = useAuth();
+
+  // ALL STATE DECLARATIONS FIRST (never conditional)
   const [approvals, setApprovals] = React.useState<AssetApproval[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [currentPage, setCurrentPage] = React.useState(1);
@@ -55,8 +58,18 @@ export default function AssetApprovalPage() {
   const isRiskManager = user?.role === "RISK_MANAGER";
   const isTopManagement = user?.role === "TOP_MANAGEMENT";
 
+  // Check if user has allowed roles
+  React.useEffect(() => {
+    if (!isAuthLoading && !isRiskManager && !isTopManagement) {
+      toast.error("Akses ditolak. Hanya Risk Manager dan Top Management yang dapat akses halaman ini.");
+      router.back();
+    }
+  }, [isAuthLoading, isRiskManager, isTopManagement, router]);
+
   // Load approvals from API
   React.useEffect(() => {
+    if (isAuthLoading || (!isRiskManager && !isTopManagement)) return;
+
     const loadApprovalsFromAPI = async () => {
       setIsLoading(true);
       try {
@@ -88,7 +101,24 @@ export default function AssetApprovalPage() {
     };
 
     loadApprovalsFromAPI();
-  }, [currentPage]);
+  }, [currentPage, isAuthLoading, isRiskManager, isTopManagement]);
+
+  // Show loading skeleton while checking auth
+  if (isAuthLoading) {
+    return (
+      <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-4 w-96" />
+        <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
+
+  // If user doesn't have allowed roles, don't render anything (will redirect)
+  if (!isRiskManager && !isTopManagement) {
+    return null;
+  }
 
   function getStatusBadgeColor(status?: string) {
     switch (status) {
@@ -265,42 +295,6 @@ export default function AssetApprovalPage() {
                       </TooltipTrigger>
                       <TooltipContent>Lihat detail pengajuan</TooltipContent>
                     </Tooltip>
-                    {isTopManagement &&
-                      row.status ===
-                        AssetApprovalTLStatus.MENUNGGU_PERSETUJUAN_FINAL && (
-                        <>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() =>
-                                  handleApproveApproval(String(value))
-                                }
-                                className="h-8 w-8 p-0 text-green-600 hover:text-green-700 hover:bg-green-50"
-                              >
-                                <CheckCircle size={16} />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Setujui pengajuan</TooltipContent>
-                          </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() =>
-                                  handleRejectApproval(String(value))
-                                }
-                                className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                              >
-                                <X size={16} />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Tolak pengajuan</TooltipContent>
-                          </Tooltip>
-                        </>
-                      )}
                   </div>
                 </TooltipProvider>
               );

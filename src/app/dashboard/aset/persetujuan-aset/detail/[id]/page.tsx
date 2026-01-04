@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { PaginatedTable, type ColumnDef } from "@/components/paginated-table";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ConfirmationDialog } from "@/components/confirmation-dialog";
 import { ArrowLeft, CheckCircle, X } from "lucide-react";
 import { apiClient } from "@/lib/api/config";
 import { AssetApprovalTLStatus } from "@/lib/assetsStore";
@@ -49,18 +50,31 @@ interface AssetApproval {
 export default function DetailApprovalPage() {
   const params = useParams();
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isLoading: isAuthLoading } = useAuth();
   const approvalId = params.id as string;
 
+  // ALL STATE DECLARATIONS FIRST (never conditional)
   const [approval, setApproval] = React.useState<AssetApproval | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isProcessing, setIsProcessing] = React.useState(false);
+  const [approveConfirmDialog, setApproveConfirmDialog] = React.useState<{open: boolean, isLoading: boolean}>({ open: false, isLoading: false });
+  const [rejectConfirmDialog, setRejectConfirmDialog] = React.useState<{open: boolean, isLoading: boolean}>({ open: false, isLoading: false });
 
   const isTopManagement = user?.role === "TOP_MANAGEMENT";
   const isRiskManager = user?.role === "RISK_MANAGER";
 
+  // Check if user has allowed roles
+  React.useEffect(() => {
+    if (!isAuthLoading && !isRiskManager && !isTopManagement) {
+      toast.error("Akses ditolak. Hanya Risk Manager dan Top Management yang dapat akses halaman ini.");
+      router.back();
+    }
+  }, [isAuthLoading, isRiskManager, isTopManagement, router]);
+
   // Load approval details from API
   React.useEffect(() => {
+    if (isAuthLoading || (!isRiskManager && !isTopManagement)) return;
+
     const loadApprovalDetails = async () => {
       setIsLoading(true);
       try {
@@ -84,7 +98,24 @@ export default function DetailApprovalPage() {
     if (approvalId) {
       loadApprovalDetails();
     }
-  }, [approvalId]);
+  }, [approvalId, isAuthLoading, isRiskManager, isTopManagement]);
+
+  // Show loading skeleton while checking auth
+  if (isAuthLoading) {
+    return (
+      <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+        <Skeleton className="h-8 w-32" />
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
+
+  // If user doesn't have allowed roles, don't render anything (will redirect)
+  if (!isRiskManager && !isTopManagement) {
+    return null;
+  }
 
   function getStatusBadgeColor(status?: string) {
     switch (status) {
@@ -122,10 +153,14 @@ export default function DetailApprovalPage() {
     }
   }
 
-  async function handleApproveApproval() {
+  function handleApproveApproval() {
+    setApproveConfirmDialog({ open: true, isLoading: false });
+  }
+
+  async function confirmApproveApproval() {
     if (!approval) return;
 
-    setIsProcessing(true);
+    setApproveConfirmDialog((prev) => ({ ...prev, isLoading: true }));
     try {
       const response = await apiClient.patch(
         `/asset-approvals/${approval.id}`,
@@ -140,6 +175,7 @@ export default function DetailApprovalPage() {
           ...approval,
           status: AssetApprovalTLStatus.DISETUJUI,
         });
+        setApproveConfirmDialog({ open: false, isLoading: false });
         setTimeout(() => router.back(), 1000);
       } else {
         toast.error("Gagal menyetujui pengajuan");
@@ -148,14 +184,18 @@ export default function DetailApprovalPage() {
       console.error("Error approving:", err);
       toast.error("Gagal menyetujui pengajuan");
     } finally {
-      setIsProcessing(false);
+      setApproveConfirmDialog((prev) => ({ ...prev, isLoading: false }));
     }
   }
 
-  async function handleRejectApproval() {
+  function handleRejectApproval() {
+    setRejectConfirmDialog({ open: true, isLoading: false });
+  }
+
+  async function confirmRejectApproval() {
     if (!approval) return;
 
-    setIsProcessing(true);
+    setRejectConfirmDialog((prev) => ({ ...prev, isLoading: true }));
     try {
       const response = await apiClient.patch(
         `/asset-approvals/${approval.id}`,
@@ -170,6 +210,7 @@ export default function DetailApprovalPage() {
           ...approval,
           status: AssetApprovalTLStatus.DITOLAK,
         });
+        setRejectConfirmDialog({ open: false, isLoading: false });
         setTimeout(() => router.back(), 1000);
       } else {
         toast.error("Gagal menolak pengajuan");
@@ -178,7 +219,7 @@ export default function DetailApprovalPage() {
       console.error("Error rejecting:", err);
       toast.error("Gagal menolak pengajuan");
     } finally {
-      setIsProcessing(false);
+      setRejectConfirmDialog((prev) => ({ ...prev, isLoading: false }));
     }
   }
 
@@ -272,19 +313,17 @@ export default function DetailApprovalPage() {
         <div className="flex gap-2">
           <Button
             onClick={handleApproveApproval}
-            disabled={isProcessing}
-            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white disabled:bg-green-400"
+            className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
           >
             <CheckCircle size={16} />
-            {isProcessing ? "Menyetujui..." : "Setujui Pengajuan"}
+            Setujui Pengajuan
           </Button>
           <Button
             onClick={handleRejectApproval}
-            disabled={isProcessing}
-            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white disabled:bg-red-400"
+            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white"
           >
             <X size={16} />
-            {isProcessing ? "Menolak..." : "Tolak Pengajuan"}
+            Tolak Pengajuan
           </Button>
         </div>
       )}
@@ -372,6 +411,33 @@ export default function DetailApprovalPage() {
           />
         </div>
       </div>
+
+      <ConfirmationDialog
+        open={approveConfirmDialog.open}
+        onOpenChange={(open) =>
+          setApproveConfirmDialog((prev) => ({ ...prev, open }))
+        }
+        title="Konfirmasi Setujui Pengajuan"
+        description="Apakah Anda yakin ingin menyetujui pengajuan ini? Semua aset dalam pengajuan akan disetujui."
+        confirmText="Setujui"
+        cancelText="Batal"
+        isLoading={approveConfirmDialog.isLoading}
+        onConfirm={confirmApproveApproval}
+      />
+
+      <ConfirmationDialog
+        open={rejectConfirmDialog.open}
+        onOpenChange={(open) =>
+          setRejectConfirmDialog((prev) => ({ ...prev, open }))
+        }
+        title="Konfirmasi Tolak Pengajuan"
+        description="Apakah Anda yakin ingin menolak pengajuan ini? Semua aset dalam pengajuan akan ditolak."
+        confirmText="Tolak"
+        cancelText="Batal"
+        isLoading={rejectConfirmDialog.isLoading}
+        onConfirm={confirmRejectApproval}
+        variant="danger"
+      />
     </div>
   );
 }
