@@ -54,6 +54,11 @@ interface RiskApproval {
   deletedAt: string | null;
 }
 
+interface RiskCriteria {
+  isFMEA: boolean;
+  threshold: number;
+}
+
 enum RiskApprovalTLStatus {
   MENUNGGU_PERSETUJUAN_FINAL = "MENUNGGU_PERSETUJUAN_FINAL",
   DITOLAK = "DITOLAK",
@@ -71,6 +76,7 @@ export default function DetailApprovalPage() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [isProcessing, setIsProcessing] = React.useState(false);
   const [confirmDialogOpen, setConfirmDialogOpen] = React.useState(false);
+  const [riskCriteria, setRiskCriteria] = React.useState<RiskCriteria | null>(null);
   const [confirmDialogConfig, setConfirmDialogConfig] = React.useState<{
     title: string;
     description: string;
@@ -121,6 +127,22 @@ export default function DetailApprovalPage() {
       loadApprovalDetails();
     }
   }, [approvalId, isAuthLoading, isRiskManager, isTopManagement]);
+
+  // Load risk criteria
+  React.useEffect(() => {
+    const loadCriteria = async () => {
+      try {
+        const response = await apiClient.get("/risk-criteria");
+        if (response.data?.data) {
+          setRiskCriteria(response.data.data);
+        }
+      } catch (err) {
+        console.error("Error loading risk criteria:", err);
+      }
+    };
+
+    loadCriteria();
+  }, []);
 
   // Show loading skeleton while checking auth
   if (isAuthLoading) {
@@ -440,44 +462,96 @@ export default function DetailApprovalPage() {
                 return cias.join(", ") || "-";
               },
             },
-            {
-              header: "Impact",
-              key: "impactSeverity",
-              render: (value) => (
-                <span className="text-center">{String(value ?? "-")}</span>
-              ),
-              searchable: false,
-            },
-            {
-              header: "Likelihood",
-              key: "likelihoodOccurence",
-              render: (value) => (
-                <span className="text-center">{String(value ?? "-")}</span>
-              ),
-              searchable: false,
-            },
-            {
-              header: "Skor Risiko",
-              key: (row: Risk) => {
-                const score =
-                  (row.impactSeverity ?? 1) *
-                  (row.likelihoodOccurence ?? 1);
-                return score;
-              },
-              render: (value: any) => {
-                const score = Number(value);
-                return (
-                  <span
-                    className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getRiskScoreColor(
-                      score
-                    )}`}
-                  >
-                    {String(value ?? "-")}
-                  </span>
-                );
-              },
-              searchable: false,
-            },
+            ...(riskCriteria?.isFMEA
+              ? [
+                  {
+                    header: "Severity",
+                    key: "impactSeverity",
+                    render: (value: any) => (
+                      <span className="text-center">{String(value ?? "-")}</span>
+                    ),
+                    searchable: false,
+                  } as const,
+                  {
+                    header: "Occurrence",
+                    key: "likelihoodOccurence",
+                    render: (value: any) => (
+                      <span className="text-center">{String(value ?? "-")}</span>
+                    ),
+                    searchable: false,
+                  } as const,
+                  {
+                    header: "Detection",
+                    key: "detection",
+                    render: (value: any) => (
+                      <span className="text-center">{String(value ?? "-")}</span>
+                    ),
+                    searchable: false,
+                  } as const,
+                  {
+                    header: "RPN",
+                    key: (row: Risk) => {
+                      const rpn =
+                        (row.impactSeverity ?? 1) *
+                        (row.likelihoodOccurence ?? 1) *
+                        (row.detection ?? 1);
+                      return rpn;
+                    },
+                    render: (value: any) => {
+                      const score = Number(value);
+                      return (
+                        <span
+                          className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getRiskScoreColor(
+                            score
+                          )}`}
+                        >
+                          {String(value ?? "-")}
+                        </span>
+                      );
+                    },
+                    searchable: false,
+                  } as const,
+                ]
+              : [
+                  {
+                    header: "Impact",
+                    key: "impactSeverity",
+                    render: (value: any) => (
+                      <span className="text-center">{String(value ?? "-")}</span>
+                    ),
+                    searchable: false,
+                  } as const,
+                  {
+                    header: "Likelihood",
+                    key: "likelihoodOccurence",
+                    render: (value: any) => (
+                      <span className="text-center">{String(value ?? "-")}</span>
+                    ),
+                    searchable: false,
+                  } as const,
+                  {
+                    header: "Skor Risiko",
+                    key: (row: Risk) => {
+                      const score =
+                        (row.impactSeverity ?? 1) *
+                        (row.likelihoodOccurence ?? 1);
+                      return score;
+                    },
+                    render: (value: any) => {
+                      const score = Number(value);
+                      return (
+                        <span
+                          className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${getRiskScoreColor(
+                            score
+                          )}`}
+                        >
+                          {String(value ?? "-")}
+                        </span>
+                      );
+                    },
+                    searchable: false,
+                  } as const,
+                ]),
             {
               header: "Status",
               key: "status",

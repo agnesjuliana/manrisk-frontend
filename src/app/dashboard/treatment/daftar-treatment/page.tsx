@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import {
@@ -112,7 +113,8 @@ interface UserOption {
 }
 
 export default function DaftarTreatmentPage() {
-  const { isAuthenticated, user } = useAuth();
+  const router = useRouter();
+  const { isAuthenticated, user, isLoading: isAuthLoading } = useAuth();
   const [token, setToken] = useState<string | null>(null);
   const [data, setData] = useState<TreatmentItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -130,6 +132,11 @@ export default function DaftarTreatmentPage() {
   const [confirmationDialogOpen, setConfirmationDialogOpen] = useState(false);
   const [confirmationAction, setConfirmationAction] = useState<"approve" | "reject" | null>(null);
   const [treatmentIdForConfirm, setTreatmentIdForConfirm] = useState<string | null>(null);
+
+  // Role checks
+  const isRiskManager = user?.role === "RISK_MANAGER";
+  const isRiskOwner = user?.role === "RISK_OWNER";
+  const isTopManagement = user?.role === "TOP_MANAGEMENT";
 
   const [form, setForm] = useState({
     treatmentOpt: "MITIGATE",
@@ -150,6 +157,16 @@ export default function DaftarTreatmentPage() {
     setToken(storedToken);
   }, [isAuthenticated]);
 
+  // Auth validation - check if user has required role
+  useEffect(() => {
+    if (isAuthLoading) return;
+
+    if (!isRiskManager && !isRiskOwner && !isTopManagement) {
+      toast.error("Anda tidak memiliki akses ke halaman ini");
+      router.back();
+    }
+  }, [isAuthLoading, isRiskManager, isRiskOwner, isTopManagement, router]);
+
   const getHeaders = (): Record<string, string> => {
     return {
       "Content-Type": "application/json",
@@ -159,7 +176,7 @@ export default function DaftarTreatmentPage() {
 
   // Fetch data from API
   useEffect(() => {
-    if (!token) return;
+    if (!token || isAuthLoading || (!isRiskManager && !isRiskOwner && !isTopManagement)) return;
 
     const fetchData = async () => {
       try {
@@ -180,11 +197,11 @@ export default function DaftarTreatmentPage() {
     };
 
     fetchData();
-  }, [token]);
+  }, [token, isAuthLoading, isRiskManager, isRiskOwner, isTopManagement]);
 
   // Fetch risk criteria
   useEffect(() => {
-    if (!token) return;
+    if (!token || isAuthLoading || (!isRiskManager && !isRiskOwner && !isTopManagement)) return;
 
     const fetchRiskCriteria = async () => {
       try {
@@ -202,11 +219,11 @@ export default function DaftarTreatmentPage() {
     };
 
     fetchRiskCriteria();
-  }, [token]);
+  }, [token, isAuthLoading, isRiskManager, isRiskOwner, isTopManagement]);
 
   // Fetch control options
   useEffect(() => {
-    if (!token) return;
+    if (!token || isAuthLoading || (!isRiskManager && !isRiskOwner && !isTopManagement)) return;
 
     const fetchControlOptions = async () => {
       try {
@@ -223,11 +240,11 @@ export default function DaftarTreatmentPage() {
     };
 
     fetchControlOptions();
-  }, [token]);
+  }, [token, isAuthLoading, isRiskManager, isRiskOwner, isTopManagement]);
 
   // Fetch users for PIC selection
   useEffect(() => {
-    if (!token) return;
+    if (!token || isAuthLoading || (!isRiskManager && !isRiskOwner && !isTopManagement)) return;
 
     const fetchUsers = async () => {
       try {
@@ -247,7 +264,7 @@ export default function DaftarTreatmentPage() {
     };
 
     fetchUsers();
-  }, [token]);
+  }, [token, isAuthLoading, isRiskManager, isRiskOwner, isTopManagement]);
 
   function computeRiskScore(severity: number, likelihood: number) {
     return severity * likelihood;
@@ -562,6 +579,20 @@ export default function DaftarTreatmentPage() {
     userRole: user?.role,
   }));
 
+  // Show loading while checking auth
+  if (isAuthLoading) {
+    return (
+      <div className="flex flex-1 flex-col gap-4 p-4 pt-0 w-full min-w-0">
+        <div className="text-center py-8 text-gray-500">Loading...</div>
+      </div>
+    );
+  }
+
+  // Return null if user is not authorized (will trigger redirect in useEffect)
+  if (!isRiskManager && !isRiskOwner && !isTopManagement) {
+    return null;
+  }
+
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 pt-0 w-full min-w-0">
       <div className="flex items-center justify-between">
@@ -772,18 +803,28 @@ export default function DaftarTreatmentPage() {
             {
               header: "Aksi",
               key: "id",
-              render: (value, row) => {
+              render: (value: any, row: any) => {
                 // Only RISK_MANAGER can edit
                 const canEdit =
                   row.treatment &&
                   row.treatment.isApprovedByTop !== true &&
                   row.userRole === "RISK_MANAGER";
 
+                // RISK_OWNER can only view existing treatments
+                const canView =
+                  row.treatment &&
+                  row.userRole === "RISK_OWNER";
+
                 // TOP_MANAGEMENT approval/rejection pending
                 const isPending =
                   row.treatment &&
                   row.treatment.isApprovedByTop === null &&
                   row.userRole === "TOP_MANAGEMENT";
+
+                // RISK_OWNER cannot create, only view
+                if (row.userRole === "RISK_OWNER" && !row.treatment) {
+                  return null;
+                }
 
                 return (
                   <div className="flex items-center gap-2">
@@ -802,11 +843,11 @@ export default function DaftarTreatmentPage() {
                             )
                           }
                         >
-                          {!row.treatment && "Pilih Treatment"}
+                          {!row.treatment && row.userRole === "RISK_MANAGER" && "Pilih Treatment"}
                           {row.treatment && canEdit && (
                             <Edit className="w-4 h-4" />
                           )}
-                          {row.treatment && !canEdit && (
+                          {row.treatment && (canView || !canEdit) && (
                             <Eye className="w-4 h-4" />
                           )}
                         </Button>

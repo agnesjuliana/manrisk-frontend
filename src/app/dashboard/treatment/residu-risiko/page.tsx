@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/use-auth";
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
@@ -14,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PaginatedTable } from "@/components/paginated-table";
+import { toast } from "sonner";
 import apiClient from "@/lib/api/config";
 
 const RISK_SCORE_RANGES = [
@@ -105,6 +108,8 @@ function getRiskLevelBadgeColor(level: string) {
 }
 
 export default function ResiduRisikoPage() {
+  const router = useRouter();
+  const { user, isLoading: isAuthLoading } = useAuth();
   const [treatments, setTreatments] = useState<TreatmentRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -113,6 +118,12 @@ export default function ResiduRisikoPage() {
   const [editingRiskId, setEditingRiskId] = useState<string | null>(null);
   const [savingReassessment, setSavingReassessment] = useState(false);
   const [saveConfirmationOpen, setSaveConfirmationOpen] = useState(false);
+
+  // Role checks
+  const isRiskManager = user?.role === "RISK_MANAGER";
+  const isRiskOwner = user?.role === "RISK_OWNER";
+  const isTopManagement = user?.role === "TOP_MANAGEMENT";
+
   const [editForm, setEditForm] = useState({
     reassessedLikelihood: "",
     reassessedSeverity: "",
@@ -120,8 +131,20 @@ export default function ResiduRisikoPage() {
     notes: "",
   });
 
+  // Auth validation - check if user has required role
+  useEffect(() => {
+    if (isAuthLoading) return;
+
+    if (!isRiskManager && !isRiskOwner && !isTopManagement) {
+      toast.error("Anda tidak memiliki akses ke halaman ini");
+      router.back();
+    }
+  }, [isAuthLoading, isRiskManager, isRiskOwner, isTopManagement, router]);
+
   // Fetch data from API
   useEffect(() => {
+    if (isAuthLoading || (!isRiskManager && !isRiskOwner && !isTopManagement)) return;
+
     const fetchData = async () => {
       try {
         setLoading(true);
@@ -140,10 +163,12 @@ export default function ResiduRisikoPage() {
     };
 
     fetchData();
-  }, []);
+  }, [isAuthLoading, isRiskManager, isRiskOwner, isTopManagement]);
 
   // Fetch risk criteria
   useEffect(() => {
+    if (isAuthLoading || (!isRiskManager && !isRiskOwner && !isTopManagement)) return;
+
     const fetchRiskCriteria = async () => {
       try {
         const response = await apiClient.get("/risk-criteria");
@@ -157,7 +182,7 @@ export default function ResiduRisikoPage() {
     };
 
     fetchRiskCriteria();
-  }, []);
+  }, [isAuthLoading, isRiskManager, isRiskOwner, isTopManagement]);
 
   // Separate risks: those without revisionLog (need reassessment) vs with revisionLog (already reassessed)
   const risksNeedingReassessment = useMemo(() => {
@@ -289,6 +314,20 @@ export default function ResiduRisikoPage() {
     }
   }
 
+  // Show loading while checking auth
+  if (isAuthLoading) {
+    return (
+      <div className="flex flex-1 flex-col gap-6 p-4 pt-0 w-full min-w-0">
+        <div className="text-center py-8 text-gray-500">Loading...</div>
+      </div>
+    );
+  }
+
+  // Return null if user is not authorized (will trigger redirect in useEffect)
+  if (!isRiskManager && !isRiskOwner && !isTopManagement) {
+    return null;
+  }
+
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 pt-0 w-full min-w-0">
       {error && (
@@ -386,13 +425,15 @@ export default function ResiduRisikoPage() {
                     header: "Aksi",
                     key: "riskId",
                     render: (value) => (
-                      <Button
-                        size="sm"
-                        variant="default"
-                        onClick={() => openReassessmentDialog(String(value))}
-                      >
-                        Nilai Ulang
-                      </Button>
+                      (isRiskManager || isTopManagement) ? (
+                        <Button
+                          size="sm"
+                          variant="default"
+                          onClick={() => openReassessmentDialog(String(value))}
+                        >
+                          Nilai Ulang
+                        </Button>
+                      ) : null
                     ),
                     searchable: false,
                   },
