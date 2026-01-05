@@ -83,7 +83,10 @@ interface TreatmentRecord {
   controls: Control[];
 }
 
-function computeScore(severity: number, likelihood: number): number {
+function computeScore(severity: number, likelihood: number, detection?: number, isFMEA?: boolean): number {
+  if (isFMEA && detection !== undefined) {
+    return severity * likelihood * detection;
+  }
   return severity * likelihood;
 }
 
@@ -189,7 +192,7 @@ export default function ResiduRisikoPage() {
     return treatments
       .filter((t) => t.isApprovedByTop && !t.risk.revisionLog)
       .map((t) => {
-        const originalScore = computeScore(t.risk.impactSeverity, t.risk.likelihoodOccurence);
+        const originalScore = computeScore(t.risk.impactSeverity, t.risk.likelihoodOccurence, t.risk.detection, riskCriteria?.isFMEA);
         const originalLevel = computeRiskLevel(originalScore);
 
         return {
@@ -223,14 +226,14 @@ export default function ResiduRisikoPage() {
     return treatments
       .filter((t) => t.isApprovedByTop && t.risk.revisionLog)
       .map((t) => {
-        const originalScore = computeScore(t.risk.impactSeverity, t.risk.likelihoodOccurence);
+        const originalScore = computeScore(t.risk.impactSeverity, t.risk.likelihoodOccurence, t.risk.detection, riskCriteria?.isFMEA);
         const originalLevel = computeRiskLevel(originalScore);
 
-        const residualScore = computeScore(t.risk.impactSeverity, t.risk.likelihoodOccurence);
+        const residualScore = computeScore(t.risk.impactSeverity, t.risk.likelihoodOccurence, t.risk.detection, riskCriteria?.isFMEA);
         const residualLevel = computeRiskLevel(residualScore);
 
         const revisionLog = t.risk.revisionLog!;
-        const reassessedScore = computeScore(revisionLog.impactSeverity, revisionLog.likelihoodOccurence);
+        const reassessedScore = computeScore(revisionLog.impactSeverity, revisionLog.likelihoodOccurence, revisionLog.detection, riskCriteria?.isFMEA);
         const reassessedLevel = computeRiskLevel(reassessedScore);
         const scoreDifference = originalScore - reassessedScore;
 
