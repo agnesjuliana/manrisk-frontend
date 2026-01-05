@@ -382,22 +382,34 @@ export default function DaftarKontrolPage() {
   const handleSoASave = async () => {
     if (!selectedControlForSoA || !token) return;
     
-    if (!soaForm.managerId) {
-      alert("Manager tidak boleh kosong");
-      return;
-    }
-    if (!soaForm.targetDate) {
-      alert("Target date tidak boleh kosong");
-      return;
+    // Validation based on status
+    if (soaForm.status === "RELEVAN") {
+      if (!soaForm.managerId) {
+        alert("Manager tidak boleh kosong");
+        return;
+      }
+      if (!soaForm.targetDate) {
+        alert("Target date tidak boleh kosong");
+        return;
+      }
     }
 
-    const payload = {
+    // Build payload based on status
+    const payload: any = {
       controlId: selectedControlForSoA.id,
-      managerId: soaForm.managerId,
       status: soaForm.status,
-      targetDate: soaForm.targetDate,
-      notes: soaForm.notes,
     };
+
+    // Only add manager and targetDate if status is RELEVAN
+    if (soaForm.status === "RELEVAN") {
+      payload.managerId = soaForm.managerId;
+      payload.targetDate = soaForm.targetDate;
+    }
+
+    // Add notes if provided (for both RELEVAN and TIDAK_RELEVAN)
+    if (soaForm.notes) {
+      payload.notes = soaForm.notes;
+    }
 
     try {
       const response = await fetch(`${API_BASE_URL}/soa`, {
@@ -906,6 +918,7 @@ export default function DaftarKontrolPage() {
                     <TableHead className="text-xs font-semibold text-sky-900 uppercase tracking-wide">Nama Kontrol</TableHead>
                     <TableHead className="text-xs font-semibold text-sky-900 uppercase tracking-wide">Kategori</TableHead>
                     <TableHead className="text-xs font-semibold text-sky-900 uppercase tracking-wide">Terkait Treatment</TableHead>
+                    <TableHead className="text-xs font-semibold text-sky-900 uppercase tracking-wide">PIC</TableHead>
                     <TableHead className="text-xs font-semibold text-sky-900 uppercase tracking-wide">Target Date</TableHead>
                     <TableHead className="text-xs font-semibold text-sky-900 uppercase tracking-wide">Status</TableHead>
                     <TableHead className="text-xs font-semibold text-sky-900 uppercase tracking-wide">Aksi</TableHead>
@@ -955,6 +968,9 @@ export default function DaftarKontrolPage() {
                           </TableCell>
                           <TableCell className="text-sm text-gray-700">
                             {getTreatmentName(control.countRelatedTreatment)}
+                          </TableCell>
+                          <TableCell className="text-sm text-gray-700">
+                            {control.soa?.manager?.name || "-"}
                           </TableCell>
                           <TableCell className="text-sm text-gray-700">
                             {control.soa?.targetDate
@@ -1134,65 +1150,72 @@ export default function DaftarKontrolPage() {
                     </Select>
                   </div>
 
-                  <div>
-                    <Label htmlFor="managerId" className="text-xs font-semibold text-sky-900 block mb-2 uppercase tracking-widest">Manager/Penanggungjawab *</Label>
-                    <Select
-                      value={soaForm.managerId}
-                      onValueChange={(value) =>
-                        setSoaForm({ ...soaForm, managerId: value })
-                      }
-                      disabled={loadingUsers}
-                    >
-                      <SelectTrigger id="managerId" className="w-full h-10 border-sky-200 focus:border-sky-400 focus:ring-sky-100 mt-1">
-                        <SelectValue placeholder={loadingUsers ? "Loading..." : "Pilih manager"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {users.length > 0 ? (
-                          users.map((user) => (
-                            <SelectItem key={user.id} value={user.id}>
-                              {user.name}
-                            </SelectItem>
-                          ))
-                        ) : (
-                          <SelectItem value="empty" disabled>
-                            {loadingUsers ? "Loading users..." : "No users available"}
-                          </SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {soaForm.status === "RELEVAN" && (
+                    <>
+                      <div>
+                        <Label htmlFor="managerId" className="text-xs font-semibold text-sky-900 block mb-2 uppercase tracking-widest">Manager/Penanggungjawab *</Label>
+                        <Select
+                          value={soaForm.managerId}
+                          onValueChange={(value) =>
+                            setSoaForm({ ...soaForm, managerId: value })
+                          }
+                          disabled={loadingUsers}
+                        >
+                          <SelectTrigger id="managerId" className="w-full h-10 border-sky-200 focus:border-sky-400 focus:ring-sky-100 mt-1">
+                            <SelectValue placeholder={loadingUsers ? "Loading..." : "Pilih manager"} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {users.length > 0 ? (
+                              users.map((user) => (
+                                <SelectItem key={user.id} value={user.id}>
+                                  {user.name}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem value="empty" disabled>
+                                {loadingUsers ? "Loading users..." : "No users available"}
+                              </SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                  <div>
-                    <Label htmlFor="targetDate" className="text-xs font-semibold text-sky-900 block mb-2 uppercase tracking-widest">Target Date *</Label>
-                    <Input
-                      id="targetDate"
-                      type="date"
-                      value={soaForm.targetDate}
-                      onChange={(e) =>
-                        setSoaForm({ ...soaForm, targetDate: e.target.value })
-                      }
-                      className="w-full h-10 border-sky-200 focus:border-sky-400 focus:ring-sky-100 mt-1"
-                    />
-                  </div>
+                      <div>
+                        <Label htmlFor="targetDate" className="text-xs font-semibold text-sky-900 block mb-2 uppercase tracking-widest">Target Date *</Label>
+                        <Input
+                          id="targetDate"
+                          type="date"
+                          value={soaForm.targetDate}
+                          onChange={(e) =>
+                            setSoaForm({ ...soaForm, targetDate: e.target.value })
+                          }
+                          className="w-full h-10 border-sky-200 focus:border-sky-400 focus:ring-sky-100 mt-1"
+                        />
+                      </div>
+                    </>
+                  )}
 
-                  <div>
-                    <Label htmlFor="notes" className="text-xs font-semibold text-sky-900 block mb-2 uppercase tracking-widest">Catatan</Label>
-                    <textarea
-                      id="notes"
-                      value={soaForm.notes}
-                      onChange={(e) =>
-                        setSoaForm({ ...soaForm, notes: e.target.value })
-                      }
-                      placeholder="Catatan tambahan tentang relevansi kontrol ini..."
-                      className="w-full px-3 py-2 border border-sky-200 rounded-md text-sm focus:outline-none focus:border-sky-400 focus:ring-sky-100 mt-1"
-                      rows={4}
-                    />
-                  </div>
+                  {(soaForm.status === "RELEVAN" || soaForm.status === "TIDAK_RELEVAN") && (
+                    <div>
+                      <Label htmlFor="notes" className="text-xs font-semibold text-sky-900 block mb-2 uppercase tracking-widest">Catatan</Label>
+                      <textarea
+                        id="notes"
+                        value={soaForm.notes}
+                        onChange={(e) =>
+                          setSoaForm({ ...soaForm, notes: e.target.value })
+                        }
+                        placeholder="Catatan tambahan tentang relevansi kontrol ini..."
+                        className="w-full px-3 py-2 border border-sky-200 rounded-md text-sm focus:outline-none focus:border-sky-400 focus:ring-sky-100 mt-1"
+                        rows={4}
+                      />
+                    </div>
+                  )}
 
                   <div className="flex flex-col gap-2 pt-4 border-t border-sky-100">
                     <Button
                       onClick={handleSoASave}
                       className="w-full h-10 text-sm font-medium bg-sky-600 hover:bg-sky-700 text-white"
+                      disabled={soaForm.status === "BELUM_DITENTUKAN" || (soaForm.status === "RELEVAN" && (!soaForm.managerId || !soaForm.targetDate))}
                     >
                       Simpan SoA
                     </Button>
