@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { loadUsers, type User as StoreUser } from "@/lib/usersStore";
 import { PaginatedTable, type ColumnDef } from "@/components/paginated-table";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -24,6 +25,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Eye } from "lucide-react";
 import { apiClient } from "@/lib/api/config";
+import { useAuth } from "@/hooks/use-auth";
 
 type User = StoreUser;
 
@@ -54,7 +56,9 @@ interface Risk {
 
 export default function BuatAjuanPage() {
   const router = useRouter();
+  const { user, isLoading: isAuthLoading } = useAuth();
 
+  // ALL STATE DECLARATIONS FIRST (never conditional)
   const [risks, setRisks] = React.useState<Risk[]>([]);
   const [users, setUsers] = React.useState<User[]>([]);
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
@@ -68,6 +72,19 @@ export default function BuatAjuanPage() {
   const [selectedRisk, setSelectedRisk] = React.useState<Risk | null>(null);
   const [detailOpen, setDetailOpen] = React.useState(false);
   const [riskCriteria, setRiskCriteria] = React.useState<any>(null);
+
+  // Role variables
+  const isRiskManager = user?.role === "RISK_MANAGER";
+  const isTopManagement = user?.role === "TOP_MANAGEMENT";
+
+  // THEN EFFECTS
+  // Check if user has allowed roles
+  React.useEffect(() => {
+    if (!isAuthLoading && !isRiskManager && !isTopManagement) {
+      toast.error("Akses ditolak. Hanya Risk Manager dan Top Management yang dapat akses halaman ini.");
+      router.back();
+    }
+  }, [isAuthLoading, isRiskManager, isTopManagement, router]);
 
   // Load users on client side
   React.useEffect(() => {
@@ -92,6 +109,8 @@ export default function BuatAjuanPage() {
 
   // Load risks from API with DISETUJUI_RM status filter
   React.useEffect(() => {
+    if (isAuthLoading || (!isRiskManager && !isTopManagement)) return;
+
     const loadRisksFromAPI = async () => {
       setIsLoading(true);
       try {
@@ -123,7 +142,24 @@ export default function BuatAjuanPage() {
     };
 
     loadRisksFromAPI();
-  }, [currentPage]);
+  }, [currentPage, isAuthLoading, isRiskManager, isTopManagement]);
+
+  // Show loading skeleton while checking auth
+  if (isAuthLoading) {
+    return (
+      <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-4 w-96" />
+        <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
+
+  // If user doesn't have allowed roles, don't render anything (will redirect)
+  if (!isRiskManager && !isTopManagement) {
+    return null;
+  }
 
   function toggle(id: string) {
     setSelected((prev) => {

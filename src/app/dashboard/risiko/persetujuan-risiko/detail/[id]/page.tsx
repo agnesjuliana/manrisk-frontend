@@ -63,9 +63,10 @@ enum RiskApprovalTLStatus {
 export default function DetailApprovalPage() {
   const params = useParams();
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, isLoading: isAuthLoading } = useAuth();
   const approvalId = params.id as string;
 
+  // ALL STATE DECLARATIONS FIRST (never conditional)
   const [approval, setApproval] = React.useState<RiskApproval | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isProcessing, setIsProcessing] = React.useState(false);
@@ -79,10 +80,23 @@ export default function DetailApprovalPage() {
     variant?: "default" | "danger";
   } | null>(null);
 
+  // Role variables
+  const isRiskManager = user?.role === "RISK_MANAGER";
   const isTopManagement = user?.role === "TOP_MANAGEMENT";
+
+  // THEN EFFECTS
+  // Check if user has allowed roles
+  React.useEffect(() => {
+    if (!isAuthLoading && !isRiskManager && !isTopManagement) {
+      toast.error("Akses ditolak. Hanya Risk Manager dan Top Management yang dapat akses halaman ini.");
+      router.back();
+    }
+  }, [isAuthLoading, isRiskManager, isTopManagement, router]);
 
   // Load approval details from API
   React.useEffect(() => {
+    if (isAuthLoading || (!isRiskManager && !isTopManagement)) return;
+
     const loadApprovalDetails = async () => {
       setIsLoading(true);
       try {
@@ -106,7 +120,24 @@ export default function DetailApprovalPage() {
     if (approvalId) {
       loadApprovalDetails();
     }
-  }, [approvalId]);
+  }, [approvalId, isAuthLoading, isRiskManager, isTopManagement]);
+
+  // Show loading skeleton while checking auth
+  if (isAuthLoading) {
+    return (
+      <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+        <Skeleton className="h-8 w-32" />
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
+
+  // If user doesn't have allowed roles, don't render anything (will redirect)
+  if (!isRiskManager && !isTopManagement) {
+    return null;
+  }
 
   function getStatusBadgeColor(status?: string) {
     switch (status) {

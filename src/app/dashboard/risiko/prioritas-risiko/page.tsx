@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import {
@@ -18,6 +19,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Star } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { apiClient } from "@/lib/api/config";
 
 interface Risk {
@@ -47,65 +49,21 @@ function riskLevelForScore(score: number) {
 }
 
 export default function PrioritasRisikoPage() {
-  const { user } = useAuth();
+  const router = useRouter();
+  const { user, isLoading: isAuthLoading } = useAuth();
+
+  // ALL STATE DECLARATIONS FIRST (never conditional)
   const [mounted, setMounted] = React.useState(false);
   const [risks, setRisks] = React.useState<Risk[]>([]);
   const [riskCriteria, setRiskCriteria] = React.useState<RiskCriteria | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
 
-  // Mark component as mounted to prevent hydration mismatches
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
-
+  // Role variables
   const isRiskManager = user?.role === "RISK_MANAGER";
+  const isRiskOwner = user?.role === "RISK_OWNER";
   const isTopManagement = user?.role === "TOP_MANAGEMENT";
 
-  // Load risk criteria and risks from API
-  React.useEffect(() => {
-    // Only load if user is loaded and component is mounted
-    if (!mounted || !user) return;
-
-    const loadData = async () => {
-      setIsLoading(true);
-      try {
-        // Fetch risk criteria
-        const criteriaResponse = await apiClient.get("/risk-criteria");
-        if (criteriaResponse.data?.data) {
-          setRiskCriteria(criteriaResponse.data.data);
-        }
-
-        // Determine status filter based on role
-        let statusFilter: string;
-        if (isRiskManager) {
-          statusFilter = "DISETUJUI_RM,MENUNGGU_PERSETUJUAN_FINAL,MENUNGGU_PERSETUJUAN_RM,DISETUJUI";
-        } else {
-          // Default for TOP_MANAGEMENT and other roles
-          statusFilter = "MENUNGGU_PERSETUJUAN_FINAL,DISETUJUI";
-        }
-
-        // Fetch all risks
-        const risksResponse = await apiClient.get("/risk-registers", {
-          params: {
-            per_page: 1000,
-            status: statusFilter,
-          },
-        });
-
-        if (risksResponse.data?.data?.data) {
-          setRisks(risksResponse.data.data.data);
-        }
-      } catch (err) {
-        console.error("Error loading data:", err);
-        toast.error("Gagal memuat data risiko");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadData();
-  }, [mounted, user]);
-
+  // MEMOS (before effects to ensure consistent hook order)
   const computed = React.useMemo(() => {
     return risks
       .map((r) => {
@@ -178,6 +136,82 @@ export default function PrioritasRisikoPage() {
       rpn: rpn || score,
     }));
   }, [computed, riskCriteria]);
+
+  // THEN EFFECTS
+  // Mark component as mounted to prevent hydration mismatches
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Check if user has allowed roles
+  React.useEffect(() => {
+    if (!isAuthLoading && !isRiskManager && !isRiskOwner && !isTopManagement) {
+      toast.error("Akses ditolak. Hanya Risk Manager, Risk Owner, dan Top Management yang dapat akses halaman ini.");
+      router.back();
+    }
+  }, [isAuthLoading, isRiskManager, isRiskOwner, isTopManagement, router]);
+
+  // Load risk criteria and risks from API
+  React.useEffect(() => {
+    // Only load if user is loaded, component is mounted, and user has access
+    if (!mounted || !user || isAuthLoading || (!isRiskManager && !isRiskOwner && !isTopManagement)) return;
+
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        // Fetch risk criteria
+        const criteriaResponse = await apiClient.get("/risk-criteria");
+        if (criteriaResponse.data?.data) {
+          setRiskCriteria(criteriaResponse.data.data);
+        }
+
+        // Determine status filter based on role
+        let statusFilter: string;
+        if (isRiskManager) {
+          statusFilter = "DISETUJUI_RM,MENUNGGU_PERSETUJUAN_FINAL,MENUNGGU_PERSETUJUAN_RM,DISETUJUI";
+        } else {
+          // Default for TOP_MANAGEMENT and RISK_OWNER
+          statusFilter = "MENUNGGU_PERSETUJUAN_FINAL,DISETUJUI";
+        }
+
+        // Fetch all risks
+        const risksResponse = await apiClient.get("/risk-registers", {
+          params: {
+            per_page: 1000,
+            status: statusFilter,
+          },
+        });
+
+        if (risksResponse.data?.data?.data) {
+          setRisks(risksResponse.data.data.data);
+        }
+      } catch (err) {
+        console.error("Error loading data:", err);
+        toast.error("Gagal memuat data risiko");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadData();
+  }, [mounted, user, isAuthLoading, isRiskManager, isRiskOwner, isTopManagement]);
+
+  // Show loading skeleton while checking auth
+  if (isAuthLoading) {
+    return (
+      <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-4 w-96" />
+        <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
+
+  // If user doesn't have allowed roles, don't render anything (will redirect)
+  if (!isRiskManager && !isRiskOwner && !isTopManagement) {
+    return null;
+  }
 
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 pt-0 w-full min-w-0">

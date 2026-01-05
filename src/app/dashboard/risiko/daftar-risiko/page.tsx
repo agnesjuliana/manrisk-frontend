@@ -1,10 +1,12 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { PaginatedTable } from "@/components/paginated-table";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmationDialog } from "@/components/confirmation-dialog";
 import { DeleteConfirmationDialog } from "@/components/delete-confirmation-dialog";
 import {
@@ -112,7 +114,10 @@ interface RiskCriteria {
 }
 
 export default function DaftarRisikoPage() {
-  const { user } = useAuth();
+  const router = useRouter();
+  const { user, isLoading: isAuthLoading } = useAuth();
+
+  // ALL STATE DECLARATIONS FIRST (never conditional)
   const [mounted, setMounted] = React.useState(false);
   const [risks, setRisks] = React.useState<Risk[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
@@ -151,14 +156,6 @@ export default function DaftarRisikoPage() {
     onConfirm: () => Promise<void>;
   } | null>(null);
 
-  // Mark component as mounted to prevent hydration mismatches
-  React.useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const isRiskOwner = user?.role === "RISK_OWNER";
-  const isRiskManager = user?.role === "RISK_MANAGER";
-
   const [form, setForm] = React.useState<Partial<Risk>>({
     vulnerability: "",
     threat: "",
@@ -177,6 +174,25 @@ export default function DaftarRisikoPage() {
   const [showSourceDropdown, setShowSourceDropdown] = React.useState(false);
   const [showCustomRiskId, setShowCustomRiskId] = React.useState(false);
   const [customRiskId, setCustomRiskId] = React.useState("");
+
+  // Role variables (derived from user)
+  const isRiskOwner = user?.role === "RISK_OWNER";
+  const isRiskManager = user?.role === "RISK_MANAGER";
+  const isTopManagement = user?.role === "TOP_MANAGEMENT";
+
+  // THEN EFFECTS
+  // Check if user has allowed roles
+  React.useEffect(() => {
+    if (!isAuthLoading && !isRiskOwner && !isRiskManager && !isTopManagement) {
+      toast.error("Akses ditolak. Hanya Risk Owner, Risk Manager, dan Top Management yang dapat akses halaman ini.");
+      router.back();
+    }
+  }, [isAuthLoading, isRiskOwner, isRiskManager, isTopManagement, router]);
+
+  // Mark component as mounted to prevent hydration mismatches
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Load risks from API
   React.useEffect(() => {
@@ -687,6 +703,23 @@ export default function DaftarRisikoPage() {
     } catch {
       return "-";
     }
+  }
+
+  // Show loading skeleton while checking auth
+  if (isAuthLoading) {
+    return (
+      <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-4 w-96" />
+        <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
+
+  // If user doesn't have allowed roles, don't render anything (will redirect)
+  if (!isRiskOwner && !isRiskManager && !isTopManagement) {
+    return null;
   }
 
   return (
