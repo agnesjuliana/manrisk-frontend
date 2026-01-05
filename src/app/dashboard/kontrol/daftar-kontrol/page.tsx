@@ -120,6 +120,7 @@ import {
   AlertTriangle,
   X,
   Eye,
+  Download,
 } from "lucide-react";
 
 type RelevanceStatus = "BELUM_DITENTUKAN" | "RELEVAN" | "TIDAK_RELEVAN";
@@ -702,6 +703,60 @@ export default function DaftarKontrolPage() {
     return text.substring(0, maxLength) + "...";
   };
 
+  const exportToCSV = () => {
+    // Prepare CSV headers
+    const headers = [
+      "Kode",
+      "Nama Kontrol",
+      "Kategori",
+      "Terkait Treatment",
+      "PIC",
+      "Target Date",
+      "Status",
+      "Catatan",
+    ];
+
+    // Prepare data rows
+    const rows = filteredControls.map((control) => [
+      control.code,
+      control.title,
+      control.category || "-",
+      getTreatmentName(control.countRelatedTreatment),
+      control.soa?.manager?.name || "-",
+      control.soa?.targetDate
+        ? new Date(control.soa.targetDate).toLocaleDateString("id-ID")
+        : "-",
+      getRelevanceStatus(control.soa) === "RELEVAN"
+        ? "Relevan"
+        : getRelevanceStatus(control.soa) === "TIDAK_RELEVAN"
+        ? "Tidak Relevan"
+        : "Belum Ditentukan",
+      control.soa?.notes || "-",
+    ]);
+
+    // Escape CSV values and create CSV content
+    const csvContent = [
+      headers.map((h) => `"${h}"`).join(","),
+      ...rows.map((row) =>
+        row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")
+      ),
+    ].join("\n");
+
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const timestamp = new Date().toISOString().split("T")[0];
+    const filename = `Daftar_Kontrol_${timestamp}.csv`;
+
+    link.setAttribute("href", URL.createObjectURL(blob));
+    link.setAttribute("download", filename);
+    link.style.visibility = "hidden";
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 pt-0 w-full min-w-0">
       {/* Header */}
@@ -712,13 +767,21 @@ export default function DaftarKontrolPage() {
             Evaluasi dan tentukan relevansi kontrol ISO 27001 Annex A terhadap organisasi
           </p>
         </div>
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => resetForm()} className="gap-2 bg-sky-600 hover:bg-sky-700 text-white">
-              <Plus className="w-4 h-4" />
-              Tambah Kontrol
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <Button
+            onClick={exportToCSV}
+            className="gap-2 bg-green-600 hover:bg-green-700 text-white"
+          >
+            <Download className="w-4 h-4" />
+            Download CSV
+          </Button>
+          <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={() => resetForm()} className="gap-2 bg-sky-600 hover:bg-sky-700 text-white">
+                <Plus className="w-4 h-4" />
+                Tambah Kontrol
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-2xl">
             <DialogHeader className="border-b border-sky-100 pb-4">
               <DialogTitle className="text-xl text-gray-900">
@@ -792,6 +855,7 @@ export default function DaftarKontrolPage() {
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Statistics Cards */}
