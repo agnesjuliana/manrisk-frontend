@@ -32,7 +32,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { PaginatedTable } from "@/components/paginated-table";
-import { Eye, X, Edit, CheckCircle2, XCircle } from "lucide-react";
+import { Eye, X, Edit, CheckCircle2, XCircle, Download } from "lucide-react";
 import { toast } from "sonner";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 
@@ -593,10 +593,97 @@ export default function DaftarTreatmentPage() {
     return null;
   }
 
+  const exportToCSV = () => {
+    // Prepare CSV headers
+    const headers = [
+      "No",
+      "Risk ID",
+      "Risiko",
+      "Skor Risiko",
+      "Perlakuan",
+      "Penanggung Jawab",
+      riskCriteria?.isFMEA ? "Target Severity" : "Target Impact",
+      riskCriteria?.isFMEA ? "Target Occurrence" : "Target Likelihood",
+      ...(riskCriteria?.isFMEA ? ["Target Detection"] : []),
+      "Status",
+    ];
+
+    // Prepare data rows
+    const rows = tableData.map((row, index) => {
+      const thresholdDiff = row.riskScore - (riskCriteria?.threshold ?? 9);
+      let thresholdStatus = "";
+      if (thresholdDiff > 0) {
+        thresholdStatus = `+${thresholdDiff} poin`;
+      } else if (thresholdDiff < 0) {
+        thresholdStatus = `Bawah: ${thresholdDiff} poin`;
+      } else {
+        thresholdStatus = "Di Threshold";
+      }
+
+      let statusLabel = "";
+      if (!row.treatment) {
+        statusLabel = "Draft";
+      } else if (row.approvalStatus === null) {
+        statusLabel = "Menunggu Persetujuan";
+      } else if (row.approvalStatus === true) {
+        statusLabel = "DISETUJUI";
+      } else {
+        statusLabel = "DITOLAK";
+      }
+
+      const baseRow = [
+        (index + 1).toString(),
+        row.riskId || "-",
+        row.identifiedRisk || "-",
+        String(row.riskScore),
+        row.treatment?.treatmentOpt || "-",
+        row.picName || "-",
+        row.treatment?.impactSeverityTarget || "-",
+        row.treatment?.likelihoodOccurenceTarget || "-",
+      ];
+
+      const targetDetection = riskCriteria?.isFMEA ? [String(row.treatment?.detectionTarget || "-")] : [];
+
+      return [
+        ...baseRow,
+        ...targetDetection,
+        statusLabel,
+      ];
+    });
+
+    // Escape CSV values and create CSV content
+    const csvContent = [
+      headers.map((h) => `"${h}"`).join(","),
+      ...rows.map((row) =>
+        row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")
+      ),
+    ].join("\n");
+
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const timestamp = new Date().toISOString().split("T")[0];
+    const filename = `Daftar_Treatment_${timestamp}.csv`;
+
+    link.setAttribute("href", URL.createObjectURL(blob));
+    link.setAttribute("download", filename);
+    link.style.visibility = "hidden";
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 pt-0 w-full min-w-0">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Daftar Treatment</h2>
+        <Button
+          onClick={exportToCSV}
+          className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
+        >
+          <Download size={16} /> Download CSV
+        </Button>
       </div>
 
       {loading ? (

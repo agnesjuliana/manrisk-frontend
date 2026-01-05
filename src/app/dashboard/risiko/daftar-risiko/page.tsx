@@ -43,6 +43,7 @@ import {
   ArchiveX,
   ArchiveRestore,
   SendHorizontal,
+  Download,
 } from "lucide-react";
 import { apiClient } from "@/lib/api/config";
 import { RiskStatus } from "@/lib/risksStore";
@@ -705,6 +706,90 @@ export default function DaftarRisikoPage() {
     }
   }
 
+  const exportToCSV = () => {
+    // Prepare CSV headers
+    const headers = [
+      "No",
+      "Risk ID",
+      "Kategori",
+      "Risiko",
+      "Vulnerability",
+      "Threat",
+      "CIA Impact",
+      riskCriteria?.isFMEA ? "Severity" : "Impact",
+      riskCriteria?.isFMEA ? "Occurrence" : "Likelihood",
+      ...(riskCriteria?.isFMEA ? ["Detection", "RPN"] : ["Skor Risiko"]),
+      "Asset",
+      "Context",
+      "Owner",
+      "Status",
+    ];
+
+    // Prepare data rows
+    const rows = risks.map((risk, index) => {
+      const cias = [];
+      if (risk.isConfidentiality) cias.push("C");
+      if (risk.isIntegrity) cias.push("I");
+      if (risk.isAvailability) cias.push("A");
+
+      const baseRow = [
+        (index + 1).toString(),
+        risk.customRiskId || "-",
+        risk.category?.title || "-",
+        risk.identifiedRisk || "-",
+        risk.vulnerability || "-",
+        risk.threat || "-",
+        cias.join(", ") || "-",
+        String(risk.impactSeverity ?? "-"),
+        String(risk.likelihoodOccurence ?? "-"),
+      ];
+
+      let scoreData: string[];
+      if (riskCriteria?.isFMEA) {
+        const detection = String(risk.detection ?? "-");
+        const rpn = risk.detection
+          ? (risk.impactSeverity ?? 1) * (risk.likelihoodOccurence ?? 1) * (risk.detection ?? 1)
+          : "-";
+        scoreData = [detection, String(rpn)];
+      } else {
+        const score =
+          (risk.impactSeverity ?? 1) * (risk.likelihoodOccurence ?? 1);
+        scoreData = [String(score)];
+      }
+
+      return [
+        ...baseRow,
+        ...scoreData,
+        risk.asset?.name || "-",
+        risk.context?.name || "-",
+        risk.owner?.name || "-",
+        getStatusLabel(risk.status),
+      ];
+    });
+
+    // Escape CSV values and create CSV content
+    const csvContent = [
+      headers.map((h) => `"${h}"`).join(","),
+      ...rows.map((row) =>
+        row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")
+      ),
+    ].join("\n");
+
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const timestamp = new Date().toISOString().split("T")[0];
+    const filename = `Daftar_Risiko_${timestamp}.csv`;
+
+    link.setAttribute("href", URL.createObjectURL(blob));
+    link.setAttribute("download", filename);
+    link.style.visibility = "hidden";
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Show loading skeleton while checking auth
   if (isAuthLoading) {
     return (
@@ -729,7 +814,14 @@ export default function DaftarRisikoPage() {
           <div className="flex items-center justify-between gap-4 flex-shrink-0">
             <h1 className="text-2xl font-semibold">Daftar & Penilaian Risiko</h1>
             {(isRiskOwner || isRiskManager) && (
-          <Dialog open={open} onOpenChange={(newOpen) => {
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={exportToCSV}
+                  className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
+                >
+                  <Download size={16} /> Download CSV
+                </Button>
+                <Dialog open={open} onOpenChange={(newOpen) => {
             setOpen(newOpen);
             if (!newOpen) {
               setSelectedRisk(null);
@@ -1229,7 +1321,8 @@ export default function DaftarRisikoPage() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
-        )}
+              </div>
+            )}
       </div>
 
       <PaginatedTable<Risk>

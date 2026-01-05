@@ -28,7 +28,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 // Charts akan ditambahkan nanti dengan recharts
-import { CheckCircle2, AlertCircle, TrendingUp, Download } from "lucide-react";
+import { CheckCircle2, AlertCircle, TrendingUp } from "lucide-react";
 
 interface Control {
   id: string;
@@ -222,105 +222,6 @@ export default function SoaPage() {
         )
       : 0;
 
-  const handleExportPDF = () => {
-    const content = `
-IMPLEMENTASI KONTROL KEAMANAN
-Generated: ${new Date().toLocaleDateString("id-ID")}
-
-OVERVIEW
-========
-Total Kontrol Relevan: ${soaData.length}
-Belum Diimplementasikan: ${
-      soaData.filter(
-        (s) =>
-          !s.implementationStatus || s.implementationStatus === "DIRENCANAKAN"
-      ).length
-    }
-Dalam Implementasi: ${
-      soaData.filter((s) => s.implementationStatus === "DALAM_IMPLEMENTASI")
-        .length
-    }
-Sudah Diimplementasikan: ${
-      soaData.filter((s) => s.implementationStatus === "DIIMPLEMENTASIKAN")
-        .length
-    }
-
-CONTROL LIST
-============
-${soaData
-  .map(
-    (item, idx) => `
-${idx + 1}. ${item.control.code} - ${item.control.title}
-   Category: ${item.control.category}
-   Manager: ${item.manager.name} (${item.manager.email})
-   Status: ${getImplementationStatusLabel(item.implementationStatus)}
-   Target Date: ${
-     item.targetDate
-       ? new Date(item.targetDate).toLocaleDateString("id-ID")
-       : "N/A"
-   }
-   Notes: ${item.notes || "N/A"}
-`
-  )
-  .join("\n")}
-
-END OF DOCUMENT
-    `;
-
-    const blob = new Blob([content], { type: "text/plain" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `SoA_${new Date().toISOString().split("T")[0]}.txt`;
-    a.click();
-  };
-
-  const handleExportCSV = () => {
-    const headers = [
-      "Control Code",
-      "Control Title",
-      "Category",
-      "Manager Name",
-      "Manager Email",
-      "Implementation Status",
-      "Target Date",
-      "Notes",
-      "Status Target",
-    ];
-
-    const rows = soaData.map((item) => [
-      item.control.code,
-      item.control.title,
-      item.control.category,
-      item.manager.name,
-      item.manager.email,
-      getImplementationStatusLabel(item.implementationStatus),
-      item.targetDate
-        ? new Date(item.targetDate).toLocaleDateString("id-ID")
-        : "-",
-      item.notes || "-",
-      item.statusTarget,
-    ]);
-
-    const csvContent = [
-      headers.join(","),
-      ...rows.map((row) =>
-        row
-          .map((cell) =>
-            typeof cell === "string" && cell.includes(",") ? `"${cell}"` : cell
-          )
-          .join(",")
-      ),
-    ].join("\n");
-
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `SoA_${new Date().toISOString().split("T")[0]}.csv`;
-    a.click();
-  };
-
   return (
     <div className="flex flex-1 flex-col gap-6 p-4 pt-0 w-full min-w-0">
       {/* Header */}
@@ -333,24 +234,6 @@ END OF DOCUMENT
             Kelola pelaksanaan kontrol yang telah dinyatakan relevan untuk
             organisasi
           </p>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={handleExportCSV}
-            className="gap-2 border-sky-200 text-sky-600 hover:bg-sky-50 hover:text-sky-800"
-          >
-            <Download className="w-4 h-4" />
-            CSV
-          </Button>
-          <Button
-            variant="outline"
-            onClick={handleExportPDF}
-            className="gap-2 border-sky-200 text-sky-600 hover:bg-sky-50 hover:text-sky-800"
-          >
-            <Download className="w-4 h-4" />
-            Report
-          </Button>
         </div>
       </div>
 

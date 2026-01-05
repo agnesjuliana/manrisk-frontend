@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { DeleteConfirmationDialog } from "@/components/delete-confirmation-dialog";
 import { ConfirmationDialog } from "@/components/confirmation-dialog";
-import { Plus, Trash, Edit, SendHorizontal, ArchiveX, ArchiveRestore, X, CheckCircle } from "lucide-react";
+import { Plus, Trash, Edit, SendHorizontal, ArchiveX, ArchiveRestore, X, CheckCircle, Download } from "lucide-react";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import {
   Tooltip,
@@ -653,12 +653,87 @@ export default function DaftarAsetPage() {
     }
   }
 
+  const exportToCSV = () => {
+    // Prepare CSV headers
+    const headers = [
+      "No",
+      "Nama Aset",
+      "Tipe",
+      "Klasifikasi",
+      "Lokasi",
+      "Owner",
+      ...(isRiskOwner ? [] : ["Divisi"]),
+      "Status",
+    ];
+
+    // Prepare data rows
+    const rows = assets.map((asset, index) => [
+      (index + 1).toString(),
+      asset.name,
+      asset.type || "-",
+      asset.classification || "-",
+      asset.location || "-",
+      asset.ownerName || "-",
+      ...(isRiskOwner ? [] : [asset.division || "-"]),
+      getStatusLabel(asset.status || AssetStatus.DRAFT),
+    ]);
+
+    // Escape CSV values and create CSV content
+    const csvContent = [
+      headers.map((h) => `"${h}"`).join(","),
+      ...rows.map((row) =>
+        row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")
+      ),
+    ].join("\n");
+
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const timestamp = new Date().toISOString().split("T")[0];
+    const filename = `Daftar_Aset_${timestamp}.csv`;
+
+    link.setAttribute("href", URL.createObjectURL(blob));
+    link.setAttribute("download", filename);
+    link.style.visibility = "hidden";
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const getStatusLabel = (status: AssetStatus): string => {
+    switch (status) {
+      case AssetStatus.DRAFT:
+        return "Draft";
+      case AssetStatus.MENUNGGU_PERSETUJUAN_RM:
+        return "Menunggu Persetujuan RM";
+      case AssetStatus.DISETUJUI_RM:
+        return "Disetujui RM";
+      case AssetStatus.MENUNGGU_PERSETUJUAN_FINAL:
+        return "Menunggu Persetujuan Final";
+      case AssetStatus.REVISI:
+        return "Revisi";
+      case AssetStatus.DISETUJUI:
+        return "Disetujui";
+      case AssetStatus.DITOLAK:
+        return "Ditolak";
+      default:
+        return status;
+    }
+  };
+
   return (
     <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold">Daftar Aset</h1>
         {!isTopManagement && (
           <div className="flex items-center gap-2">
+            <Button
+              onClick={exportToCSV}
+              className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
+            >
+              <Download size={16} /> Download CSV
+            </Button>
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
                 <Button className="bg-sky-600 hover:bg-sky-700 text-white flex items-center gap-2">
