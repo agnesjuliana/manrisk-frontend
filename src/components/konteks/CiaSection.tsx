@@ -106,6 +106,7 @@ export default function CiaSection({
               <TableRow className="bg-sky-50 border-b border-sky-100">
                 <TableHead className="text-gray-700 font-semibold">No</TableHead>
                 <TableHead className="text-gray-700 font-semibold">Service</TableHead>
+                <TableHead className="text-gray-700 font-semibold">Konteks</TableHead>
                 <TableHead className="text-gray-700 font-semibold">C</TableHead>
                 <TableHead className="text-gray-700 font-semibold">I</TableHead>
                 <TableHead className="text-gray-700 font-semibold">A</TableHead>
@@ -117,6 +118,7 @@ export default function CiaSection({
                 <TableRow key={i}>
                   <TableCell className="w-8">{i + 1}</TableCell>
                   <TableCell>{s.service}</TableCell>
+                  <TableCell>{s.context?.name || "-"}</TableCell>
                   <TableCell>{s.C}</TableCell>
                   <TableCell>{s.I}</TableCell>
                   <TableCell>{s.A}</TableCell>

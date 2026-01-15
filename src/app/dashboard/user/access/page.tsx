@@ -16,6 +16,7 @@ import {
 import { Trash, Edit, Plus } from "lucide-react";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { PaginatedTable } from "@/components/paginated-table";
+import { DeleteConfirmationDialog } from "@/components/delete-confirmation-dialog";
 import { departmentsApi, type Department } from "@/lib/api";
 
 export default function UserAccessPage() {
@@ -29,6 +30,9 @@ export default function UserAccessPage() {
   // Add subrole sheet state
   const [open, setOpen] = React.useState(false);
   const [editingId, setEditingId] = React.useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [deletingId, setDeletingId] = React.useState<string | null>(null);
+  const [deletingName, setDeletingName] = React.useState<string>("");
   const [form, setForm] = React.useState({
     name: "",
     description: "",
@@ -109,8 +113,6 @@ export default function UserAccessPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Apakah Anda yakin ingin menghapus divisi ini?")) return;
-
     setIsLoading(true);
     try {
       const response = await departmentsApi.delete(id);
@@ -122,7 +124,16 @@ export default function UserAccessPage() {
       toast.error(error.message || "Failed to delete department");
     } finally {
       setIsLoading(false);
+      setDeleteDialogOpen(false);
+      setDeletingId(null);
+      setDeletingName("");
     }
+  }
+
+  function handleDeleteClick(id: string, name: string) {
+    setDeletingId(id);
+    setDeletingName(name);
+    setDeleteDialogOpen(true);
   }
 
   function handleEdit(department: Department) {
@@ -259,6 +270,14 @@ export default function UserAccessPage() {
           {
             header: "Deskripsi",
             key: "description",
+            render: (value) => {
+              const text = String(value || "");
+              return (
+                <span className="text-gray-700" title={text}>
+                  {text.length > 100 ? `${text.substring(0, 100)}...` : text}
+                </span>
+              );
+            },
             searchable: true,
           },
           {
@@ -288,7 +307,7 @@ export default function UserAccessPage() {
                 </button>
                 <button
                   className="p-2 hover:bg-gray-100 rounded transition-colors disabled:opacity-50"
-                  onClick={() => handleDelete(String(value))}
+                  onClick={() => handleDeleteClick(String(value), row.name)}
                   disabled={isLoading}
                 >
                   <Trash size={18} className="text-gray-600" />
@@ -300,6 +319,22 @@ export default function UserAccessPage() {
         ]}
         pageSize={pageSize}
         emptyMessage="Tidak ada divisi yang ditemukan"
+      />
+
+      <DeleteConfirmationDialog
+        open={deleteDialogOpen}
+        itemName={deletingName}
+        title="Hapus Divisi"
+        description="Divisi yang dihapus tidak dapat dipulihkan"
+        confirmLabel="Hapus"
+        cancelLabel="Batal"
+        isLoading={isLoading}
+        onConfirm={() => deletingId && handleDelete(deletingId)}
+        onCancel={() => {
+          setDeleteDialogOpen(false);
+          setDeletingId(null);
+          setDeletingName("");
+        }}
       />
     </div>
   );

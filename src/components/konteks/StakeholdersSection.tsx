@@ -103,7 +103,13 @@ export default function StakeholdersSection({
                 <TableRow key={i}>
                   <TableCell className="w-8">{i + 1}</TableCell>
                   <TableCell>{s.name}</TableCell>
-                  <TableCell>{s.interest}</TableCell>
+                  <TableCell>
+                    <span title={s.interest}>
+                      {s.interest && s.interest.length > 100
+                        ? `${s.interest.substring(0, 100)}...`
+                        : s.interest}
+                    </span>
+                  </TableCell>
                   {!isReadOnly && (
                     <TableCell>
                       <div className="flex items-center gap-2">

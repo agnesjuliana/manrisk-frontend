@@ -25,6 +25,7 @@ import {
 import { Trash, Edit, Plus } from "lucide-react";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { PaginatedTable } from "@/components/paginated-table";
+import { DeleteConfirmationDialog } from "@/components/delete-confirmation-dialog";
 
 export default function UserRegistryPage() {
   const [rows, setRows] = React.useState<UserManagement[]>([]);
@@ -37,6 +38,9 @@ export default function UserRegistryPage() {
   // dialog form state
   const [open, setOpen] = React.useState(false);
   const [editingId, setEditingId] = React.useState<string | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [deletingId, setDeletingId] = React.useState<string | null>(null);
+  const [deletingName, setDeletingName] = React.useState<string>("");
   const [form, setForm] = React.useState({
     name: "",
     email: "",
@@ -145,8 +149,6 @@ export default function UserRegistryPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Apakah Anda yakin ingin menghapus pengguna ini?")) return;
-
     setIsLoading(true);
     try {
       const response = await usersApi.delete(id);
@@ -158,7 +160,16 @@ export default function UserRegistryPage() {
       toast.error(error.message || "Gagal menghapus pengguna");
     } finally {
       setIsLoading(false);
+      setDeleteDialogOpen(false);
+      setDeletingId(null);
+      setDeletingName("");
     }
+  }
+
+  function handleDeleteClick(id: string, name: string) {
+    setDeletingId(id);
+    setDeletingName(name);
+    setDeleteDialogOpen(true);
   }
 
   function handleEdit(user: UserManagement) {
@@ -372,7 +383,7 @@ export default function UserRegistryPage() {
                   </button>
                   <button
                     className="p-2 hover:bg-gray-100 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={() => handleDelete(String(value))}
+                    onClick={() => handleDeleteClick(String(value), row.name)}
                     disabled={isLoading || !!isLastAdmin}
                     title={isLastAdmin ? "Tidak dapat menghapus ADMIN terakhir dalam organisasi" : ""}
                   >
@@ -386,6 +397,22 @@ export default function UserRegistryPage() {
         ]}
         pageSize={pageSize}
         emptyMessage="Tidak ada pengguna yang ditemukan"
+      />
+
+      <DeleteConfirmationDialog
+        open={deleteDialogOpen}
+        itemName={deletingName}
+        title="Hapus Pengguna"
+        description="Pengguna yang dihapus tidak dapat dipulihkan"
+        confirmLabel="Hapus"
+        cancelLabel="Batal"
+        isLoading={isLoading}
+        onConfirm={() => deletingId && handleDelete(deletingId)}
+        onCancel={() => {
+          setDeleteDialogOpen(false);
+          setDeletingId(null);
+          setDeletingName("");
+        }}
       />
     </div>
   );

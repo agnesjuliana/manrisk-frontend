@@ -254,8 +254,9 @@ export default function KonteksOrganisasiPage() {
               C: p.C,
               I: p.I,
               A: p.A,
-              // Store priority_id for API calls
-              ...(p.priority_id ? { priority_id: p.priority_id } : {}),
+              priority_id: p.priority_id,
+              context_id: p.context?.id,
+              context: p.context,
             })),
           },
         }));
@@ -571,9 +572,12 @@ export default function KonteksOrganisasiPage() {
         if (!regulation || !regulation.id) return;
         (async () => {
           try {
-            const response = await regulationsApi.update(regulation.id as string, {
-              name: String(validatedDraft),
-            });
+            const response = await regulationsApi.update(
+              regulation.id as string,
+              {
+                name: String(validatedDraft),
+              }
+            );
             if (response.status) {
               setData((s) => ({
                 ...s,
@@ -787,7 +791,7 @@ export default function KonteksOrganisasiPage() {
   // user edit (internal stakeholders map to users)
   const [userEditOpen, setUserEditOpen] = useState(false);
   const [userForm, setUserForm] = useState<StoreUser | null>(null);
-  
+
   // delete confirmation dialog
   const [deleteConfirm, setDeleteConfirm] = useState<{
     open: boolean;
@@ -840,7 +844,10 @@ export default function KonteksOrganisasiPage() {
             {!isRiskOwner && (
               <Dialog>
                 <DialogTrigger asChild>
-                  <Button className="bg-sky-600 hover:bg-sky-700 text-white" size="sm">
+                  <Button
+                    className="bg-sky-600 hover:bg-sky-700 text-white"
+                    size="sm"
+                  >
                     Edit Profil
                   </Button>
                 </DialogTrigger>
@@ -902,43 +909,41 @@ export default function KonteksOrganisasiPage() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <ScopeSection
-          technical_bounds={data.scope.technical_bounds}
-          openAddModal={openAddModal}
-          openEditRow={openEditRow}
-          removeArrayItem={removeArrayItem}
-          isReadOnly={isRiskOwner}
-        />
+      <ScopeSection
+        technical_bounds={data.scope.technical_bounds}
+        openAddModal={openAddModal}
+        openEditRow={openEditRow}
+        removeArrayItem={removeArrayItem}
+        isReadOnly={isRiskOwner}
+      />
 
-        <StakeholdersSection
-          users={data.stakeholders.internal}
-          external={data.stakeholders.external}
-          openAddModal={openAddModal}
-          openEditRow={openEditRow}
-          removeArrayItem={removeArrayItem}
-          isReadOnly={isRiskOwner}
-        />
+      <StakeholdersSection
+        users={data.stakeholders.internal}
+        external={data.stakeholders.external}
+        openAddModal={openAddModal}
+        openEditRow={openEditRow}
+        removeArrayItem={removeArrayItem}
+        isReadOnly={isRiskOwner}
+      />
 
-        <CiaSection
-          cia={data.cia_objectives}
-          ciaLoadError={ciaLoadError}
-          onEdit={openCiaEdit}
-          openAddModal={openAddModal}
-          openEditRow={openEditRow}
-          removeArrayItem={removeArrayItem}
-          onCiaModified={loadCia}
-          isReadOnly={isRiskOwner}
-        />
+      <CiaSection
+        cia={data.cia_objectives}
+        ciaLoadError={ciaLoadError}
+        onEdit={openCiaEdit}
+        openAddModal={openAddModal}
+        openEditRow={openEditRow}
+        removeArrayItem={removeArrayItem}
+        onCiaModified={loadCia}
+        isReadOnly={isRiskOwner}
+      />
 
-        <RegulationsSection
-          selected={data.regulations.selected}
-          openAddModal={openAddModal}
-          openEditRow={openEditRow}
-          removeArrayItem={removeArrayItem}
-          isReadOnly={isRiskOwner}
-        />
-      </div>
+      <RegulationsSection
+        selected={data.regulations.selected}
+        openAddModal={openAddModal}
+        openEditRow={openEditRow}
+        removeArrayItem={removeArrayItem}
+        isReadOnly={isRiskOwner}
+      />
 
       {/* CIA Edit Dialog */}
       {!isRiskOwner && (
@@ -948,7 +953,9 @@ export default function KonteksOrganisasiPage() {
         >
           <DialogContent className="sm:max-w-lg">
             <DialogHeader className="border-b border-sky-100 pb-4">
-              <DialogTitle className="text-2xl text-gray-900">Ubah Objektif CIA</DialogTitle>
+              <DialogTitle className="text-2xl text-gray-900">
+                Ubah Objektif CIA
+              </DialogTitle>
               <DialogDescription className="text-gray-600 mt-1">
                 Ubah tujuan Kerahasiaan, Integritas, dan Ketersediaan sekaligus.
               </DialogDescription>
@@ -972,7 +979,9 @@ export default function KonteksOrganisasiPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Integritas (Integrity)</Label>
+                <Label className="text-xs font-semibold text-sky-900 uppercase tracking-widest">
+                  Integritas (Integrity)
+                </Label>
                 <Textarea
                   value={ciaDraft.integrity}
                   onChange={(e) =>
@@ -1001,7 +1010,12 @@ export default function KonteksOrganisasiPage() {
               <Button variant="outline" onClick={closeCiaEdit}>
                 Batal
               </Button>
-              <Button className="bg-sky-600 hover:bg-sky-700 text-white" onClick={saveCiaEdit}>Simpan Perubahan</Button>
+              <Button
+                className="bg-sky-600 hover:bg-sky-700 text-white"
+                onClick={saveCiaEdit}
+              >
+                Simpan Perubahan
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -1015,14 +1029,18 @@ export default function KonteksOrganisasiPage() {
         >
           <DialogContent className="sm:max-w-lg">
             <DialogHeader className="border-b border-sky-100 pb-4">
-              <DialogTitle className="text-2xl text-gray-900">Sunting {editingSection}</DialogTitle>
+              <DialogTitle className="text-2xl text-gray-900">
+                Sunting {editingSection}
+              </DialogTitle>
               <DialogDescription className="text-gray-600 mt-1">
                 Ubah detail untuk bagian ini kemudian simpan.
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-2 mt-6">
-              <Label className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Konten</Label>
+              <Label className="text-xs font-semibold text-sky-900 uppercase tracking-widest">
+                Konten
+              </Label>
               <Textarea
                 value={draftText}
                 onChange={(e) => setDraftText(e.target.value)}
@@ -1035,7 +1053,12 @@ export default function KonteksOrganisasiPage() {
               <Button variant="outline" onClick={closeEdit}>
                 Batal
               </Button>
-              <Button className="bg-sky-600 hover:bg-sky-700 text-white" onClick={saveEdit}>Simpan Perubahan</Button>
+              <Button
+                className="bg-sky-600 hover:bg-sky-700 text-white"
+                onClick={saveEdit}
+              >
+                Simpan Perubahan
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -1049,14 +1072,18 @@ export default function KonteksOrganisasiPage() {
         >
           <DialogContent className="sm:max-w-lg">
             <DialogHeader className="border-b border-sky-100 pb-4">
-              <DialogTitle className="text-2xl text-gray-900">Sunting Pengguna</DialogTitle>
+              <DialogTitle className="text-2xl text-gray-900">
+                Sunting Pengguna
+              </DialogTitle>
               <DialogDescription className="text-gray-600 mt-1">
                 Ubah data pengguna stakeholder internal
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-6 mt-6">
               <div className="space-y-2">
-                <Label className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Nama</Label>
+                <Label className="text-xs font-semibold text-sky-900 uppercase tracking-widest">
+                  Nama
+                </Label>
                 <Input
                   value={userForm?.name ?? ""}
                   onChange={(e) =>
@@ -1067,19 +1094,25 @@ export default function KonteksOrganisasiPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Email</Label>
+                <Label className="text-xs font-semibold text-sky-900 uppercase tracking-widest">
+                  Email
+                </Label>
                 <Input
                   type="email"
                   value={userForm?.email ?? ""}
                   onChange={(e) =>
-                    setUserForm((p) => (p ? { ...p, email: e.target.value } : p))
+                    setUserForm((p) =>
+                      p ? { ...p, email: e.target.value } : p
+                    )
                   }
                   className="border-gray-300"
                   placeholder="Email pengguna"
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Peran (Role)</Label>
+                <Label className="text-xs font-semibold text-sky-900 uppercase tracking-widest">
+                  Peran (Role)
+                </Label>
                 <Input
                   value={userForm?.role ?? ""}
                   onChange={(e) =>
@@ -1092,7 +1125,9 @@ export default function KonteksOrganisasiPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Unit/Divisi</Label>
+                <Label className="text-xs font-semibold text-sky-900 uppercase tracking-widest">
+                  Unit/Divisi
+                </Label>
                 <Input
                   value={userForm?.division ?? ""}
                   onChange={(e) =>
@@ -1109,7 +1144,12 @@ export default function KonteksOrganisasiPage() {
               <Button variant="outline" onClick={closeUserEdit}>
                 Batal
               </Button>
-              <Button className="bg-sky-600 hover:bg-sky-700 text-white" onClick={saveUserEdit}>Simpan Perubahan</Button>
+              <Button
+                className="bg-sky-600 hover:bg-sky-700 text-white"
+                onClick={saveUserEdit}
+              >
+                Simpan Perubahan
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -1137,7 +1177,9 @@ export default function KonteksOrganisasiPage() {
         open={deleteConfirm.open}
         itemName={deleteConfirm.itemName}
         onConfirm={confirmDelete}
-        onCancel={() => setDeleteConfirm({ open: false, path: null, idx: null })}
+        onCancel={() =>
+          setDeleteConfirm({ open: false, path: null, idx: null })
+        }
       />
     </div>
   );
