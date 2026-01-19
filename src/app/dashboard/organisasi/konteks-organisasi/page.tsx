@@ -255,8 +255,6 @@ export default function KonteksOrganisasiPage() {
               I: p.I,
               A: p.A,
               priority_id: p.priority_id,
-              context_id: p.context?.id,
-              context: p.context,
             })),
           },
         }));
