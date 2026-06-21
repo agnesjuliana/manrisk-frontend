@@ -1,5 +1,14 @@
-import { redirect } from "next/navigation";
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function Page() {
-  redirect("/dashboard/organisasi/konteks-organisasi");
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace("/dashboard/organisasi/konteks-organisasi");
+  }, [router]);
+
+  return null;
 }

@@ -849,7 +849,7 @@ export default function DaftarRisikoPage() {
                 <Plus size={16} /> Tambah Risiko
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-h-[90vh] overflow-y-auto !max-w-6xl">
               <DialogHeader className="border-b border-sky-100 pb-4">
                 <DialogTitle className="text-xl text-gray-900">{selectedRisk?.id ? "Edit Risiko" : "Tambah Risiko"}</DialogTitle>
                 <DialogDescription>
@@ -891,10 +891,112 @@ export default function DaftarRisikoPage() {
               </div>
 
               <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* LEFT COLUMN */}
+                <div className="space-y-6">
+                  {/* Aset */}
                   <div>
                     <Field>
-                      <FieldLabel className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Kategori *</FieldLabel>
+                      <FieldLabel className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Aset <span className="text-red-600">*</span></FieldLabel>
+                      <Select
+                        value={form.assetId || ""}
+                        onValueChange={(id) =>
+                          setForm((p) => ({ ...p, assetId: id }))
+                        }
+                      >
+                        <SelectTrigger className="w-full border-sky-200 focus:border-sky-400 focus:ring-sky-100">
+                          <SelectValue placeholder="Pilih aset" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {assets.map((a) => (
+                            <SelectItem key={a.id} value={a.id}>
+                              {a.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                  </div>
+
+                  {/* Risiko */}
+                  <div>
+                    <Field>
+                      <FieldLabel className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Risiko <span className="text-red-600">*</span></FieldLabel>
+                      <Input
+                        value={String(form.identifiedRisk || "")}
+                        onChange={(e) =>
+                          setForm((p) => ({
+                            ...p,
+                            identifiedRisk: e.target.value,
+                          }))
+                        }
+                        className="border-sky-200 focus:border-sky-400 focus:ring-sky-100"
+                      />
+                    </Field>
+                  </div>
+
+                  {/* Kerentanan */}
+                  <div>
+                    <Field>
+                      <FieldLabel className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Kerentanan <span className="text-red-600">*</span></FieldLabel>
+                      <Input
+                        value={String(form.vulnerability || "")}
+                        onChange={(e) =>
+                          setForm((p) => ({
+                            ...p,
+                            vulnerability: e.target.value,
+                          }))
+                        }
+                        className="border-sky-200 focus:border-sky-400 focus:ring-sky-100"
+                      />
+                    </Field>
+                  </div>
+
+                  {/* Ancaman */}
+                  <div>
+                    <Field>
+                      <FieldLabel className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Ancaman <span className="text-red-600">*</span></FieldLabel>
+                      <Input
+                        value={String(form.threat || "")}
+                        onChange={(e) =>
+                          setForm((p) => ({ ...p, threat: e.target.value }))
+                        }
+                        className="border-sky-200 focus:border-sky-400 focus:ring-sky-100"
+                      />
+                    </Field>
+                  </div>
+                </div>
+
+                {/* RIGHT COLUMN */}
+                <div className="space-y-6">
+                  {/* Ruang Lingkup */}
+                  <div>
+                    <Field>
+                      <FieldLabel className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Ruang Lingkup <span className="text-red-600">*</span></FieldLabel>
+                      <Select
+                        value={form.contextId || ""}
+                        onValueChange={(id) =>
+                          setForm((p) => ({ ...p, contextId: id }))
+                        }
+                      >
+                        <SelectTrigger className="w-full border-sky-200 focus:border-sky-400 focus:ring-sky-100">
+                          <SelectValue placeholder="Pilih ruang lingkup" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {contexts.map((c) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {c.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                  </div>
+
+                  {/* Kategori */}
+                  <div>
+                    <Field>
+                      <FieldLabel className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Kategori <span className="text-red-600">*</span></FieldLabel>
                       <div className="relative">
                         <Input
                           placeholder="Pilih atau ketik kategori"
@@ -944,58 +1046,10 @@ export default function DaftarRisikoPage() {
                     </Field>
                   </div>
 
+                  {/* Asal Risiko */}
                   <div>
                     <Field>
-                      <FieldLabel className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Risiko</FieldLabel>
-                      <Input
-                        value={String(form.identifiedRisk || "")}
-                        onChange={(e) =>
-                          setForm((p) => ({
-                            ...p,
-                            identifiedRisk: e.target.value,
-                          }))
-                        }
-                        className="border-sky-200 focus:border-sky-400 focus:ring-sky-100"
-                      />
-                    </Field>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <Field>
-                      <FieldLabel className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Kerentanan *</FieldLabel>
-                      <Input
-                        value={String(form.vulnerability || "")}
-                        onChange={(e) =>
-                          setForm((p) => ({
-                            ...p,
-                            vulnerability: e.target.value,
-                          }))
-                        }
-                        className="border-sky-200 focus:border-sky-400 focus:ring-sky-100"
-                      />
-                    </Field>
-                  </div>
-
-                  <div>
-                    <Field>
-                      <FieldLabel className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Ancaman</FieldLabel>
-                      <Input
-                        value={String(form.threat || "")}
-                        onChange={(e) =>
-                          setForm((p) => ({ ...p, threat: e.target.value }))
-                        }
-                        className="border-sky-200 focus:border-sky-400 focus:ring-sky-100"
-                      />
-                    </Field>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <Field>
-                      <FieldLabel className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Asal Risiko *</FieldLabel>
+                      <FieldLabel className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Asal Risiko <span className="text-red-600">*</span></FieldLabel>
                       <div className="relative">
                         <Input
                           placeholder="Pilih atau ketik sumber"
@@ -1045,58 +1099,11 @@ export default function DaftarRisikoPage() {
                     </Field>
                   </div>
 
-                  <div>
-                    <Field>
-                      <FieldLabel className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Aset</FieldLabel>
-                      <Select
-                        value={form.assetId || ""}
-                        onValueChange={(id) =>
-                          setForm((p) => ({ ...p, assetId: id }))
-                        }
-                      >
-                        <SelectTrigger className="w-full border-sky-200 focus:border-sky-400 focus:ring-sky-100">
-                          <SelectValue placeholder="Pilih aset" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {assets.map((a) => (
-                            <SelectItem key={a.id} value={a.id}>
-                              {a.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </Field>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <Field>
-                      <FieldLabel className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Ruang Lingkup</FieldLabel>
-                      <Select
-                        value={form.contextId || ""}
-                        onValueChange={(id) =>
-                          setForm((p) => ({ ...p, contextId: id }))
-                        }
-                      >
-                        <SelectTrigger className="w-full border-sky-200 focus:border-sky-400 focus:ring-sky-100">
-                          <SelectValue placeholder="Pilih ruang lingkup" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {contexts.map((c) => (
-                            <SelectItem key={c.id} value={c.id}>
-                              {c.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </Field>
-                  </div>
-
+                  {/* Risk Owner */}
                   {isRiskManager && (
                     <div>
                       <Field>
-                        <FieldLabel className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Risk Owner</FieldLabel>
+                        <FieldLabel className="text-xs font-semibold text-sky-900 uppercase tracking-widest">Risk Owner <span className="text-red-600">*</span></FieldLabel>
                         <Select
                           value={form.owner?.id || ""}
                           onValueChange={(id) => {
@@ -1124,6 +1131,7 @@ export default function DaftarRisikoPage() {
                     </div>
                   )}
                 </div>
+              </div>
 
                 <div>
                   <Field>

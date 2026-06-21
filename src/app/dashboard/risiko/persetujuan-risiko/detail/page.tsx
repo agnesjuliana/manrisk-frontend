@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { PaginatedTable, type ColumnDef } from "@/components/paginated-table";
 import { Button } from "@/components/ui/button";
@@ -66,10 +66,27 @@ enum RiskApprovalTLStatus {
 }
 
 export default function DetailApprovalPage() {
-  const params = useParams();
+  return (
+    <React.Suspense
+      fallback={
+        <div className="flex flex-1 flex-col gap-4 p-4 pt-0">
+          <Skeleton className="h-8 w-32" />
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-64 w-full" />
+        </div>
+      }
+    >
+      <DetailApprovalContent />
+    </React.Suspense>
+  );
+}
+
+function DetailApprovalContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, isLoading: isAuthLoading } = useAuth();
-  const approvalId = params.id as string;
+  const approvalId = searchParams.get("id") || "";
 
   // ALL STATE DECLARATIONS FIRST (never conditional)
   const [approval, setApproval] = React.useState<RiskApproval | null>(null);

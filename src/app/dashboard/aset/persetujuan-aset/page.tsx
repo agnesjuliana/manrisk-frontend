@@ -286,7 +286,7 @@ export default function AssetApprovalPage() {
                           size="sm"
                           variant="ghost"
                           onClick={() =>
-                            router.push(`/dashboard/aset/persetujuan-aset/detail/${String(value)}`)
+                            router.push(`/dashboard/aset/persetujuan-aset/detail?id=${encodeURIComponent(String(value))}`)
                           }
                           className="h-8 w-8 p-0"
                         >

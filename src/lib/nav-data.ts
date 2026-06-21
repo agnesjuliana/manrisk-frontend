@@ -11,6 +11,24 @@ import {
 
 export const navMain = [
   {
+    title: "Monitoring",
+    url: "/dashboard/monitoring",
+    icon: ChartSpline,
+    accessRole: ["RISK_MANAGER", "RISK_OWNER", "TOP_MANAGEMENT"],
+    items: [
+      {
+        title: "Rangkuman Risiko",
+        url: "/dashboard/monitoring/rangkuman-risiko",
+        accessRole: ["RISK_MANAGER", "RISK_OWNER", "TOP_MANAGEMENT"],
+      },
+      {
+        title: "Daftar Tugas",
+        url: "/dashboard/monitoring/daftar-tugas",
+        accessRole: ["RISK_MANAGER", "RISK_OWNER", "TOP_MANAGEMENT"],
+      },
+    ],
+  },
+  {
     title: "Manajemen User",
     url: "/dashboard/user",
     icon: UserCog,
@@ -126,24 +144,6 @@ export const navMain = [
       {
         title: "Implementasi Kontrol",
         url: "/dashboard/kontrol/soa",
-        accessRole: ["RISK_MANAGER", "RISK_OWNER", "TOP_MANAGEMENT"],
-      },
-    ],
-  },
-  {
-    title: "Monitoring",
-    url: "/dashboard/monitoring",
-    icon: ChartSpline,
-    accessRole: ["RISK_MANAGER", "RISK_OWNER", "TOP_MANAGEMENT"],
-    items: [
-      {
-        title: "Rangkuman Risiko",
-        url: "/dashboard/monitoring/rangkuman-risiko",
-        accessRole: ["RISK_MANAGER", "RISK_OWNER", "TOP_MANAGEMENT"],
-      },
-      {
-        title: "Daftar Tugas",
-        url: "/dashboard/monitoring/daftar-tugas",
         accessRole: ["RISK_MANAGER", "RISK_OWNER", "TOP_MANAGEMENT"],
       },
     ],

@@ -190,6 +190,32 @@ pnpm test
 
 Open [http://localhost:3000](http://localhost:3000)
 
+### Cloudflare Pages Deployment
+
+This app is configured as a static Next.js export for Cloudflare Pages. The build output is generated in `out`.
+
+Use these settings in the Cloudflare Pages dashboard:
+
+1. Go to **Workers & Pages** > **Create** > **Pages** > **Connect to Git**.
+2. Select the repository that contains this project.
+3. Set **Project name** as needed, for example `manrisk`.
+4. Set **Production branch** to your deployment branch.
+5. In **Build settings**, use:
+   - **Framework preset**: `Next.js (Static HTML Export)` or `None`
+   - **Root directory**: `manrisk`
+   - **Build command**: `pnpm build`
+   - **Build output directory**: `out`
+6. In **Environment variables**, add:
+   - `NEXT_PUBLIC_API_URL`: your deployed backend API base URL, for example `https://api.example.com`
+   - `NODE_VERSION`: `20`
+7. Save and deploy.
+
+Notes:
+- Do not use `pnpm start` or `next start` on Cloudflare Pages. Cloudflare serves the generated `out` folder.
+- Approval detail routes use query strings for static export compatibility:
+  - `/dashboard/aset/persetujuan-aset/detail?id=<approval-id>`
+  - `/dashboard/risiko/persetujuan-risiko/detail?id=<approval-id>`
+
 ### Quick Login
 ```
 Email: rm@isms.local

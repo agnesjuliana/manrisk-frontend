@@ -13,7 +13,7 @@ import { loadUsers, User } from "@/lib/usersStore";
 import { loadTreatments, Treatment } from "@/lib/treatmentsStore";
 import { useAuth } from "@/hooks/use-auth";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 interface ControlStatistics {
   totalAnnexControl: number;

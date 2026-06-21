@@ -292,7 +292,7 @@ export default function RiskApprovalPage() {
                           size="sm"
                           variant="ghost"
                           onClick={() =>
-                            router.push(`/dashboard/risiko/persetujuan-risiko/detail/${String(value)}`)
+                            router.push(`/dashboard/risiko/persetujuan-risiko/detail?id=${encodeURIComponent(String(value))}`)
                           }
                           className="h-8 w-8 p-0"
                         >

@@ -15,7 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000/api";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 interface ApiStatistics {
   totalRisks: number;
